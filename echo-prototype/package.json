@@ -10,6 +10,7 @@
     "convert": "node scripts/convert.js",
     "annotate": "node scripts/annotate.js",
     "import": "node scripts/import-sessions.js",
+    "search": "node scripts/search.js",
     "all": "npm run convert && npm run validate && npm run index && npm run resolve"
   },
   "dependencies": {
