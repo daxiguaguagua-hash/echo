@@ -1,0 +1,17 @@
+{
+  "description": "Echo project hooks — session start status",
+  "hooks": {
+    "Setup": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash /Users/vincenthuang/.claude/hooks/echo-status.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
