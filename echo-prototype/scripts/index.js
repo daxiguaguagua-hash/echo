@@ -1,36 +1,18 @@
 #!/usr/bin/env node
 const fs = require("fs");
-const path = require("path");
-const matter = require("gray-matter");
 const { articlesDir, commentsDir, ensureDir } = require("./lib/infra/workspace");
+const store = require("./lib/infra/markdown-store");
 
 ensureDir(articlesDir);
 ensureDir(commentsDir);
 
-function loadComments() {
-  const comments = [];
-  for (const name of fs.readdirSync(commentsDir)) {
-    if (!name.endsWith(".md")) continue;
-    const raw = fs.readFileSync(path.join(commentsDir, name), "utf-8");
-    const { data } = matter(raw);
-    if (data.type === "annotation") comments.push({ ...data, _file: `comments/${name}` });
-  }
-  return comments.sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
-}
+const comments = store.loadComments(commentsDir).sort(
+  (a, b) => String(a.created_at).localeCompare(String(b.created_at))
+);
 
-function loadArticles() {
-  const articles = {};
-  for (const name of fs.readdirSync(articlesDir)) {
-    if (!name.endsWith(".md")) continue;
-    const raw = fs.readFileSync(path.join(articlesDir, name), "utf-8");
-    const { data, content } = matter(raw);
-    if (!data.id) continue;  // skip non-Echo files
-    articles[data.id] = { data, content, file: name };
-  }
-  return articles;
-}
+const articles = store.indexArticles(store.loadArticles(articlesDir));
 
-function buildCommentList(comments, articleId) {
+function buildCommentList(articleId) {
   const articleComments = comments.filter(
     (c) => c.target?.article_id === articleId
   );
@@ -61,12 +43,9 @@ function buildCommentList(comments, articleId) {
   return lines.join("\n");
 }
 
-const comments = loadComments();
-const articles = loadArticles();
-
 for (const [id, article] of Object.entries(articles)) {
-  const commentSection = buildCommentList(comments, id);
-  const filePath = path.join(articlesDir, article.file);
+  const commentSection = buildCommentList(id);
+  const filePath = article.absPath;
   const raw = fs.readFileSync(filePath, "utf-8");
 
   let updated;
@@ -75,24 +54,21 @@ for (const [id, article] of Object.entries(articles)) {
   const legacyMarker = "<!-- ECHO:COMMENT_LIST -->";
 
   if (raw.includes(startMarker) && raw.includes(endMarker)) {
-    // Replace between existing markers (re-runnable)
     updated = raw.replace(
       new RegExp(startMarker + "[\\s\\S]*" + endMarker, "g"),
       commentSection
     );
-    console.log(`${article.file}: re-indexed (${comments.filter((c) => c.target?.article_id === id).length} comments)`);
+    console.log(`${article.relPath}: re-indexed (${comments.filter((c) => c.target?.article_id === id).length} comments)`);
   } else if (raw.includes(legacyMarker)) {
-    // First run: replace legacy marker
     updated = raw.replace(legacyMarker, commentSection);
-    console.log(`${article.file}: first index (${comments.filter((c) => c.target?.article_id === id).length} comments)`);
+    console.log(`${article.relPath}: first index (${comments.filter((c) => c.target?.article_id === id).length} comments)`);
   } else {
-    // Append at end
     updated = raw.trimEnd() + "\n\n" + commentSection + "\n";
-    console.log(`${article.file}: appended (${comments.filter((c) => c.target?.article_id === id).length} comments)`);
+    console.log(`${article.relPath}: appended (${comments.filter((c) => c.target?.article_id === id).length} comments)`);
   }
 
   if (updated === raw) {
-    console.log(`${article.file}: unchanged — skipped`);
+    console.log(`${article.relPath}: unchanged — skipped`);
   } else {
     fs.writeFileSync(filePath, updated);
   }

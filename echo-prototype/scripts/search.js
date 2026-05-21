@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-const fs = require("fs");
-const path = require("path");
-const matter = require("gray-matter");
 const { articlesDir, ensureDir } = require("./lib/infra/workspace");
+const store = require("./lib/infra/markdown-store");
 
 ensureDir(articlesDir);
 
@@ -20,14 +18,11 @@ if (!opts.keyword && !opts.tag) {
   process.exit(0);
 }
 
-const files = fs.readdirSync(articlesDir).filter((f) => f.endsWith(".md"));
-const articles = [];
-for (const file of files) {
-  const raw = fs.readFileSync(path.join(articlesDir, file), "utf-8");
-  const { data, content } = matter(raw);
-  if (!data.id) continue;
-  articles.push({ ...data, _file: file, _content: content });
-}
+const articles = store.loadArticles(articlesDir).map((a) => ({
+  ...a.data,
+  _file: a.relPath,
+  _content: a.content,
+}));
 
 let results = articles;
 

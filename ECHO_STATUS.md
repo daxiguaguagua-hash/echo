@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-21 (最小拆分完成)
+最后更新：2026-05-21 (Codex review 通过，准备 commit)
 
 ## 已完成
 
@@ -29,10 +29,12 @@
 - [x] **配置模块** — `lib/infra/config.js`：`isCaptureEnabled()` 统一 capture 开关逻辑，`getSpeakers()` 统一 speaker 配置
 - [x] **最小拆分 CLI/usecase/domain/infra** — annotate.js 去重（复用 anchor.js），validate.js 校验规则 → `lib/domain/validation.js`，convert.js 解析逻辑 → `lib/usecases/convert-buffer.js`。Codex review 通过。23 测试全绿，管线通过。
 - [x] **hook 行为验证** — SessionStart 通知在本会话确认正常工作（`SessionStart:startup hook success`），issues/002-hook-verification.md 已过时
+- [x] **markdown-store 抽取** — `lib/infra/markdown-store.js`：7 个导出（listMarkdownFiles、readMarkdownFile、loadArticles、loadArticleById、loadComments、indexArticles、nextAnnotationId）；`lib/usecases/strip-comments.js`。5 个 CLI 脚本净减 116 行重复代码。Codex 两轮 review 发现并修复 4 个 bug（ID 覆盖、路径丢失、错误吞咽、扫描不一致）。
+- [x] **markdown-store 测试** — `test/markdown-store.test.js`：15 个用例，覆盖 listMarkdownFiles、readMarkdownFile、loadArticles (strict/non-strict)、loadArticleById、loadComments、indexArticles、nextAnnotationId、stripCommentSections。全部用临时目录不碰真实数据。Codex 编写初版，修复了两处测试干扰问题（gray-matter/js-yaml 同进程内同 fixture 二次抛异常行为不一致）。38 测试全绿，管线通过。
 
 ## 进行中
 
-- [ ] **工程边界落地** — 按 `ENGINEERING_BOUNDARIES.md` 继续，下一步：`readMD()` 抽到 `lib/infra/markdown-store.js`，统一 workspace/config 与 hook 入口
+- [ ] **工程边界落地** — 按 `ENGINEERING_BOUNDARIES.md` 继续，下一步：`echo-mcp init` / `echo-mcp hook install` / `echo-mcp doctor` 命令实现
 
 ## 待做
 
@@ -65,6 +67,7 @@
 - [ ] **workspace.js: resolveWorkspace() 双路径问题** — 配置文件始终从 `DEFAULT_WORKSPACE` 读取，与 `getConfig()` 读的路径不一致。需要统一或加文档说明
 - [ ] **echo-capture.sh: 单引号注入风险** — `$SESSION_FILE` 等变量直接插入 Python 单引号字符串，路径含单引号会语法错误。应通过 `json.dumps` 转义
 - [ ] **echo-capture.sh: 全量加载 transcript** — `entries = [json.loads(line) for line in f]` 对长会话有内存压力。应只扫描 `last_count` 之后的新条目
+- [ ] **测试临时目录未清理** — `markdown-store.test.js` 的 `tempDir()` 不删 `/tmp` 下的 fixture 目录。应在 test helper 重构时加 `t.after(() => fs.rmSync(dir, { recursive: true, force: true }))`
 - [ ] **迁移清理** — 删除旧 `echo-prototype/.echo-buffer/`（已被 `~/.echo-workspace/session-buffer/` 取代）；清理 `echo-prototype/` 中已被复制到 workspace 的旧文章
 
 ## 数据来源

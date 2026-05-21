@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 const fs = require("fs");
 const path = require("path");
-const matter = require("gray-matter");
 
 const { articlesDir, commentsDir, ensureDir } = require("./lib/infra/workspace");
+const store = require("./lib/infra/markdown-store");
 const anchor = require("./lib/domain/anchor");
+const { stripCommentSections } = require("./lib/usecases/strip-comments");
 
 ensureDir(articlesDir);
 
@@ -37,36 +38,20 @@ if (!articleId || !quote || !commentText) {
 }
 
 // --- load article ---
-function loadArticle(id) {
-  for (const name of fs.readdirSync(articlesDir)) {
-    if (!name.endsWith(".md")) continue;
-    const raw = fs.readFileSync(path.join(articlesDir, name), "utf-8");
-    const { data } = matter(raw);
-    if (data.id === id) {
-      let body = raw.replace(/^---[\s\S]*?---\n*/, "");
-      body = body.replace(/<!-- ECHO_COMMENTS_START -->[\s\S]*<!-- ECHO_COMMENTS_END -->\n*/g, "");
-      body = body.replace(/<!-- ECHO:COMMENT_LIST -->\n*/g, "");
-      return { data, body, file: name };
-    }
-  }
-  return null;
-}
-
-const article = loadArticle(articleId);
-if (!article) {
+const loaded = store.loadArticleById(articlesDir, articleId);
+if (!loaded) {
   console.log(`Error: article "${articleId}" not found.`);
   console.log("Available articles:");
-  for (const name of fs.readdirSync(articlesDir)) {
-    if (!name.endsWith(".md")) continue;
-    const raw = fs.readFileSync(path.join(articlesDir, name), "utf-8");
-    const { data } = matter(raw);
-    if (data.id) console.log(`  ${data.id}  (${name})`);
+  for (const a of store.loadArticles(articlesDir)) {
+    console.log(`  ${a.id}  (${a.relPath})`);
   }
   process.exit(1);
 }
 
+const body = stripCommentSections(loaded.content);
+
 // --- find quote ---
-const searchBody = anchor.stripInlineFormatting(article.body);
+const searchBody = anchor.stripInlineFormatting(body);
 const searchQuote = anchor.stripInlineFormatting(quote);
 const positions = anchor.findAllPositions(searchBody, searchQuote);
 
@@ -89,21 +74,7 @@ const prefixRaw = searchBody.slice(Math.max(0, chosen.index - 100), chosen.index
 const suffixRaw = searchBody.slice(chosen.index + searchQuote.length, chosen.index + searchQuote.length + 100).trim();
 
 // --- generate ID ---
-function nextAnnotationId() {
-  let max = 0;
-  if (fs.existsSync(commentsDir)) {
-    for (const name of fs.readdirSync(commentsDir)) {
-      const m = name.match(/^ann-(\d+)\.md$/);
-      if (m) {
-        const n = parseInt(m[1], 10);
-        if (n > max) max = n;
-      }
-    }
-  }
-  return `ann-${String(max + 1).padStart(3, "0")}`;
-}
-
-const newId = nextAnnotationId();
+const newId = store.nextAnnotationId(commentsDir);
 const now = new Date().toISOString().replace(/\.\d{3}Z$/, "+08:00");
 
 // --- build evolution ---
@@ -118,7 +89,7 @@ const yaml = [
   `type: annotation`,
   `target:`,
   `  article_id: ${articleId}`,
-  `  path: ${article.file}`,
+  `  path: ${loaded.relPath}`,
   `anchor:`,
   `  quote: ${JSON.stringify(quote)}`,
   `  prefix: ${JSON.stringify(prefixRaw)}`,
@@ -147,7 +118,7 @@ if (fs.existsSync(outPath)) {
 
 fs.writeFileSync(outPath, fileContent);
 console.log(`Created: comments/${newId}.md`);
-console.log(`  article: ${articleId} (${article.file})`);
+console.log(`  article: ${articleId} (${loaded.relPath})`);
 console.log(`  quote:   ${quote.slice(0, 60)}${quote.length > 60 ? "..." : ""}`);
 console.log(`  anchor:  line ${chosen.line}, occurrence ${positions.indexOf(chosen) + 1}`);
 if (evOf.length > 0) console.log(`  replies: ${evOf.join(", ")}`);

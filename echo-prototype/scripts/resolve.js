@@ -1,41 +1,18 @@
 #!/usr/bin/env node
-const fs = require("fs");
-const path = require("path");
-const matter = require("gray-matter");
 const { articlesDir, commentsDir, ensureDir } = require("./lib/infra/workspace");
+const store = require("./lib/infra/markdown-store");
 const { resolveAnchor } = require("./lib/domain/anchor");
+const { stripCommentSections } = require("./lib/usecases/strip-comments");
 
 ensureDir(articlesDir);
 ensureDir(commentsDir);
 
-function loadArticles() {
-  const articles = {};
-  for (const name of fs.readdirSync(articlesDir)) {
-    if (!name.endsWith(".md")) continue;
-    const raw = fs.readFileSync(path.join(articlesDir, name), "utf-8");
-    const { data } = matter(raw);
-    if (!data.id) continue;  // skip non-Echo files
-    let body = raw.replace(/^---[\s\S]*?---\n*/, "");
-    body = body.replace(/<!-- ECHO_COMMENTS_START -->[\s\S]*<!-- ECHO_COMMENTS_END -->\n*/g, "");
-    body = body.replace(/<!-- ECHO:COMMENT_LIST -->\n*/g, "");
-    articles[data.id] = { data, body, file: name };
-  }
-  return articles;
+const articles = {};
+for (const [id, a] of Object.entries(store.indexArticles(store.loadArticles(articlesDir)))) {
+  articles[id] = { data: a.data, body: stripCommentSections(a.content), file: a.relPath };
 }
 
-function loadComments() {
-  const comments = [];
-  for (const name of fs.readdirSync(commentsDir)) {
-    if (!name.endsWith(".md")) continue;
-    const raw = fs.readFileSync(path.join(commentsDir, name), "utf-8");
-    const { data } = matter(raw);
-    if (data.type === "annotation") comments.push({ ...data, _file: `comments/${name}` });
-  }
-  return comments;
-}
-
-const articles = loadArticles();
-const comments = loadComments();
+const comments = store.loadComments(commentsDir);
 
 let ok = 0;
 let broken = 0;
