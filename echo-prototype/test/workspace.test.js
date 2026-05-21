@@ -1,0 +1,62 @@
+const assert = require("node:assert/strict");
+const path = require("node:path");
+const test = require("node:test");
+
+const {
+  expandHome,
+  resolveWorkspacePath,
+} = require("../scripts/lib/workspace");
+
+const homeDir = "/home/example";
+const defaultWorkspace = path.join(homeDir, ".echo-workspace");
+
+test("expandHome expands only leading tilde path segments", () => {
+  assert.equal(expandHome("~/.echo-workspace", homeDir), "/home/example/.echo-workspace");
+  assert.equal(expandHome("/tmp/~/.echo-workspace", homeDir), "/tmp/~/.echo-workspace");
+});
+
+test("resolveWorkspacePath prefers ECHO_WORKSPACE over config", () => {
+  const resolved = resolveWorkspacePath({
+    env: { ECHO_WORKSPACE: "~/custom-echo" },
+    homeDir,
+    defaultWorkspace,
+    readConfig: () => JSON.stringify({ workspace: "~/from-config" }),
+  });
+
+  assert.equal(resolved, "/home/example/custom-echo");
+});
+
+test("resolveWorkspacePath falls back to echo.json workspace", () => {
+  const resolved = resolveWorkspacePath({
+    env: {},
+    homeDir,
+    defaultWorkspace,
+    readConfig: () => JSON.stringify({ workspace: "~/from-config" }),
+  });
+
+  assert.equal(resolved, "/home/example/from-config");
+});
+
+test("resolveWorkspacePath falls back to default workspace when config is missing", () => {
+  const resolved = resolveWorkspacePath({
+    env: {},
+    homeDir,
+    defaultWorkspace,
+    readConfig: () => {
+      throw new Error("missing");
+    },
+  });
+
+  assert.equal(resolved, defaultWorkspace);
+});
+
+test("resolveWorkspacePath ignores malformed config", () => {
+  const resolved = resolveWorkspacePath({
+    env: {},
+    homeDir,
+    defaultWorkspace,
+    readConfig: () => "{not json",
+  });
+
+  assert.equal(resolved, defaultWorkspace);
+});

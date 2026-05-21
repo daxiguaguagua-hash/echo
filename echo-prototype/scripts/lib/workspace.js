@@ -4,19 +4,34 @@ const os = require("os");
 
 const DEFAULT_WORKSPACE = path.join(os.homedir(), ".echo-workspace");
 
-function resolveWorkspace() {
-  if (process.env.ECHO_WORKSPACE) {
-    return process.env.ECHO_WORKSPACE.replace(/^~/, os.homedir());
+function expandHome(value, homeDir = os.homedir()) {
+  return String(value).replace(/^~(?=$|\/)/, homeDir);
+}
+
+function resolveWorkspacePath(opts = {}) {
+  const env = opts.env || process.env;
+  const homeDir = opts.homeDir || os.homedir();
+  const defaultWorkspace = opts.defaultWorkspace || path.join(homeDir, ".echo-workspace");
+  const readConfig = opts.readConfig || ((configPath) => fs.readFileSync(configPath, "utf-8"));
+
+  if (env.ECHO_WORKSPACE) {
+    return expandHome(env.ECHO_WORKSPACE, homeDir);
   }
-  const configPath = path.join(DEFAULT_WORKSPACE, "echo.json");
+
+  const configPath = path.join(defaultWorkspace, "echo.json");
   try {
-    const raw = fs.readFileSync(configPath, "utf-8");
+    const raw = readConfig(configPath);
     const config = JSON.parse(raw);
     if (config.workspace) {
-      return config.workspace.replace(/^~/, os.homedir());
+      return expandHome(config.workspace, homeDir);
     }
   } catch (_) {}
-  return DEFAULT_WORKSPACE;
+
+  return defaultWorkspace;
+}
+
+function resolveWorkspace() {
+  return resolveWorkspacePath();
 }
 
 function getConfig() {
@@ -38,6 +53,8 @@ const ws = resolveWorkspace();
 
 module.exports = {
   resolveWorkspace,
+  resolveWorkspacePath,
+  expandHome,
   getConfig,
   ensureDir,
   DEFAULT_WORKSPACE,

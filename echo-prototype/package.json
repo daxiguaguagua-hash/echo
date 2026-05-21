@@ -4,6 +4,8 @@
   "private": true,
   "description": "Echo knowledge forum — local-first, Markdown-based, with annotation chains",
   "scripts": {
+    "test": "node --test",
+    "verify": "npm run test && npm run validate && npm run resolve",
     "validate": "node scripts/validate.js",
     "index": "node scripts/index.js",
     "resolve": "node scripts/resolve.js",

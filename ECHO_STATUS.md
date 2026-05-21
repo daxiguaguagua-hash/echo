@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-20
+最后更新：2026-05-21
 
 ## 已完成
 
@@ -20,11 +20,22 @@
 - [x] **格式对齐** — convert.js 和 import-sessions.js 统一到 ECHO_FORMAT.md（5 项差异全部修复，管线通过）
 - [x] **共享格式模块** — `scripts/lib/echo-format.js`：JSON 样板 + 单序列化器。convert.js 132→77 行，import-sessions.js 255→185 行。详见 `issues/003-shared-article-renderer.md`
 - [x] **可配置 speaker 名** — `ECHO_USER_SPEAKER` / `ECHO_AI_SPEAKER` 环境变量，默认 `vincent` / `ai`。DEFAULT_SPEAKERS 可覆盖
+- [x] **工程边界改造说明** — 已整理 `ENGINEERING_BOUNDARIES.md`，明确测试、workspace、hook、legacy buffer、npm 发布边界
+- [x] **测试用例第一阶段** — 新增 `node:test`，覆盖 `echo-format`、`anchor`、`workspace` 路径解析边界；`npm run verify` 通过
 
 ## 进行中
 
+- [ ] **Claude Code 下一步执行指令** — 请优先阅读并执行 `ENGINEERING_BOUNDARIES.md`。不要从零重新设计，沿着当前已完成的第一阶段测试继续推进：
+  1. 保持 `npm run verify` 绿色。
+  2. 继续拆分 CLI/usecase/domain/infra 边界。
+  3. 优先把 `convert.js`、`annotate.js`、`validate.js` 中的纯逻辑抽到可测试模块。
+  4. hook 方向按文档改为 `echo-mcp hook capture/status`，不要继续扩大 `.sh` 脚本业务逻辑。
+  5. `~/.echo-buffer` 只作为 legacy 迁移来源，不再作为新写入路径。
+  6. 暂时不要全量迁移 TypeScript，也不要先做大规模 ESM 迁移。
+
 ## 待做
 - [ ] **hook 行为验证** — SessionStart 通知 + 捕获开关需新会话测试，当前会话无法验证。详见 `issues/002-hook-verification.md`
+- [ ] **工程边界落地** — 按 `ENGINEERING_BOUNDARIES.md` 继续拆分 CLI/usecase/domain/infra，统一 workspace/config 与 hook 入口
 
 ### 核心功能
 - [ ] **MCP server** — `search_articles`、`get_article`、`get_article_context`、`list_tags`、`list_recent`
@@ -42,6 +53,7 @@
 ### 工程
 - [ ] **Git 仓库初始化** — `git init` + `.gitignore`（排除 `.echo-buffer/`、`node_modules/`）
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
+- [ ] **npm CLI 化** — 增加 `echo-mcp init`、`hook capture/status/install/doctor`、`migrate legacy-buffer`
 
 ## 后期改进
 
