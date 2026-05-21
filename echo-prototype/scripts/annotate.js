@@ -4,6 +4,7 @@ const path = require("path");
 const matter = require("gray-matter");
 
 const { articlesDir, commentsDir, ensureDir } = require("./lib/infra/workspace");
+const anchor = require("./lib/domain/anchor");
 
 ensureDir(articlesDir);
 
@@ -64,29 +65,10 @@ if (!article) {
   process.exit(1);
 }
 
-// --- strip formatting ---
-function stripInline(text) {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, "$1")
-    .replace(/__([^_]+)__/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/_([^_]+)_/g, "$1")
-    .replace(/~~(.+?)~~/g, "$1");
-}
-
 // --- find quote ---
-const searchBody = stripInline(article.body);
-const searchQuote = stripInline(quote);
-
-const positions = [];
-let idx = 0;
-while (true) {
-  idx = searchBody.indexOf(searchQuote, idx);
-  if (idx === -1) break;
-  const line = searchBody.slice(0, idx).split("\n").length;
-  positions.push({ index: idx, line });
-  idx += searchQuote.length;
-}
+const searchBody = anchor.stripInlineFormatting(article.body);
+const searchQuote = anchor.stripInlineFormatting(quote);
+const positions = anchor.findAllPositions(searchBody, searchQuote);
 
 if (positions.length === 0) {
   console.log(`Error: quote not found in article "${articleId}".`);

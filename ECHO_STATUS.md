@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-21
+最后更新：2026-05-21 (最小拆分完成)
 
 ## 已完成
 
@@ -27,14 +27,14 @@
 - [x] **Hook capture Node 化** — `lib/hooks/capture.js`：替代 188 行 bash 脚本，stdin → UserPromptSubmit/Stop/StopFailure 三事件处理，AUQ 检测，capture 开关
 - [x] **Hook status Node 化** — `lib/hooks/status.js`：替代 94 行 bash+python 脚本，解析 ECHO_STATUS.md → SessionStart additionalContext + systemMessage
 - [x] **配置模块** — `lib/infra/config.js`：`isCaptureEnabled()` 统一 capture 开关逻辑，`getSpeakers()` 统一 speaker 配置
+- [x] **最小拆分 CLI/usecase/domain/infra** — annotate.js 去重（复用 anchor.js），validate.js 校验规则 → `lib/domain/validation.js`，convert.js 解析逻辑 → `lib/usecases/convert-buffer.js`。Codex review 通过。23 测试全绿，管线通过。
+- [x] **hook 行为验证** — SessionStart 通知在本会话确认正常工作（`SessionStart:startup hook success`），issues/002-hook-verification.md 已过时
 
 ## 进行中
 
-- [ ] **继续拆分 CLI/usecase/domain/infra** — 骨架已建好，`convert.js`、`annotate.js`、`validate.js` 中的纯逻辑抽到 `lib/domain/` 和 `lib/usecases/`
+- [ ] **工程边界落地** — 按 `ENGINEERING_BOUNDARIES.md` 继续，下一步：`readMD()` 抽到 `lib/infra/markdown-store.js`，统一 workspace/config 与 hook 入口
 
 ## 待做
-- [ ] **hook 行为验证** — SessionStart 通知 + 捕获开关需新会话测试，当前会话无法验证。详见 `issues/002-hook-verification.md`
-- [ ] **工程边界落地** — 按 `ENGINEERING_BOUNDARIES.md` 继续拆分 CLI/usecase/domain/infra，统一 workspace/config 与 hook 入口
 
 ### 核心功能
 - [ ] **MCP server** — `search_articles`、`get_article`、`get_article_context`、`list_tags`、`list_recent`
