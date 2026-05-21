@@ -8,7 +8,7 @@ const {
   inferTitle,
   inferSummary,
   extractSessionDate,
-} = require("../scripts/lib/echo-format");
+} = require("../scripts/lib/domain/echo-format");
 
 const speakers = {
   human: { id: "vincent", role: "human" },

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 const fs = require("fs");
 const path = require("path");
-const { bufferDir, articlesDir, ensureDir } = require("./lib/workspace");
-const ef = require("./lib/echo-format");
+const { bufferDir, articlesDir, ensureDir } = require("./lib/infra/workspace");
+const ef = require("./lib/domain/echo-format");
 
 ensureDir(articlesDir);
 ensureDir(bufferDir);

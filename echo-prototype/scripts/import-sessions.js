@@ -2,8 +2,8 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const { articlesDir, ensureDir } = require("./lib/workspace");
-const ef = require("./lib/echo-format");
+const { articlesDir, ensureDir } = require("./lib/infra/workspace");
+const ef = require("./lib/domain/echo-format");
 
 ensureDir(articlesDir);
 

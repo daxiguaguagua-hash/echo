@@ -5,7 +5,7 @@ const {
   stripInlineFormatting,
   findAllPositions,
   resolveAnchor,
-} = require("../scripts/lib/anchor");
+} = require("../scripts/lib/domain/anchor");
 
 test("stripInlineFormatting keeps text while removing common markdown markers", () => {
   assert.equal(

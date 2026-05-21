@@ -2,8 +2,8 @@
 const fs = require("fs");
 const path = require("path");
 const matter = require("gray-matter");
-const { articlesDir, commentsDir, ensureDir } = require("./lib/workspace");
-const { resolveAnchor } = require("./lib/anchor");
+const { articlesDir, commentsDir, ensureDir } = require("./lib/infra/workspace");
+const { resolveAnchor } = require("./lib/domain/anchor");
 
 ensureDir(articlesDir);
 ensureDir(commentsDir);

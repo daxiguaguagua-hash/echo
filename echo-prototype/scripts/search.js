@@ -2,7 +2,7 @@
 const fs = require("fs");
 const path = require("path");
 const matter = require("gray-matter");
-const { articlesDir, ensureDir } = require("./lib/workspace");
+const { articlesDir, ensureDir } = require("./lib/infra/workspace");
 
 ensureDir(articlesDir);
 

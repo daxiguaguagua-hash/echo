@@ -5,7 +5,7 @@ const test = require("node:test");
 const {
   expandHome,
   resolveWorkspacePath,
-} = require("../scripts/lib/workspace");
+} = require("../scripts/lib/infra/workspace");
 
 const homeDir = "/home/example";
 const defaultWorkspace = path.join(homeDir, ".echo-workspace");

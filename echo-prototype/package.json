@@ -15,6 +15,9 @@
     "search": "node scripts/search.js",
     "all": "npm run convert && npm run validate && npm run index && npm run resolve"
   },
+  "bin": {
+    "echo-mcp": "./bin/echo-mcp.js"
+  },
   "dependencies": {
     "gray-matter": "^4.0.3"
   }
