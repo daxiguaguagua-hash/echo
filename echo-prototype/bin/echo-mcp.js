@@ -6,16 +6,27 @@ const USAGE = `echo-mcp — Echo knowledge forum CLI
 Usage:
   echo-mcp hook capture          Read hook JSON from stdin, write to session-buffer
   echo-mcp hook status           Generate SessionStart status output
-  echo-mcp hook install [--write]  Print or apply Claude Code hook config
+  echo-mcp hook install <provider> [--write]  Print or apply hook config
   echo-mcp hook doctor           Check hook health
   echo-mcp init                  Create workspace, write echo.json
   echo-mcp doctor                Check overall workspace health
   echo-mcp migrate legacy-buffer  Migrate ~/.echo-buffer to workspace
-  echo-mcp convert               Run buffer → article conversion
+  echo-mcp convert               Run buffer -> article conversion
   echo-mcp validate              Validate all articles and comments
   echo-mcp resolve               Resolve all annotation anchors
   echo-mcp search                Full-text search
 `;
+
+function printDoctorResults(results) {
+  let hasError = false;
+  for (const r of results) {
+    const icon = r.status === "ok" ? "  OK" : r.status === "warn" ? "WARN" : "ERR ";
+    console.log(`  ${icon}  ${r.name}: ${r.message}`);
+    if (r.status === "error") hasError = true;
+  }
+  console.log(`\n${results.length} checks.`);
+  if (hasError) process.exit(1);
+}
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -29,17 +40,82 @@ switch (cmd) {
     const sub = args[1];
     if (sub === "capture") require("../scripts/lib/hooks/capture");
     else if (sub === "status") require("../scripts/lib/hooks/status");
-    else if (sub === "install") console.log("hook install — not yet implemented");
-    else if (sub === "doctor") console.log("hook doctor — not yet implemented");
+    else if (sub === "install") {
+      const provider = args[2];
+      if (!provider || provider.startsWith("-")) {
+        console.error("Error: provider required. Usage: echo-mcp hook install claude [--write]");
+        process.exit(1);
+      }
+      if (provider !== "claude") {
+        console.error(`Error: unknown provider '${provider}'. Only 'claude' is supported.`);
+        process.exit(1);
+      }
+      const write = args.includes("--write");
+      const { installClaudeHook } = require("../scripts/lib/usecases/install-claude-hook");
+
+      const result = installClaudeHook({ write });
+
+      if (result.legacy.length > 0) {
+        console.log("Legacy .sh hooks detected:");
+        for (const l of result.legacy) {
+          console.log(`  ${l.event}: ${l.command}`);
+        }
+        console.log("");
+      }
+
+      if (result.toAdd.length > 0) {
+        console.log(write ? "Installed:" : "Will install:");
+        for (const a of result.toAdd) {
+          console.log(`  ${a.event}: ${a.command}`);
+        }
+      }
+
+      if (result.alreadyInstalled.length > 0) {
+        console.log("Already installed:");
+        for (const a of result.alreadyInstalled) {
+          console.log(`  ${a.event}: ${a.command}`);
+        }
+      }
+
+      if (result.toAdd.length === 0) {
+        console.log("All hooks already up to date.");
+      }
+
+      if (!write) {
+        console.log("\nRun with --write to apply this configuration.");
+      } else {
+        console.log("\nHook configuration written to ~/.claude/settings.json");
+      }
+    }
+    else if (sub === "doctor") {
+      const { runDoctor } = require("../scripts/lib/usecases/run-doctor");
+      const results = runDoctor({ hookOnly: true });
+      console.log("Hook health check:\n");
+      printDoctorResults(results);
+    }
     else console.log(USAGE);
     break;
   }
-  case "init":
-    console.log("init — not yet implemented");
+  case "init": {
+    const { initWorkspace } = require("../scripts/lib/usecases/init-workspace");
+    const result = initWorkspace();
+    console.log(`Workspace: ${result.workspace}`);
+    if (result.created.length > 0) {
+      console.log(`Created: ${result.created.join(", ")}`);
+    }
+    if (result.skipped.length > 0) {
+      console.log(`Skipped (exists): ${result.skipped.join(", ")}`);
+    }
+    console.log(`echo.json: ${result.configAction}`);
     break;
-  case "doctor":
-    console.log("doctor — not yet implemented");
+  }
+  case "doctor": {
+    const { runDoctor } = require("../scripts/lib/usecases/run-doctor");
+    const results = runDoctor();
+    console.log("Echo health check:\n");
+    printDoctorResults(results);
     break;
+  }
   case "migrate":
     console.log("migrate — not yet implemented");
     break;

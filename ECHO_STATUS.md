@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-21 (Codex review 通过，准备 commit)
+最后更新：2026-05-21 (CLI 命令实现完成，60 测试全绿)
 
 ## 已完成
 
@@ -31,10 +31,11 @@
 - [x] **hook 行为验证** — SessionStart 通知在本会话确认正常工作（`SessionStart:startup hook success`），issues/002-hook-verification.md 已过时
 - [x] **markdown-store 抽取** — `lib/infra/markdown-store.js`：7 个导出（listMarkdownFiles、readMarkdownFile、loadArticles、loadArticleById、loadComments、indexArticles、nextAnnotationId）；`lib/usecases/strip-comments.js`。5 个 CLI 脚本净减 116 行重复代码。Codex 两轮 review 发现并修复 4 个 bug（ID 覆盖、路径丢失、错误吞咽、扫描不一致）。
 - [x] **markdown-store 测试** — `test/markdown-store.test.js`：15 个用例，覆盖 listMarkdownFiles、readMarkdownFile、loadArticles (strict/non-strict)、loadArticleById、loadComments、indexArticles、nextAnnotationId、stripCommentSections。全部用临时目录不碰真实数据。Codex 编写初版，修复了两处测试干扰问题（gray-matter/js-yaml 同进程内同 fixture 二次抛异常行为不一致）。38 测试全绿，管线通过。
+- [x] **CLI 命令实现** — `echo-mcp init`、`echo-mcp hook install claude [--write]`、`echo-mcp doctor`、`echo-mcp hook doctor`。三个 usecase（init-workspace、install-claude-hook、run-doctor）+ 19 新增测试。Codex 两轮 review：设计审查 + 测试覆盖率审查。60 测试全绿，管线通过。
 
 ## 进行中
 
-- [ ] **工程边界落地** — 按 `ENGINEERING_BOUNDARIES.md` 继续，下一步：`echo-mcp init` / `echo-mcp hook install` / `echo-mcp doctor` 命令实现
+- [ ] **MCP server** — `search_articles`、`get_article`、`get_article_context`、`list_tags`、`list_recent`
 
 ## 待做
 
@@ -54,7 +55,7 @@
 ### 工程
 - [ ] **Git 仓库初始化** — `git init` + `.gitignore`（排除 `.echo-buffer/`、`node_modules/`）
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
-- [ ] **npm CLI 化** — 增加 `echo-mcp init`、`hook capture/status/install/doctor`、`migrate legacy-buffer`
+- [x] **npm CLI 化** — `echo-mcp init`、`hook capture/status/install/doctor` 已实现，`migrate legacy-buffer` 待实现
 
 ## 后期改进
 
