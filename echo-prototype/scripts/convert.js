@@ -2,6 +2,7 @@
 const fs = require("fs");
 const path = require("path");
 const { bufferDir, articlesDir, ensureDir } = require("./lib/workspace");
+const ef = require("./lib/echo-format");
 
 ensureDir(articlesDir);
 ensureDir(bufferDir);
@@ -30,69 +31,18 @@ function parseBuffer(filePath) {
   return { raw, turns };
 }
 
-function extractParticipants(turns) {
-  const speakers = new Map();
-  for (const t of turns) {
-    if (!speakers.has(t.speaker)) {
-      speakers.set(t.speaker, {
-        id: t.speaker,
-        role: t.speaker === "vincent" ? "human" : "ai",
-      });
-    }
-    // Infer model from AI heading (e.g. "## ai 的回复（Claude）" or "## codex 的审阅")
-    const p = speakers.get(t.speaker);
-    if (t.speaker !== "vincent" && !p.model) {
-      const m = t.content.match(/^## (?:ai|codex|claude) 的(?:回复|审阅|验收)(?:（(\w[\w.-]*?)）)?/m);
-      if (m && m[1]) p.model = m[1];
-      else if (t.speaker === "claude") p.model = "claude-opus-4-7";
-      else if (t.speaker === "codex") p.model = "gpt-5.1-codex-max";
-    }
-  }
-  return [...speakers.values()];
-}
-
-function inferTitle(turns) {
-  const firstUser = turns.find((t) => t.speaker === "vincent");
-  if (!firstUser) return "未命名对话";
-  const text = firstUser.content.replace(/^我：/, "").trim();
-  const cleaned = text.replace(/[""]/g, "").slice(0, 40);
-  return cleaned.length < text.length ? cleaned + "..." : cleaned;
-}
-
 function buildArticle(bufferFile, turns) {
-  const date = path.basename(bufferFile, ".md");
-  const dateStr = date.replace("session-", "");
+  const sessionName = path.basename(bufferFile, ".md");
+  const dateStr = ef.extractSessionDate(sessionName);
   const id = `session-${dateStr}`;
 
-  const bodyLines = [];
-  for (const t of turns) {
-    const meta = [`<!-- turn: ${t.id} speaker=${t.speaker}`];
-    if (t.reply_to) meta.push(`reply_to=${t.reply_to}`);
-    meta.push("-->");
-    bodyLines.push(meta.join(" "), t.content.trimEnd());
-  }
+  const article = ef.createArticle({
+    id,
+    created_at: `${dateStr}T00:00:00+08:00`,
+    turns,
+  });
 
-  const article = [
-    "---",
-    `id: ${id}`,
-    `title: "${inferTitle(turns)}"`,
-    `created_at: ${dateStr}T00:00:00+08:00`,
-    `updated_at: ${new Date().toISOString().replace(/\.\d{3}Z$/, "+08:00")}`,
-    "tags: []",
-    `summary: "${dateStr} 对话记录"`,
-    "participants:",
-    ...extractParticipants(turns).map(
-      (p) => `  - id: ${p.id}\n    role: ${p.role}${p.model ? `\n    model: ${p.model}` : ""}`
-    ),
-    "---",
-    "",
-    bodyLines.join("\n\n"),
-    "",
-    "<!-- ECHO:COMMENT_LIST -->",
-    "",
-  ].join("\n");
-
-  return { id, article, title: inferTitle(turns), turnCount: turns.length };
+  return { id, article: ef.toMarkdown(article), title: article.title, turnCount: article.turns.length };
 }
 
 // Main

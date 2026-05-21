@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { articlesDir, ensureDir } = require("./lib/workspace");
+const ef = require("./lib/echo-format");
 
 ensureDir(articlesDir);
 
@@ -63,17 +64,9 @@ function cleanAssistantBlocks(blocks) {
   return merged;
 }
 
-function inferTitle(text) {
-  if (!text) return "未命名对话";
-  const cleaned = text.replace(/[""]/g, "").slice(0, 60).replace(/\n/g, " ");
-  return cleaned.length < text.length ? cleaned + "..." : cleaned;
-}
-
 function formatDate(isoStr) {
   return isoStr.slice(0, 10);
 }
-
-// ---- main logic ----
 
 function parseSession(filePath) {
   const raw = fs.readFileSync(filePath, "utf-8");
@@ -144,39 +137,22 @@ function parseSession(filePath) {
 function buildArticle(sessionId, turns, models, firstTs) {
   const date = firstTs ? formatDate(firstTs) : "unknown-date";
   const id = `session-${sessionId.slice(0, 8)}`;
-
-  const firstUser = turns.find((t) => t.speaker === "vincent");
-  const title = inferTitle(firstUser?.content || "");
-
-  const userTurns = turns.filter((t) => t.speaker === "vincent").length;
-  const aiTurns = turns.filter((t) => t.speaker === "ai").length;
-
-  const bodyLines = [];
-  for (const t of turns) {
-    bodyLines.push(`<!-- turn: ${t.speaker} -->`, t.content.trimEnd());
-  }
-
   const dateStr = `${date}T00:00:00+08:00`;
 
-  const article = [
-    "---",
-    `id: ${id}`,
-    `title: "${title}"`,
-    `created_at: ${dateStr}`,
-    `updated_at: ${new Date().toISOString().replace(/\.\d{3}Z$/, "+08:00")}`,
-    `source_session: ${sessionId}`,
-    "tags: []",
-    `summary: "${date} 对话记录 (${userTurns} 条发言, ${aiTurns} 条回复)"`,
-    ...(models.length > 0 ? [`ai_models: [${models.join(", ")}]`] : []),
-    "---",
-    "",
-    bodyLines.join("\n\n"),
-    "",
-    "<!-- ECHO:COMMENT_LIST -->",
-    "",
-  ].join("\n");
+  const speakers = {
+    human: { id: "vincent", role: "human" },
+    ai: { id: "ai", role: "ai", model: models[0] || "unknown" },
+  };
 
-  return { id, article, title, turnCount: turns.length };
+  const article = ef.createArticle({
+    id,
+    created_at: dateStr,
+    source_session: sessionId,
+    turns,
+    speakers,
+  });
+
+  return { id, article: ef.toMarkdown(article), title: article.title, turnCount: article.turns.length };
 }
 
 // ---- main ----
