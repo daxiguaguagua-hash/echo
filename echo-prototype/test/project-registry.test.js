@@ -192,3 +192,56 @@ test("registerProject resolves relative paths to absolute", () => {
   fs.rmSync(echoHome, { recursive: true, force: true });
   fs.rmSync(projectPath, { recursive: true, force: true });
 });
+
+test("registerProject throws on same-basename collision with different paths", () => {
+  const echoHome = tempDir();
+  const dirA = tempDir() + path.sep + "my-app";
+  const dirB = tempDir() + path.sep + "my-app";
+  fs.mkdirSync(dirA, { recursive: true });
+  fs.mkdirSync(dirB, { recursive: true });
+
+  registerProject(dirA, { echoHome });
+
+  assert.throws(
+    () => registerProject(dirB, { echoHome }),
+    /already registered/i
+  );
+
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(path.dirname(dirA), { recursive: true, force: true });
+});
+
+test("loadRegistry throws on corrupt JSON and backs up the bad file", () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(echoHome, { recursive: true });
+  fs.writeFileSync(path.join(echoHome, "registry.json"), "{not json!!");
+
+  assert.throws(
+    () => loadRegistry(echoHome),
+    /corrupt/
+  );
+
+  const backups = fs.readdirSync(echoHome).filter(f => f.startsWith("registry.json.corrupt-"));
+  assert.equal(backups.length, 1);
+  assert.ok(!fs.existsSync(path.join(echoHome, "registry.json")));
+
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("findProjectForPath returns longest-prefix match for nested projects", () => {
+  const echoHome = tempDir();
+  const projectA = tempDir();
+  const projectAB = path.join(projectA, "sub");
+  fs.mkdirSync(projectA, { recursive: true });
+  fs.mkdirSync(projectAB, { recursive: true });
+
+  registerProject(projectA, { echoHome });
+  registerProject(projectAB, { echoHome });
+
+  const found = findProjectForPath(path.join(projectAB, "lib", "deep"), { echoHome });
+  assert.notEqual(found, null);
+  assert.equal(found.projectRoot, path.resolve(projectAB));
+
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(projectA, { recursive: true, force: true });
+});

@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
+const { resolveEchoHomePath } = require("../infra/workspace");
 const { isCaptureEnabled } = require("../infra/config");
+const { findProjectForPath } = require("../usecases/project-registry");
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -48,12 +50,17 @@ async function main() {
   const captureStatus = captureActive ? "开启中" : "已暂停";
   const captureHint = captureActive ? "echo capture off 暂停" : "echo capture on 开启";
 
-  let systemMsg = `Echo: ${done} done | 自动记录 ${captureStatus} | ${captureHint}`;
+  const echoHome = resolveEchoHomePath();
+  const project = findProjectForPath(cwd, { echoHome });
+  const projectLabel = project ? ` (${project.projectId})` : "";
+
+  let systemMsg = `Echo${projectLabel}: ${done} done | 自动记录 ${captureStatus} | ${captureHint}`;
   if (inProgress.length > 0) {
     systemMsg += " | In progress: " + inProgress.slice(0, 2).join(", ");
   }
 
   const ctx = [`Echo 项目状态：${done} 项已完成`];
+  if (project) ctx.push(`当前项目：${project.projectId} (${project.dataRoot})`);
   ctx.push("请使用 Skill 工具调用 gstack 了解项目全貌。");
   if (inProgress.length > 0) {
     ctx.push("");

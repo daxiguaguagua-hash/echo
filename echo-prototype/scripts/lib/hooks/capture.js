@@ -1,12 +1,11 @@
 const fs = require("fs");
 const path = require("path");
-const { bufferDir, ensureDir } = require("../infra/workspace");
+const {
+  resolveEchoHomePath,
+  ensureDir,
+} = require("../infra/workspace");
 const { isCaptureEnabled, getSpeakers } = require("../infra/config");
-
-const PENDING_DIR = path.join(bufferDir, "pending");
-const SESSION_MAP = path.join(bufferDir, "session-map.txt");
-const AUQ_COUNTER = path.join(bufferDir, "auq-counter.txt");
-const FAILURES_LOG = path.join(bufferDir, "failures.jsonl");
+const { findProjectForPath } = require("../usecases/project-registry");
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -25,20 +24,34 @@ function getLocalDate() {
   return local.toISOString().slice(0, 10);
 }
 
-function getSessionFile(sid) {
-  ensureDir(bufferDir);
-  if (fs.existsSync(SESSION_MAP)) {
-    const map = fs.readFileSync(SESSION_MAP, "utf-8");
+function resolveBufferRoot(data) {
+  const echoHome = resolveEchoHomePath();
+  const cwd = data.cwd || process.cwd();
+
+  const project = findProjectForPath(cwd, { echoHome });
+  if (project) {
+    return { bufferRoot: project.dataRoot, project };
+  }
+  return { bufferRoot: echoHome, project: null };
+}
+
+function getSessionFile(sid, bufferRoot) {
+  const mapPath = path.join(bufferRoot, "session-map.txt");
+  ensureDir(bufferRoot);
+
+  if (fs.existsSync(mapPath)) {
+    const map = fs.readFileSync(mapPath, "utf-8");
     for (const line of map.split("\n")) {
       const [k, v] = line.split("=");
       if (k === sid && v) return v;
     }
   }
+
   const base = `session-${getLocalDate()}`;
   let v = 1;
-  while (fs.existsSync(path.join(bufferDir, `${base}-v${v}.md`))) v++;
-  const file = path.join(bufferDir, `${base}-v${v}.md`);
-  fs.appendFileSync(SESSION_MAP, `${sid}=${file}\n`);
+  while (fs.existsSync(path.join(bufferRoot, `${base}-v${v}.md`))) v++;
+  const file = path.join(bufferRoot, `${base}-v${v}.md`);
+  fs.appendFileSync(mapPath, `${sid}=${file}\n`);
   return file;
 }
 
@@ -94,9 +107,10 @@ function extractAuqBlock(hookData, lastCount) {
   return { block, newCount };
 }
 
-async function handleUserPromptSubmit(data) {
-  ensureDir(PENDING_DIR);
-  const pendingFile = path.join(PENDING_DIR, `${data.session_id || "unknown"}.json`);
+async function handleUserPromptSubmit(data, bufferRoot) {
+  const pendingDir = path.join(bufferRoot, "session-buffer", "pending");
+  ensureDir(pendingDir);
+  const pendingFile = path.join(pendingDir, `${data.session_id || "unknown"}.json`);
   fs.writeFileSync(pendingFile, JSON.stringify({
     prompt: data.prompt || "",
     session_id: data.session_id || "",
@@ -107,9 +121,11 @@ async function handleUserPromptSubmit(data) {
   console.log("pending saved");
 }
 
-async function handleStop(data) {
+async function handleStop(data, bufferRoot) {
+  const bufDir = path.join(bufferRoot, "session-buffer");
+  const pendingDir = path.join(bufDir, "pending");
   const sid = data.session_id || "unknown";
-  const pendingFile = path.join(PENDING_DIR, `${sid}.json`);
+  const pendingFile = path.join(pendingDir, `${sid}.json`);
 
   if (!fs.existsSync(pendingFile)) {
     console.log("(no pending prompt — skipping)");
@@ -123,20 +139,21 @@ async function handleStop(data) {
     return;
   }
 
-  const sessionFile = getSessionFile(sid);
+  const sessionFile = getSessionFile(sid, bufDir);
 
   let turnNum = 1;
   if (fs.existsSync(sessionFile)) {
     turnNum = (fs.readFileSync(sessionFile, "utf-8").match(/<!-- turn:/g) || []).length + 1;
   }
 
+  const auqCounterPath = path.join(bufDir, "auq-counter.txt");
   let lastCount = 0;
-  if (fs.existsSync(AUQ_COUNTER)) {
-    lastCount = parseInt(fs.readFileSync(AUQ_COUNTER, "utf-8").trim() || "0", 10);
+  if (fs.existsSync(auqCounterPath)) {
+    lastCount = parseInt(fs.readFileSync(auqCounterPath, "utf-8").trim() || "0", 10);
   }
   const { block: auqBlock, newCount } = extractAuqBlock(data, lastCount);
   if (newCount > lastCount) {
-    fs.writeFileSync(AUQ_COUNTER, String(newCount));
+    fs.writeFileSync(auqCounterPath, String(newCount));
   }
 
   const speakers = getSpeakers();
@@ -157,9 +174,10 @@ ${aiText}
   console.log(`turn t${String(turnNum).padStart(3, "0")}-t${String(turnNum + 1).padStart(3, "0")} saved`);
 }
 
-async function handleStopFailure(data) {
-  ensureDir(bufferDir);
-  fs.appendFileSync(FAILURES_LOG, JSON.stringify({
+async function handleStopFailure(data, bufferRoot) {
+  const bufDir = path.join(bufferRoot, "session-buffer");
+  ensureDir(bufDir);
+  fs.appendFileSync(path.join(bufDir, "failures.jsonl"), JSON.stringify({
     ts: data.timestamp || "",
     session_id: data.session_id || "",
     error: data.error || "",
@@ -172,8 +190,6 @@ async function main() {
   }
 
   const raw = await readStdin();
-  ensureDir(bufferDir);
-  fs.writeFileSync(path.join(bufferDir, "debug-last-input.json"), raw);
 
   let data;
   try {
@@ -182,10 +198,13 @@ async function main() {
     process.exit(0);
   }
 
+  const { bufferRoot } = resolveBufferRoot(data);
+  ensureDir(path.join(bufferRoot, "session-buffer"));
+
   const event = data.hook_event_name || "";
-  if (event === "UserPromptSubmit") await handleUserPromptSubmit(data);
-  else if (event === "Stop") await handleStop(data);
-  else if (event === "StopFailure") await handleStopFailure(data);
+  if (event === "UserPromptSubmit") await handleUserPromptSubmit(data, bufferRoot);
+  else if (event === "Stop") await handleStop(data, bufferRoot);
+  else if (event === "StopFailure") await handleStopFailure(data, bufferRoot);
 
   process.exit(0);
 }
