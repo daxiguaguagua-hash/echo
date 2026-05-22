@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-21 (CLI 命令实现完成，60 测试全绿)
+最后更新：2026-05-22 (Project registry 第一阶段：registry usecase + init project + doctor 双层检查)
 
 ## 已完成
 
@@ -32,10 +32,14 @@
 - [x] **markdown-store 抽取** — `lib/infra/markdown-store.js`：7 个导出（listMarkdownFiles、readMarkdownFile、loadArticles、loadArticleById、loadComments、indexArticles、nextAnnotationId）；`lib/usecases/strip-comments.js`。5 个 CLI 脚本净减 116 行重复代码。Codex 两轮 review 发现并修复 4 个 bug（ID 覆盖、路径丢失、错误吞咽、扫描不一致）。
 - [x] **markdown-store 测试** — `test/markdown-store.test.js`：15 个用例，覆盖 listMarkdownFiles、readMarkdownFile、loadArticles (strict/non-strict)、loadArticleById、loadComments、indexArticles、nextAnnotationId、stripCommentSections。全部用临时目录不碰真实数据。Codex 编写初版，修复了两处测试干扰问题（gray-matter/js-yaml 同进程内同 fixture 二次抛异常行为不一致）。38 测试全绿，管线通过。
 - [x] **CLI 命令实现** — `echo-mcp init`、`echo-mcp hook install claude [--write]`、`echo-mcp doctor`、`echo-mcp hook doctor`。三个 usecase（init-workspace、install-claude-hook、run-doctor）+ 19 新增测试。Codex 两轮 review：设计审查 + 测试覆盖率审查。60 测试全绿，管线通过。
+- [x] **空文件夹启动指南** — 新增 `USAGE_GUIDE_V2.md`，说明源码目录 vs 工作区、开发期 `npm link`、自定义 workspace 默认指针、hook 安装、首条数据捕获、管线、搜索和批注闭环。`npm run all` 已通过。
+- [x] **项目目录模型边界** — 根据 USAGE_GUIDE_V2 的”人类用户备注”，在 `ENGINEERING_BOUNDARIES.md` 明确两层模型：用户工程目录（如 `~/echo-notes`）与全局 Echo home（`~/.echo-workspace`）分离；新增 `resolveEchoHomePath()`、`projectIdFromPath()`、`resolveProjectDataRoot()` 及 workspace 测试边界。
+- [x] **Project registry 第一阶段** — `lib/usecases/project-registry.js`：`loadRegistry`、`saveRegistry`、`registerProject`（幂等）、`findProjectForPath`（支持子路径匹配）。`echo-mcp init project [--path <dir>]` 命令。`run-doctor` 扩展 Echo home、registry.json、当前项目注册、项目数据目录检查。12 新增测试，76 测试全绿，管线通过。
 
 ## 进行中
 
 - [ ] **MCP server** — `search_articles`、`get_article`、`get_article_context`、`list_tags`、`list_recent`
+- [ ] **hook 项目路由** — hook capture/status 根据当前 cwd 或 transcript 所属项目，把数据写入对应 `~/.echo-workspace/projects/<project-id>/session-buffer/`
 
 ## 待做
 
@@ -55,6 +59,10 @@
 ### 工程
 - [ ] **Git 仓库初始化** — `git init` + `.gitignore`（排除 `.echo-buffer/`、`node_modules/`）
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
+- [x] **Project registry** — `registry.json` schema、登记/读取 usecase、重复登记幂等和路径缺失测试
+- [x] **init project 命令** — 新增 `echo-mcp init project [--path <dir>]`：全局 `~/.echo-workspace/registry.json` 登记项目，并创建 `projects/<project-id>/` 数据目录（session-buffer/、articles/、comments/、index/）
+- [ ] **hook 项目路由** — hook capture/status 根据当前 cwd 或 transcript 所属项目，把数据写入对应 `~/.echo-workspace/projects/<project-id>/session-buffer/`
+- [x] **doctor 双层检查** — `echo-mcp doctor` 同时检查 Echo home、registry.json、当前项目注册、项目数据目录，避免 `~/echo-notes/` “没有任何改变”这类困惑
 - [x] **npm CLI 化** — `echo-mcp init`、`hook capture/status/install/doctor` 已实现，`migrate legacy-buffer` 待实现
 
 ## 后期改进
@@ -65,7 +73,7 @@
 - [ ] **turn 编号优化** — 改为只统计当前 session 文件的 turn 数
 - [ ] **跨平台** — `paste-to-md.sh` 的 Windows/Linux 版本
 - [ ] **npm 发包** — `npx echo-mcp` 一行启动
-- [ ] **workspace.js: resolveWorkspace() 双路径问题** — 配置文件始终从 `DEFAULT_WORKSPACE` 读取，与 `getConfig()` 读的路径不一致。需要统一或加文档说明
+- [ ] **workspace.js: legacy resolveWorkspace() 双路径问题** — 当前仍兼容单 workspace 模型；下一阶段应统一到 Echo home + project registry，并保留 `ECHO_WORKSPACE` 作为 legacy/调试覆盖
 - [ ] **echo-capture.sh: 单引号注入风险** — `$SESSION_FILE` 等变量直接插入 Python 单引号字符串，路径含单引号会语法错误。应通过 `json.dumps` 转义
 - [ ] **echo-capture.sh: 全量加载 transcript** — `entries = [json.loads(line) for line in f]` 对长会话有内存压力。应只扫描 `last_count` 之后的新条目
 - [ ] **测试临时目录未清理** — `markdown-store.test.js` 的 `tempDir()` 不删 `/tmp` 下的 fixture 目录。应在 test helper 重构时加 `t.after(() => fs.rmSync(dir, { recursive: true, force: true }))`

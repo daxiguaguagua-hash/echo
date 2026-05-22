@@ -2,6 +2,8 @@
 
 将 Claude Code 会话自动转为可搜索、可标注的 Markdown 知识库。
 
+新手请先读 USAGE_GUIDE.md（从零初始化 → 接入捕获 → 生成文章 → 搜索批注 → 排障）
+
 ## 安装
 
 ```bash

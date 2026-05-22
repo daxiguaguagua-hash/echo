@@ -8,10 +8,33 @@ function expandHome(value, homeDir = os.homedir()) {
   return String(value).replace(/^~(?=$|\/)/, homeDir);
 }
 
+function resolveEchoHomePath(opts = {}) {
+  const env = opts.env || process.env;
+  const homeDir = opts.homeDir || os.homedir();
+  if (env.ECHO_HOME) {
+    return expandHome(env.ECHO_HOME, homeDir);
+  }
+  return path.join(homeDir, ".echo-workspace");
+}
+
+function projectIdFromPath(projectPath) {
+  const base = path.basename(path.resolve(projectPath));
+  return base
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "project";
+}
+
+function resolveProjectDataRoot(projectPath, opts = {}) {
+  const echoHome = opts.echoHome || resolveEchoHomePath(opts);
+  const projectId = opts.projectId || projectIdFromPath(projectPath);
+  return path.join(echoHome, "projects", projectId);
+}
+
 function resolveWorkspacePath(opts = {}) {
   const env = opts.env || process.env;
   const homeDir = opts.homeDir || os.homedir();
-  const defaultWorkspace = opts.defaultWorkspace || path.join(homeDir, ".echo-workspace");
+  const defaultWorkspace = opts.defaultWorkspace || resolveEchoHomePath({ env, homeDir });
   const readConfig = opts.readConfig || ((configPath) => fs.readFileSync(configPath, "utf-8"));
 
   if (env.ECHO_WORKSPACE) {
@@ -54,6 +77,9 @@ const ws = resolveWorkspace();
 module.exports = {
   resolveWorkspace,
   resolveWorkspacePath,
+  resolveEchoHomePath,
+  resolveProjectDataRoot,
+  projectIdFromPath,
   expandHome,
   getConfig,
   ensureDir,

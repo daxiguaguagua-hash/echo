@@ -1,8 +1,9 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const { resolveWorkspace } = require("../infra/workspace");
+const { resolveWorkspace, resolveEchoHomePath } = require("../infra/workspace");
 const { isCaptureEnabled } = require("../infra/config");
+const { findProjectForPath } = require("./project-registry");
 
 function check(name, status, message) {
   return { name, status, message };
@@ -70,6 +71,53 @@ function runDoctor({ hookOnly } = {}) {
     const legacyBuffer = path.join(os.homedir(), ".echo-buffer");
     if (fs.existsSync(legacyBuffer)) {
       results.push(warn("Legacy buffer", `${legacyBuffer} exists — run echo-mcp migrate legacy-buffer`));
+    }
+
+    // 7. Echo home (global)
+    const echoHome = resolveEchoHomePath();
+    if (fs.existsSync(echoHome)) {
+      results.push(ok("Echo home", `exists: ${echoHome}`));
+    } else {
+      results.push(warn("Echo home", `not found: ${echoHome} — run echo-mcp init`));
+    }
+
+    // 8. registry.json
+    const registryPath = path.join(echoHome, "registry.json");
+    let registry = null;
+    if (fs.existsSync(registryPath)) {
+      try {
+        registry = JSON.parse(fs.readFileSync(registryPath, "utf-8"));
+        const count = Object.keys(registry.projects || {}).length;
+        results.push(ok("registry.json", `valid (${count} project${count !== 1 ? "s" : ""})`));
+      } catch (_) {
+        results.push(error("registry.json", "invalid JSON"));
+      }
+    } else {
+      results.push(warn("registry.json", "missing — run echo-mcp init"));
+    }
+
+    // 9. Current project registration
+    if (registry) {
+      const cwd = process.cwd();
+      const current = findProjectForPath(cwd, { echoHome });
+      if (current) {
+        results.push(ok("Current project", `${current.projectId} (data: ${current.dataRoot})`));
+
+        // 10. Project data directories
+        const missing = [];
+        for (const d of ["session-buffer", "articles", "comments", "index"]) {
+          if (!fs.existsSync(path.join(current.dataRoot, d))) {
+            missing.push(d);
+          }
+        }
+        if (missing.length > 0) {
+          results.push(warn("Project data dirs", `missing: ${missing.join(", ")} — run echo-mcp init project`));
+        } else {
+          results.push(ok("Project data dirs", "all present"));
+        }
+      } else {
+        results.push(warn("Current project", `${cwd} not registered — run echo-mcp init project`));
+      }
     }
   }
 

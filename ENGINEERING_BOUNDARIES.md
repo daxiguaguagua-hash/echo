@@ -143,7 +143,9 @@ flowchart TD
 
 ## 5. Workspace 与配置边界
 
-当前 canonical workspace 是：
+### 5.1 当前兼容模型
+
+当前已实现的 legacy-compatible workspace 是：
 
 ```text
 ~/.echo-workspace
@@ -182,6 +184,78 @@ flowchart TD
 | `ECHO_USER_SPEAKER` | 默认 human speaker |
 | `ECHO_AI_SPEAKER` | 默认 AI speaker |
 | `ECHO_BUFFER_DIR` | 高级调试覆盖，不推荐普通用户使用 |
+
+### 5.2 目标项目模型
+
+USAGE_GUIDE_V2 的 1-4 节暴露了一个核心心智模型问题：用户创建的 `~/echo-notes` 不应该只是 Echo 的数据桶，它应该是一个独立的用户工程；Echo 自己的会话、评论、索引等运行数据应该集中沉淀到全局 Echo home。
+
+目标结构：
+
+```mermaid
+flowchart TD
+  A[用户工程 ~/echo-notes] --> B[echo.json: 项目身份/偏好]
+  C[全局 Echo home ~/.echo-workspace] --> D[registry.json: 项目登记表]
+  C --> E[projects/echo-notes/session-buffer]
+  C --> F[projects/echo-notes/articles]
+  C --> G[projects/echo-notes/comments]
+  C --> H[projects/echo-notes/index]
+```
+
+目标路径：
+
+```text
+~/echo-notes/
+  echo.json              # 轻量项目配置，不存放所有 Echo 运行数据
+
+~/.echo-workspace/
+  registry.json          # 记录 project_id -> project_root
+  projects/
+    echo-notes/
+      session-buffer/
+      articles/
+      comments/
+      index/
+```
+
+边界规则：
+
+| 概念 | 路径 | 责任 |
+|---|---|---|
+| 用户工程 | `~/echo-notes` | 用户自己的项目，可类比 React 项目目录 |
+| Echo home | `~/.echo-workspace` | Echo 全局管理中心 |
+| 项目数据目录 | `~/.echo-workspace/projects/<project-id>` | 该项目的会话、文章、评论、索引 |
+| registry | `~/.echo-workspace/registry.json` | 多项目索引，供 hook 和前端统一发现 |
+
+配置解析目标：
+
+```mermaid
+flowchart TD
+  A[当前 cwd] --> B{是否在已登记项目内}
+  B -->|是| C[使用 registry 对应 project data root]
+  B -->|否| D{ECHO_WORKSPACE 是否设置}
+  D -->|是| E[兼容 legacy workspace]
+  D -->|否| F[提示运行 echo-mcp init project]
+```
+
+测试边界：
+
+| 模块 | 必须覆盖 |
+|---|---|
+| `workspace` | `resolveEchoHomePath()` 默认到 `~/.echo-workspace`，`ECHO_HOME` 可覆盖 |
+| `workspace` | `projectIdFromPath()` 生成稳定、文件系统安全的项目 ID |
+| `workspace` | `resolveProjectDataRoot(projectRoot)` 必须落在 `~/.echo-workspace/projects/<project-id>` |
+| `init project` | 只在用户工程写轻量 `echo.json`，不把全量数据目录塞进工程根 |
+| `registry` | 登记、重复登记、路径移动、缺失项目目录 |
+| `hook capture` | 根据 hook 的 cwd / transcript 项目归属写入对应 project data root |
+
+阶段策略：
+
+| 阶段 | 行为 |
+|---|---|
+| 当前阶段 | 保留 `ECHO_WORKSPACE` 和单 workspace，新增项目路径函数与测试边界 |
+| 下一阶段 | 增加 `registry.json` usecase 和 `echo-mcp init project` |
+| 再下一阶段 | hook capture/status 按 registry 路由到项目数据目录 |
+| 前端阶段 | 从 `~/.echo-workspace/registry.json` 汇总所有项目 |
 
 ---
 
@@ -370,4 +444,3 @@ flowchart TD
 - 不要在 domain 函数里读写文件。
 - 不要把本机绝对路径写进模板。
 - 不要让 hook 和 Node 脚本各自维护一套 workspace 解析逻辑。
-
