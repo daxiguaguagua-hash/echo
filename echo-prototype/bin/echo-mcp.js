@@ -160,7 +160,7 @@ switch (cmd) {
     runScript("search.js");
     break;
   case "mcp":
-    require("../scripts/lib/mcp-server").start();
+    require("../scripts/lib/interfaces/mcp/server").start();
     break;
   case "capture": {
     const action = args[1];

@@ -49,6 +49,14 @@
   102 测试全绿，管线通过
   📄 **设计讨论记录**: [session-2026-05-23](/Users/vincenthuang/.echo-workspace/articles/session-2026-05-23.md) (20 turns)
   - 重构路线: Phase 1 路径统一+注入 → Phase 2 MCP 分层 (interfaces/mcp/ + usecases/)
+- [x] **MCP Phase 2 分层** (2026-05-23) — mcp-server.js 拆为 4 层：
+  - `domain/errors.js` — NotFoundError
+  - `usecases/query-articles.js` — 5 个工具处理函数（纯业务逻辑）
+  - `interfaces/mcp/tools.js` — TOOLS schema + TOOL_HANDLERS 映射
+  - `interfaces/mcp/server.js` — JSON-RPC dispatcher + stdio transport
+  - `scripts/lib/mcp-server.js` — 向后兼容 re-export
+  Codex 审查: GATE PASS，无 P1，依赖图单向无环，逻辑机械保留
+  103 测试全绿，管线通过
 - [x] **capture 开关命令** — `echo-mcp capture on|off|status`，写入 echo.json 的 `capture_enabled` 字段
 
 ## 待做

@@ -85,7 +85,8 @@ fs.writeFileSync(
 );
 
 // DI: inject dirs and real markdown-store — no ECHO_HOME, no require.cache hacking
-const { createHandleRequest, NotFoundError } = require("../scripts/lib/mcp-server");
+const { createHandleRequest } = require("../scripts/lib/interfaces/mcp/server");
+const { NotFoundError } = require("../scripts/lib/domain/errors");
 const handleRequest = createHandleRequest({ dirs, store });
 
 // Cleanup on exit
@@ -273,6 +274,13 @@ test("tools/call search_articles with no filters returns all articles", () => {
   const res = handleRequest({ id: 16, method: "tools/call", params: { name: "search_articles", arguments: {} } });
   const data = assertToolContent(res, 16);
   assert.equal(data.length, 2);
+});
+
+test("legacy mcp-server.js re-exports from new interfaces/mcp/server", () => {
+  const legacy = require("../scripts/lib/mcp-server");
+  assert.equal(typeof legacy.start, "function");
+  assert.equal(typeof legacy.createHandleRequest, "function");
+  assert.equal(legacy.NotFoundError, require("../scripts/lib/domain/errors").NotFoundError);
 });
 
 test("NotFoundError is exported and instanceof works", () => {
