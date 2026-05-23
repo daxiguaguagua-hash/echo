@@ -1,30 +1,15 @@
 // Echo MCP server — JSON-RPC 2.0 over stdio
 // Implements Model Context Protocol (MCP) for Echo knowledge forum
 
-const path = require("path");
 const readline = require("readline");
-const store = require("./infra/markdown-store");
-const { ensureDir, resolveEchoHomePath } = require("./infra/workspace");
+const { resolveDataDirs } = require("./infra/echo-paths");
+const { ensureDir } = require("./infra/workspace");
 
-let _dirs = null;
-
-function getDirs() {
-  if (_dirs) return _dirs;
-  const echoHome = resolveEchoHomePath();
-  const { findProjectForPath } = require("./usecases/project-registry");
-  const project = findProjectForPath(process.cwd(), { echoHome });
-  if (project) {
-    _dirs = {
-      articles: path.join(project.dataRoot, "articles"),
-      comments: path.join(project.dataRoot, "comments"),
-    };
-  } else {
-    _dirs = {
-      articles: path.join(echoHome, "articles"),
-      comments: path.join(echoHome, "comments"),
-    };
+class NotFoundError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "NotFoundError";
   }
-  return _dirs;
 }
 
 // --- JSON-RPC 2.0 ---
@@ -61,13 +46,15 @@ const CAPABILITIES = {
 };
 
 // --- Tool implementations ---
+// Each handler receives (args, deps) where deps = { dirs, store }
 
-function searchArticles(args) {
-  ensureDir(getDirs().articles);
+function searchArticles(args, deps) {
+  const { dirs, store } = deps;
+  ensureDir(dirs.articlesDir);
   const keyword = (args.keyword || "").toLowerCase();
   const tag = (args.tag || "").toLowerCase();
 
-  const articles = store.loadArticles(getDirs().articles).map((a) => ({
+  const articles = store.loadArticles(dirs.articlesDir).map((a) => ({
     ...a.data,
     _file: a.relPath,
     _content: a.content,
@@ -109,10 +96,11 @@ function searchArticles(args) {
   }));
 }
 
-function getArticle(args) {
-  ensureDir(getDirs().articles);
-  const article = store.loadArticleById(getDirs().articles, args.id);
-  if (!article) return { error: `Article "${args.id}" not found` };
+function getArticle(args, deps) {
+  const { dirs, store } = deps;
+  ensureDir(dirs.articlesDir);
+  const article = store.loadArticleById(dirs.articlesDir, args.id);
+  if (!article) throw new NotFoundError(`Article "${args.id}" not found`);
 
   return {
     id: article.data.id,
@@ -128,25 +116,28 @@ function getArticle(args) {
   };
 }
 
-function getArticleContext(args) {
-  ensureDir(getDirs().articles);
-  const article = store.loadArticleById(getDirs().articles, args.id);
-  if (!article) return { error: `Article "${args.id}" not found` };
+function getArticleContext(args, deps) {
+  const { dirs, store } = deps;
+  ensureDir(dirs.articlesDir);
+  const article = store.loadArticleById(dirs.articlesDir, args.id);
+  if (!article) throw new NotFoundError(`Article "${args.id}" not found`);
 
-  // Load comments for this article
-  ensureDir(getDirs().comments);
-  const comments = store.loadComments(getDirs().comments).filter(
+  ensureDir(dirs.commentsDir);
+  const comments = store.loadComments(dirs.commentsDir).filter(
     (c) => c.target && c.target.article_id === args.id
   );
 
-  // Load evolution chain
   let evolutionChain = [];
   const evo = article.data.evolution;
+
+  // Walk backward through evolution chain with cycle detection
   if (evo) {
-    // Walk backward to find origin
+    const visited = new Set();
     let cursor = evo;
     while (cursor && cursor.of) {
-      const prev = store.loadArticleById(getDirs().articles, cursor.of);
+      if (visited.has(cursor.of)) break;
+      visited.add(cursor.of);
+      const prev = store.loadArticleById(dirs.articlesDir, cursor.of);
       if (prev) {
         evolutionChain.unshift({
           id: prev.data.id,
@@ -158,24 +149,26 @@ function getArticleContext(args) {
         break;
       }
     }
-    // Add current
+  }
+
+  // Current article
+  evolutionChain.push({
+    id: article.data.id,
+    title: article.data.title || article.data.id,
+    direction: null,
+  });
+
+  // Walk forward: find articles whose evolution.of points to this article
+  const allArticles = store.loadArticles(dirs.articlesDir);
+  const forward = allArticles.filter(
+    (a) => a.data.evolution && a.data.evolution.of === args.id
+  );
+  for (const f of forward) {
     evolutionChain.push({
-      id: article.data.id,
-      title: article.data.title || article.data.id,
-      direction: null,
+      id: f.data.id,
+      title: f.data.title || f.data.id,
+      direction: f.data.evolution.direction || "expands",
     });
-    // Walk forward
-    const allArticles = store.loadArticles(getDirs().articles);
-    const forward = allArticles.filter(
-      (a) => a.data.evolution && a.data.evolution.of === args.id
-    );
-    for (const f of forward) {
-      evolutionChain.push({
-        id: f.data.id,
-        title: f.data.title || f.data.id,
-        direction: f.data.evolution.direction || "expands",
-      });
-    }
   }
 
   return {
@@ -197,9 +190,10 @@ function getArticleContext(args) {
   };
 }
 
-function listTags() {
-  ensureDir(getDirs().articles);
-  const articles = store.loadArticles(getDirs().articles);
+function listTags(_args, deps) {
+  const { dirs, store } = deps;
+  ensureDir(dirs.articlesDir);
+  const articles = store.loadArticles(dirs.articlesDir);
   const tagCounts = {};
 
   for (const a of articles) {
@@ -213,11 +207,13 @@ function listTags() {
     .map(([tag, count]) => ({ tag, count }));
 }
 
-function listRecent(args) {
-  ensureDir(getDirs().articles);
-  const limit = Math.min(args.limit != null ? parseInt(args.limit, 10) : 20, 100);
+function listRecent(args, deps) {
+  const { dirs, store } = deps;
+  ensureDir(dirs.articlesDir);
+  const raw = args.limit != null ? parseInt(args.limit, 10) : 20;
+  const limit = Math.max(1, Math.min(isNaN(raw) ? 20 : raw, 100));
 
-  const articles = store.loadArticles(getDirs().articles);
+  const articles = store.loadArticles(dirs.articlesDir);
   articles.sort((a, b) => {
     const da = a.data.created_at ? new Date(a.data.created_at) : new Date(0);
     const db = b.data.created_at ? new Date(b.data.created_at) : new Date(0);
@@ -301,60 +297,75 @@ const TOOL_HANDLERS = {
 
 // --- Request dispatcher ---
 
-function handleRequest(msg) {
-  const { id, method, params } = msg;
+function createHandleRequest(deps) {
+  return function handleRequest(msg) {
+    const { id, method, params } = msg;
 
-  switch (method) {
-    case "initialize":
-      return jsonRpcResult(id, {
-        protocolVersion: "2024-11-05",
-        capabilities: CAPABILITIES,
-        serverInfo: SERVER_INFO,
-      });
-
-    case "notifications/initialized":
-      // No response needed for notifications
-      return null;
-
-    case "tools/list":
-      return jsonRpcResult(id, { tools: TOOLS });
-
-    case "tools/call": {
-      const toolName = params?.name;
-      const handler = TOOL_HANDLERS[toolName];
-      if (!handler) {
-        return jsonRpcError(id, -32601, `Unknown tool: ${toolName}`);
-      }
-      try {
-        const result = handler(params?.arguments || {});
-        // Convert result to MCP content format
-        const text = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+    switch (method) {
+      case "initialize":
         return jsonRpcResult(id, {
-          content: [{ type: "text", text }],
+          protocolVersion: "2024-11-05",
+          capabilities: CAPABILITIES,
+          serverInfo: SERVER_INFO,
         });
-      } catch (err) {
-        return jsonRpcError(id, -32000, `Tool error: ${err.message}`);
+
+      case "notifications/initialized":
+        return null;
+
+      case "tools/list":
+        return jsonRpcResult(id, { tools: TOOLS });
+
+      case "tools/call": {
+        const toolName = params?.name;
+        const handler = TOOL_HANDLERS[toolName];
+        if (!handler) {
+          return jsonRpcError(id, -32601, `Unknown tool: ${toolName}`);
+        }
+        try {
+          const result = handler(params?.arguments || {}, deps);
+          const text = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+          return jsonRpcResult(id, {
+            content: [{ type: "text", text }],
+          });
+        } catch (err) {
+          if (err instanceof NotFoundError) {
+            return jsonRpcError(id, -32002, err.message);
+          }
+          return jsonRpcError(id, -32000, `Tool error: ${err.message}`);
+        }
       }
+
+      case "ping":
+        return jsonRpcResult(id, {});
+
+      default:
+        if (id !== undefined) {
+          return jsonRpcError(id, -32601, `Method not found: ${method}`);
+        }
+        return null;
     }
-
-    case "ping":
-      return jsonRpcResult(id, {});
-
-    default:
-      if (id !== undefined) {
-        return jsonRpcError(id, -32601, `Method not found: ${method}`);
-      }
-      return null;
-  }
+  };
 }
 
 // --- Stdio transport ---
 
-function start() {
-  // Suppress console output — MCP uses stdout for JSON-RPC
+/**
+ * Start the MCP server over stdio.
+ *
+ * @param {object} [deps]
+ * @param {object} [deps.dirs]         - Pre-resolved data directories (bypass echo-paths)
+ * @param {object} [deps.store]        - Markdown store implementation
+ * @param {object} [deps.pathResolver] - Function (opts) => dirs (bypass echo-paths entirely)
+ */
+function start(deps = {}) {
   console.log = (...args) => console.error(...args);
   console.warn = (...args) => console.error(...args);
   console.info = (...args) => console.error(...args);
+
+  const dirs = deps.dirs || (deps.pathResolver ? deps.pathResolver({}) : resolveDataDirs());
+  const store = deps.store || require("./infra/markdown-store");
+
+  const handleRequest = createHandleRequest({ dirs, store });
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -371,8 +382,18 @@ function start() {
       return;
     }
 
-    const response = handleRequest(msg);
-    if (response) send(response);
+    // JSON-RPC 2.0: Request MUST be an Object
+    if (msg == null || typeof msg !== "object" || Array.isArray(msg)) {
+      send(jsonRpcError(null, -32600, "Invalid Request"));
+      return;
+    }
+
+    try {
+      const response = handleRequest(msg);
+      if (response) send(response);
+    } catch (err) {
+      send(jsonRpcError(msg.id !== undefined ? msg.id : null, -32603, "Internal error"));
+    }
   });
 
   rl.on("close", () => {
@@ -382,4 +403,4 @@ function start() {
   process.stderr.write("[echo-mcp] MCP server started\n");
 }
 
-module.exports = { start, handleRequest };
+module.exports = { start, createHandleRequest, NotFoundError };

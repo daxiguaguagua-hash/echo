@@ -40,15 +40,15 @@
 
 ## 进行中
 
-- [ ] **MCP 架构重构** — 审查发现 3 个 P0 问题：
-  1. 路径解析双轨 (workspace.js 模块级 vs mcp-server getDirs())
-  2. 错误模型混乱 (not found 是 success, 异常才是 error)
-  3. 依赖不可注入 (测试需 ECHO_HOME + require.cache hack)
-  拆分建议: `interfaces/mcp/` + `usecases/query-articles.js` + `infra/echo-paths.js`
+- [x] **MCP Phase 1 重构** (2026-05-23) — 3 个 P0 全部修复：
+  1. 路径统一: `infra/echo-paths.js` — `resolveDataDirs(opts)` 统一解析，支持 DI 和 project registry
+  2. 错误模型: `NotFoundError` — not-found 走 JSON-RPC error (-32002) 通道
+  3. 依赖注入: `createHandleRequest(deps)` + `start(deps)` — 测试直接传 dirs/store，零 env hack
+  Codex 审查: GATE PASS (初版 3 P1 + 3 P2 已全部修复)
+  新增 4 测试 (limit clamping, forward evolution, NotFoundError export)
+  102 测试全绿，管线通过
   📄 **设计讨论记录**: [session-2026-05-23](/Users/vincenthuang/.echo-workspace/articles/session-2026-05-23.md) (20 turns)
-  - Claude + Codex 交叉架构审查 (v1)
-  - Karpathy wiki 模式对 MCP 架构影响评估 (v2)
-  - 重构路线: Phase 1 路径统一+注入 → Phase 2 MCP 分层 → Phase 3 wikilink 基础设施 → Phase 4 wiki 上线
+  - 重构路线: Phase 1 路径统一+注入 → Phase 2 MCP 分层 (interfaces/mcp/ + usecases/)
 - [x] **capture 开关命令** — `echo-mcp capture on|off|status`，写入 echo.json 的 `capture_enabled` 字段
 
 ## 待做
@@ -87,7 +87,8 @@
 - [ ] **echo-capture.sh: 全量加载 transcript** — `entries = [json.loads(line) for line in f]` 对长会话有内存压力。应只扫描 `last_count` 之后的新条目
 - [ ] **测试临时目录未清理** — `markdown-store.test.js` 的 `tempDir()` 不删 `/tmp` 下的 fixture 目录。应在 test helper 重构时加 `t.after(() => fs.rmSync(dir, { recursive: true, force: true }))`
 - [ ] **迁移清理** — 删除旧 `echo-prototype/.echo-buffer/`（已被 `~/.echo-workspace/session-buffer/` 取代）；清理 `echo-prototype/` 中已被复制到 workspace 的旧文章
-- [ ] **Karpathy wiki 模式改造** — Echo 三层映射：(raw = session-buffer, wiki = articles/*.md, schema = frontmatter spec + CLAUDE.md)。引入要素：① `[[wikilink]]` 替代/补充 evolution.of frontmatter 引用 ② `index.md` 内容目录 ③ `log.md` 操作日志 ④ wikilink 解析器 + 反向链接索引 ⑤ `/understand-knowledge` 自动生成知识图谱。架构影响评估: 见 2026-05-23 第二版报告。
+- [ ] **Karpathy wiki 模式改造** — **已搁置**（2026-05-23 决定不上）。原计划：wikilink 替代 frontmatter 引用、index.md 内容目录、log.md 操作日志。
+  - **替代想法**：不做内置 wiki，改为可选的 `sync-to-wiki` 桥接脚本。检测 `~/Documents/SilentBrain/` 等已有 wiki vault，Echo 的 convert/import 输出自动同步到 wiki 的 `raw/articles/` 目录。用户自己决定是否将 Echo 文章提升为 wiki 的 concept/entity 页。这样 Echo 管线不受影响，wiki 作为独立的知识精炼层存在。架构影响评估已存档于 session-2026-05-23。
 
 ## 数据来源
 
