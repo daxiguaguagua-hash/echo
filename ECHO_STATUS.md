@@ -78,6 +78,7 @@
 - [ ] **echo-capture.sh: 全量加载 transcript** — `entries = [json.loads(line) for line in f]` 对长会话有内存压力。应只扫描 `last_count` 之后的新条目
 - [ ] **测试临时目录未清理** — `markdown-store.test.js` 的 `tempDir()` 不删 `/tmp` 下的 fixture 目录。应在 test helper 重构时加 `t.after(() => fs.rmSync(dir, { recursive: true, force: true }))`
 - [ ] **迁移清理** — 删除旧 `echo-prototype/.echo-buffer/`（已被 `~/.echo-workspace/session-buffer/` 取代）；清理 `echo-prototype/` 中已被复制到 workspace 的旧文章
+- [ ] **Karpathy wiki 模式改造** — Echo 工作区结构天然匹配 Karpathy 三层 wiki（raw = session-buffer、wiki = articles/*.md、schema = CLAUDE.md）。引入 `[[wikilink]]` 替代纯 frontmatter 引用、添加 `index.md` 内容目录、`log.md` 操作日志，让 `/understand-knowledge` 能自动生成知识图谱。详见 2026-05-22 会话。
 
 ## 数据来源
 
