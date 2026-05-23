@@ -13,6 +13,7 @@
     "annotate": "node scripts/annotate.js",
     "import": "node scripts/import-sessions.js",
     "search": "node scripts/search.js",
+    "mcp": "node bin/echo-mcp.js mcp",
     "all": "npm run convert && npm run validate && npm run index && npm run resolve"
   },
   "bin": {

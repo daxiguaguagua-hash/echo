@@ -93,6 +93,7 @@ function loadComments(dir) {
       comments.push({
         ...result.data,
         _file: `comments/${path.relative(dir, file)}`,
+        content: result.content,
       });
     }
   }

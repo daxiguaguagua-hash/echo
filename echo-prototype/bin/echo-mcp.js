@@ -16,6 +16,8 @@ Usage:
   echo-mcp validate              Validate all articles and comments
   echo-mcp resolve               Resolve all annotation anchors
   echo-mcp search                Full-text search
+  echo-mcp mcp                   Start MCP server (stdio transport)
+  echo-mcp capture on|off|status  Enable, disable, or check capture status
 `;
 
 function printDoctorResults(results) {
@@ -157,6 +159,26 @@ switch (cmd) {
   case "search":
     runScript("search.js");
     break;
+  case "mcp":
+    require("../scripts/lib/mcp-server").start();
+    break;
+  case "capture": {
+    const action = args[1];
+    const { isCaptureEnabled, setCaptureEnabled } = require("../scripts/lib/infra/config");
+    if (action === "on") {
+      const r = setCaptureEnabled(true);
+      console.log(`Capture enabled (${r.configPath})`);
+    } else if (action === "off") {
+      const r = setCaptureEnabled(false);
+      console.log(`Capture disabled (${r.configPath})`);
+    } else if (action === "status") {
+      console.log(`Capture: ${isCaptureEnabled() ? "on" : "off"}`);
+    } else {
+      console.error("Usage: echo-mcp capture on|off|status");
+      process.exit(1);
+    }
+    break;
+  }
   default:
     console.log(USAGE);
     process.exit(cmd ? 1 : 0);

@@ -200,6 +200,7 @@ test("loadComments returns only annotation-type files", () => {
       article: "art-001",
       created: "2026-05-21",
       _file: "comments/ann-001.md",
+      content: "Comment body.\n",
     },
     {
       id: "ann-002",
@@ -207,6 +208,7 @@ test("loadComments returns only annotation-type files", () => {
       article: "art-001",
       created: "2026-05-21",
       _file: `comments/${path.join("nested", "ann-002.md")}`,
+      content: "Comment body.\n",
     },
   ]);
 });

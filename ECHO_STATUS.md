@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-22 (hook capt/status 项目路由 + Code Reviewer 两项 blocker 修复)
+最后更新：2026-05-23 (MCP 架构审查 v1 + v2 wiki 影响评估)
 
 ## 已完成
 
@@ -36,15 +36,24 @@
 - [x] **项目目录模型边界** — 根据 USAGE_GUIDE_V2 的”人类用户备注”，在 `ENGINEERING_BOUNDARIES.md` 明确两层模型：用户工程目录（如 `~/echo-notes`）与全局 Echo home（`~/.echo-workspace`）分离；新增 `resolveEchoHomePath()`、`projectIdFromPath()`、`resolveProjectDataRoot()` 及 workspace 测试边界。
 - [x] **Project registry 第一阶段** — `lib/usecases/project-registry.js`：`loadRegistry`、`saveRegistry`、`registerProject`（幂等，同名冲突抛错）、`findProjectForPath`（最长前缀匹配）。`echo-mcp init project [--path <dir>]` 命令。`run-doctor` 扩展 Echo home、registry.json、当前项目注册、项目数据目录检查。15 测试，79 全绿，管线通过。
 - [x] **hook 项目路由** — `capture.js`：去掉模块级路径常量，`resolveBufferRoot()` 根据 cwd 查 registry → 匹配则写入 `projects/<project-id>/session-buffer/`，未匹配降级到 `~/.echo-workspace/session-buffer/`。`status.js`：SessionStart 输出加入当前项目名和数据目录。Code Reviewer 审查了 registry，发现并修复 2 项 blocker（同名目录碰撞检测 + 损坏 JSON 备份）。79 测试全绿，管线通过。
+- [x] **MCP server 第一阶段** — `scripts/lib/mcp-server.js`：JSON-RPC 2.0 over stdio，实现 5 个工具（`search_articles`、`get_article`、`get_article_context`、`list_tags`、`list_recent`）。零外部 MCP 依赖，纯 Node stdlib。CLI：`echo-mcp mcp` / `npm run mcp`。`markdown-store.loadComments` 新增 `content` 字段。79 测试全绿，管线通过。
 
 ## 进行中
 
-- [ ] **MCP server** — `search_articles`、`get_article`、`get_article_context`、`list_tags`、`list_recent`
+- [ ] **MCP 架构重构** — 审查发现 3 个 P0 问题：
+  1. 路径解析双轨 (workspace.js 模块级 vs mcp-server getDirs())
+  2. 错误模型混乱 (not found 是 success, 异常才是 error)
+  3. 依赖不可注入 (测试需 ECHO_HOME + require.cache hack)
+  拆分建议: `interfaces/mcp/` + `usecases/query-articles.js` + `infra/echo-paths.js`
+  📄 **设计讨论记录**: [session-2026-05-23](/Users/vincenthuang/.echo-workspace/articles/session-2026-05-23.md) (20 turns)
+  - Claude + Codex 交叉架构审查 (v1)
+  - Karpathy wiki 模式对 MCP 架构影响评估 (v2)
+  - 重构路线: Phase 1 路径统一+注入 → Phase 2 MCP 分层 → Phase 3 wikilink 基础设施 → Phase 4 wiki 上线
+- [x] **capture 开关命令** — `echo-mcp capture on|off|status`，写入 echo.json 的 `capture_enabled` 字段
 
 ## 待做
 
 ### 核心功能
-- [ ] **MCP server** — `search_articles`、`get_article`、`get_article_context`、`list_tags`、`list_recent`
 - [ ] **标签管理** — 列出所有标签及使用次数、文章加/删标签
 
 ### 展示层
@@ -78,7 +87,7 @@
 - [ ] **echo-capture.sh: 全量加载 transcript** — `entries = [json.loads(line) for line in f]` 对长会话有内存压力。应只扫描 `last_count` 之后的新条目
 - [ ] **测试临时目录未清理** — `markdown-store.test.js` 的 `tempDir()` 不删 `/tmp` 下的 fixture 目录。应在 test helper 重构时加 `t.after(() => fs.rmSync(dir, { recursive: true, force: true }))`
 - [ ] **迁移清理** — 删除旧 `echo-prototype/.echo-buffer/`（已被 `~/.echo-workspace/session-buffer/` 取代）；清理 `echo-prototype/` 中已被复制到 workspace 的旧文章
-- [ ] **Karpathy wiki 模式改造** — Echo 工作区结构天然匹配 Karpathy 三层 wiki（raw = session-buffer、wiki = articles/*.md、schema = CLAUDE.md）。引入 `[[wikilink]]` 替代纯 frontmatter 引用、添加 `index.md` 内容目录、`log.md` 操作日志，让 `/understand-knowledge` 能自动生成知识图谱。详见 2026-05-22 会话。
+- [ ] **Karpathy wiki 模式改造** — Echo 三层映射：(raw = session-buffer, wiki = articles/*.md, schema = frontmatter spec + CLAUDE.md)。引入要素：① `[[wikilink]]` 替代/补充 evolution.of frontmatter 引用 ② `index.md` 内容目录 ③ `log.md` 操作日志 ④ wikilink 解析器 + 反向链接索引 ⑤ `/understand-knowledge` 自动生成知识图谱。架构影响评估: 见 2026-05-23 第二版报告。
 
 ## 数据来源
 
