@@ -138,13 +138,13 @@ test("notifications/initialized returns null", () => {
   assert.equal(res, null);
 });
 
-test("tools/list returns 5 tools with name, description, and inputSchema", () => {
+test("tools/list returns 7 tools with name, description, and inputSchema", () => {
   const res = handleRequest({ id: 2, method: "tools/list" });
   assertJsonRpcResult(res, 2);
-  assert.equal(res.result.tools.length, 5);
+  assert.equal(res.result.tools.length, 7);
   const names = res.result.tools.map((t) => t.name).sort();
   assert.deepEqual(names, [
-    "get_article", "get_article_context", "list_recent", "list_tags", "search_articles",
+    "add_tags", "get_article", "get_article_context", "list_recent", "list_tags", "remove_tags", "search_articles",
   ]);
   for (const tool of res.result.tools) {
     assert.equal(typeof tool.name, "string");
@@ -246,6 +246,75 @@ test("tools/call handler exception returns JSON-RPC error -32000", () => {
   assertJsonRpcError(res, 14, -32000);
   assert.match(res.error.message, /Tool error/);
 });
+
+// ---- Tag management -------------------------------------------------------
+
+test("tools/call add_tags adds tags to an article", () => {
+  const res = handleRequest({ id: 40, method: "tools/call", params: { name: "add_tags", arguments: { id: "test-art-001", tags: ["new-tag", "extra"] } } });
+  const data = assertToolContent(res, 40);
+  assert.equal(data.id, "test-art-001");
+  assert.deepEqual(data.added, ["new-tag", "extra"]);
+  assert.ok(data.tags.includes("test"));
+  assert.ok(data.tags.includes("demo"));
+  assert.ok(data.tags.includes("mcp"));
+  assert.ok(data.tags.includes("new-tag"));
+  assert.ok(data.tags.includes("extra"));
+});
+
+test("tools/call add_tags ignores duplicate tags", () => {
+  // test-art-001 already has "test" tag
+  const res = handleRequest({ id: 41, method: "tools/call", params: { name: "add_tags", arguments: { id: "test-art-001", tags: ["test", "demo"] } } });
+  const data = assertToolContent(res, 41);
+  assert.equal(data.id, "test-art-001");
+  // No duplicates in result tags
+  assert.equal(data.tags.filter((t) => t === "test").length, 1);
+  assert.equal(data.tags.filter((t) => t === "demo").length, 1);
+});
+
+test("tools/call add_tags for missing ID returns JSON-RPC error -32002", () => {
+  const res = handleRequest({ id: 42, method: "tools/call", params: { name: "add_tags", arguments: { id: "nonexistent", tags: ["foo"] } } });
+  assertJsonRpcError(res, 42, -32002);
+  assert.match(res.error.message, /not found/);
+});
+
+test("tools/call remove_tags removes tags from an article", () => {
+  const res = handleRequest({ id: 43, method: "tools/call", params: { name: "remove_tags", arguments: { id: "test-art-001", tags: ["extra"] } } });
+  const data = assertToolContent(res, 43);
+  assert.equal(data.id, "test-art-001");
+  assert.deepEqual(data.removed, ["extra"]);
+  assert.ok(!data.tags.includes("extra"));
+  // Other tags still present
+  assert.ok(data.tags.includes("test"));
+  assert.ok(data.tags.includes("demo"));
+  assert.ok(data.tags.includes("mcp"));
+  assert.ok(data.tags.includes("new-tag"));
+});
+
+test("tools/call remove_tags silently ignores non-existent tags", () => {
+  const res = handleRequest({ id: 44, method: "tools/call", params: { name: "remove_tags", arguments: { id: "test-art-001", tags: ["nonexistent-tag"] } } });
+  const data = assertToolContent(res, 44);
+  assert.equal(data.id, "test-art-001");
+  assert.deepEqual(data.removed, ["nonexistent-tag"]);
+  // Existing tags should be unchanged
+  assert.ok(data.tags.includes("test"));
+  assert.ok(data.tags.includes("new-tag"));
+});
+
+test("tools/call remove_tags for missing ID returns JSON-RPC error -32002", () => {
+  const res = handleRequest({ id: 45, method: "tools/call", params: { name: "remove_tags", arguments: { id: "nonexistent", tags: ["foo"] } } });
+  assertJsonRpcError(res, 45, -32002);
+  assert.match(res.error.message, /not found/);
+});
+
+test("add_tags persists tags — re-read article confirms changes", () => {
+  // Add a tag, then get_article to verify it was written to disk
+  handleRequest({ id: 46, method: "tools/call", params: { name: "add_tags", arguments: { id: "test-art-002", tags: ["persistent-tag"] } } });
+  const res = handleRequest({ id: 47, method: "tools/call", params: { name: "get_article", arguments: { id: "test-art-002" } } });
+  const data = assertToolContent(res, 47);
+  assert.ok(data.tags.includes("persistent-tag"));
+});
+
+// ---- Cross-cutting --------------------------------------------------------
 
 test("all response types include jsonrpc: '2.0'", () => {
   const responses = [

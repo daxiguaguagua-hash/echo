@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-24 (Hook installer/doctor P2 修复)
+最后更新：2026-05-24 (项目本地管线 CLI 已实现)
 
 ## 已完成
 
@@ -63,10 +63,10 @@
 ## 待做
 
 ### 核心功能
-- [ ] **标签管理** — 列出所有标签及使用次数、文章加/删标签
+- [x] **标签管理** — MCP tools `add_tags` / `remove_tags`, CLI `echo-mcp tag add|remove|list`, persisted to YAML frontmatter. 7 新测试, 113 全绿.
 
 ### 展示层
-- [ ] **VitePress 骨架** — `docs/` 目录、`.vitepress/config.mts`、首页文章列表
+- [x] **VitePress 骨架** — `docs/` 目录、`.vitepress/config.mts`、首页文章列表、示例文章、`docs:dev/build/preview` 脚本，构建通过
 - [ ] **文章模板** — VitePress 渲染 Echo 文章的样式
 - [ ] **进化链 UI** — 文章底部评论区展示，回复链可视化
 
@@ -77,6 +77,7 @@
 ### 工程
 - [ ] **Git 仓库初始化** — `git init` + `.gitignore`（排除 `.echo-buffer/`、`node_modules/`）
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
+- [x] **项目本地管线 CLI** (2026-05-24) — 新增 `echo-mcp all` 从任意注册项目目录运行完整管线 (convert → validate → index → resolve)；所有管线脚本 (convert/validate/index/resolve/search/annotate/import-sessions) 统一走 `resolveDataDirs()` 按 cwd 匹配 project registry；新增 `run-pipeline.js` usecase；doctor 识别 Echo 内部数据目录并提示修复命令。113 测试全绿，`npm run all` 通过。设计文档：[issues/004-project-local-pipeline-cli.md](issues/004-project-local-pipeline-cli.md)
 - [x] **Project registry** — `registry.json` schema、登记/读取 usecase、重复登记幂等和路径缺失测试
 - [x] **init project 命令** — 新增 `echo-mcp init project [--path <dir>]`：全局 `~/.echo-workspace/registry.json` 登记项目，并创建 `projects/<project-id>/` 数据目录（session-buffer/、articles/、comments/、index/）
 - [x] **hook 项目路由** — capture.js：去掉模块级路径常量，按 cwd 匹配 registry 写入对应项目数据目录或降级到 Echo home
@@ -114,42 +115,9 @@
         ↓
 我回 → Stop hook → 拼 turn → 写 buffer
         ↓
-npm run convert → 加 frontmatter → 正式文章
-npm run validate → 校验
-npm run index    → 生成评论区
-npm run resolve  → 验证锚点
+echo-mcp all (或 npm run all)
+  → convert → 加 frontmatter → 正式文章
+  → validate → 校验
+  → index    → 生成评论区
+  → resolve  → 验证锚点
 ```
-
-## 手动测试
-  空文件夹 → 跑起来（5 分钟）
-
-  1. 安装 CLI
-  cd /Users/vincenthuang/myNote/echo-prototype
-  npm install
-  npm link                         # 让 echo-mcp 命令全局可用
-
-  2. 创建你的知识库目录
-  mkdir -p ~/echo-notes
-  cd ~/echo-notes
-
-  3. 初始化工作区
-  echo-mcp init
-
-  4. 注册项目
-  echo-mcp init project
-
-  5. 安装 hook（自动捕获对话）
-  echo-mcp hook install claude --write
-
-  6. 检查一切正常
-  echo-mcp doctor
-
-  做完后，你每次跟 Claude Code 对话都会被自动捕获到 ~/.echo-workspace/projects/echo-notes/session-buffer/。
-
-  定期跑管线把 buffer 转成文章：
-
-  cd /Users/vincenthuang/myNote/echo-prototype
-  npm run all        # convert → validate → index → resolve
-  npm run search -- --keyword "你的关键词"
-
-  如果不想装 hook，也可以跳过第 5 步，先手动跑 npm run import 导入历史 JSONL 会话试试效果。

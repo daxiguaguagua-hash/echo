@@ -160,6 +160,42 @@ function listTags(_args, deps) {
     .map(([tag, count]) => ({ tag, count }));
 }
 
+function addTags(args, deps) {
+  const { dirs, store } = deps;
+  ensureDir(dirs.articlesDir);
+  const article = store.loadArticleById(dirs.articlesDir, args.id);
+  if (!article) throw new NotFoundError(`Article "${args.id}" not found`);
+
+  const newTags = (args.tags || []).map((t) => t.trim()).filter(Boolean);
+  if (newTags.length === 0) return { id: article.data.id, tags: article.data.tags || [] };
+
+  const existingTags = article.data.tags || [];
+  const merged = [...new Set([...existingTags, ...newTags])];
+
+  article.data.tags = merged;
+  store.writeArticleFile(article.absPath, article.data, article.content);
+
+  return { id: article.data.id, tags: merged, added: newTags };
+}
+
+function removeTags(args, deps) {
+  const { dirs, store } = deps;
+  ensureDir(dirs.articlesDir);
+  const article = store.loadArticleById(dirs.articlesDir, args.id);
+  if (!article) throw new NotFoundError(`Article "${args.id}" not found`);
+
+  const toRemove = new Set((args.tags || []).map((t) => t.trim()).filter(Boolean));
+  if (toRemove.size === 0) return { id: article.data.id, tags: article.data.tags || [] };
+
+  const existingTags = article.data.tags || [];
+  const kept = existingTags.filter((t) => !toRemove.has(t));
+
+  article.data.tags = kept;
+  store.writeArticleFile(article.absPath, article.data, article.content);
+
+  return { id: article.data.id, tags: kept, removed: [...toRemove] };
+}
+
 function listRecent(args, deps) {
   const { dirs, store } = deps;
   ensureDir(dirs.articlesDir);
@@ -190,4 +226,6 @@ module.exports = {
   getArticleContext,
   listTags,
   listRecent,
+  addTags,
+  removeTags,
 };

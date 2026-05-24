@@ -6,6 +6,8 @@ const {
   getArticleContext,
   listTags,
   listRecent,
+  addTags,
+  removeTags,
 } = require("../../usecases/query-articles");
 
 const TOOLS = [
@@ -60,6 +62,30 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "add_tags",
+    description: "Add one or more tags to an article. Tags are written back to the markdown file's YAML frontmatter. Duplicate tags are ignored.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Article ID" },
+        tags: { type: "array", items: { type: "string" }, description: "Tags to add to the article" },
+      },
+      required: ["id", "tags"],
+    },
+  },
+  {
+    name: "remove_tags",
+    description: "Remove one or more tags from an article. Tags are written back to the markdown file's YAML frontmatter. Non-existent tags are silently ignored.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Article ID" },
+        tags: { type: "array", items: { type: "string" }, description: "Tags to remove from the article" },
+      },
+      required: ["id", "tags"],
+    },
+  },
 ];
 
 const TOOL_HANDLERS = {
@@ -68,6 +94,8 @@ const TOOL_HANDLERS = {
   get_article_context: getArticleContext,
   list_tags: listTags,
   list_recent: listRecent,
+  add_tags: addTags,
+  remove_tags: removeTags,
 };
 
 module.exports = { TOOLS, TOOL_HANDLERS };

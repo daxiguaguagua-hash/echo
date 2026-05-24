@@ -2,20 +2,13 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const { articlesDir, ensureDir } = require("./lib/infra/workspace");
+const { ensureDir } = require("./lib/infra/workspace");
+const { resolveDataDirs } = require("./lib/infra/echo-paths");
 const ef = require("./lib/domain/echo-format");
-
-ensureDir(articlesDir);
-
-// ---- config ----
-const PROJECT = process.argv[2] || "-Users-vincenthuang-myNote";
-const SESSIONS_DIR = path.join(os.homedir(), ".claude", "projects", PROJECT);
-const MIN_REAL_TURNS = 2;
 
 // ---- helpers ----
 
 function isSystemNoise(text) {
-  // Returns true if this user message is NOT a real human message
   if (!text || !text.trim()) return true;
   const t = text.trim();
   if (t.startsWith("Base directory for this skill:")) return true;
@@ -26,7 +19,7 @@ function isSystemNoise(text) {
   if (t.startsWith("<command-message>")) return true;
   if (t.startsWith("<command-args>")) return true;
   if (t.startsWith("<local-command-stdout>")) return true;
-  if (t.length > 3000) return true; // skill/content dumps
+  if (t.length > 3000) return true;
   return false;
 }
 
@@ -52,7 +45,6 @@ function cleanAssistantBlocks(blocks) {
       out.push({ type: "tool", content: `[调用工具: ${b.name}]` });
     }
   }
-  // Merge consecutive text blocks
   const merged = [];
   for (const item of out) {
     if (item.type === "text" && merged.length > 0 && merged[merged.length - 1].type === "text") {
@@ -78,8 +70,8 @@ function parseSession(filePath) {
   }
 
   const turns = [];
-  let pendingUser = null;           // current user message text
-  let pendingAssistantBlocks = [];  // accumulated assistant content blocks
+  let pendingUser = null;
+  let pendingAssistantBlocks = [];
   let models = new Set();
   let firstTs = null;
   let lastTs = null;
@@ -107,15 +99,11 @@ function parseSession(filePath) {
 
     if (ev.type === "user") {
       const text = cleanUserMessage(ev.message?.content || "");
-
       if (text && !isSystemNoise(text)) {
-        // Real user message: flush previous assistant, then previous user, then store new user
         flushAssistant();
         flushUser();
         pendingUser = text;
       }
-      // System noise user events (tool results, skill echoes, local commands):
-      // just skip them — they're part of the assistant's tool execution
     } else if (ev.type === "assistant") {
       const msg = ev.message || {};
       const blocks = msg.content || [];
@@ -127,7 +115,6 @@ function parseSession(filePath) {
     }
   }
 
-  // Flush remaining
   flushAssistant();
   flushUser();
 
@@ -155,44 +142,60 @@ function buildArticle(sessionId, turns, models, firstTs) {
   return { id, article: ef.toMarkdown(article), title: article.title, turnCount: article.turns.length };
 }
 
-// ---- main ----
+function runImportSessions(opts = {}) {
+  const dirs = opts.dirs || resolveDataDirs();
+  const { articlesDir } = dirs;
 
-if (!fs.existsSync(SESSIONS_DIR)) {
-  console.error(`Sessions directory not found: ${SESSIONS_DIR}`);
-  process.exit(1);
-}
+  const PROJECT = opts.project || process.argv[2] || "-Users-vincenthuang-myNote";
+  const SESSIONS_DIR = path.join(os.homedir(), ".claude", "projects", PROJECT);
+  const MIN_REAL_TURNS = opts.minTurns || 2;
 
-const files = fs.readdirSync(SESSIONS_DIR)
-  .filter((f) => f.endsWith(".jsonl"))
-  .sort();
+  ensureDir(articlesDir);
 
-console.log(`Scanning ${files.length} session files in ${SESSIONS_DIR}...\n`);
-
-let imported = 0;
-let skipped = 0;
-
-for (const file of files) {
-  const filePath = path.join(SESSIONS_DIR, file);
-  const sessionId = path.basename(file, ".jsonl");
-
-  try {
-    const { turns, models, firstTs } = parseSession(filePath);
-    const realTurns = turns.filter((t) => t.speaker === "vincent").length;
-
-    if (realTurns < MIN_REAL_TURNS) {
-      skipped++;
-      continue;
-    }
-
-    const { id, article, title, turnCount } = buildArticle(sessionId, turns, models, firstTs);
-    const articlePath = path.join(articlesDir, `${id}.md`);
-
-    fs.writeFileSync(articlePath, article);
-    console.log(`${id}.md ← ${sessionId} (${turnCount} turns, ${models.length} models) — "${title}"`);
-    imported++;
-  } catch (err) {
-    console.error(`${sessionId}: ERROR — ${err.message}`);
+  if (!fs.existsSync(SESSIONS_DIR)) {
+    console.error(`Sessions directory not found: ${SESSIONS_DIR}`);
+    process.exit(1);
   }
+
+  const files = fs.readdirSync(SESSIONS_DIR)
+    .filter((f) => f.endsWith(".jsonl"))
+    .sort();
+
+  console.log(`Scanning ${files.length} session files in ${SESSIONS_DIR}...\n`);
+
+  let imported = 0;
+  let skipped = 0;
+
+  for (const file of files) {
+    const filePath = path.join(SESSIONS_DIR, file);
+    const sessionId = path.basename(file, ".jsonl");
+
+    try {
+      const { turns, models, firstTs } = parseSession(filePath);
+      const realTurns = turns.filter((t) => t.speaker === "vincent").length;
+
+      if (realTurns < MIN_REAL_TURNS) {
+        skipped++;
+        continue;
+      }
+
+      const { id, article, title, turnCount } = buildArticle(sessionId, turns, models, firstTs);
+      const articlePath = path.join(articlesDir, `${id}.md`);
+
+      fs.writeFileSync(articlePath, article);
+      console.log(`${id}.md ← ${sessionId} (${turnCount} turns, ${models.length} models) — "${title}"`);
+      imported++;
+    } catch (err) {
+      console.error(`${sessionId}: ERROR — ${err.message}`);
+    }
+  }
+
+  console.log(`\nDone: ${imported} imported, ${skipped} skipped.`);
+  return { imported, skipped };
 }
 
-console.log(`\nDone: ${imported} imported, ${skipped} skipped.`);
+if (require.main === module) {
+  runImportSessions();
+}
+
+module.exports = { runImportSessions };

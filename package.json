@@ -1,0 +1,25 @@
+{
+  "name": "mynote",
+  "version": "1.0.0",
+  "description": "将 Claude Code 会话自动转为可搜索、可标注的 Markdown 知识库。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daxiguaguagua-hash/echo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/daxiguaguagua-hash/echo/issues"
+  },
+  "homepage": "https://github.com/daxiguaguagua-hash/echo#readme",
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}

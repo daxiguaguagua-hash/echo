@@ -55,6 +55,11 @@ function loadArticles(dir, opts) {
   return records;
 }
 
+function writeArticleFile(absPath, data, content) {
+  const markdown = matter.stringify(content, data);
+  fs.writeFileSync(absPath, markdown, "utf-8");
+}
+
 function loadArticleById(dir, id) {
   if (!fs.existsSync(dir)) return null;
   for (const file of listMarkdownFiles(dir)) {
@@ -127,6 +132,7 @@ function nextAnnotationId(dir) {
 module.exports = {
   listMarkdownFiles,
   readMarkdownFile,
+  writeArticleFile,
   loadArticles,
   loadArticleById,
   loadComments,

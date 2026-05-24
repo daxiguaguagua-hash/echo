@@ -12,12 +12,16 @@ Usage:
   echo-mcp init project [--path <dir>]  Register project in ~/.echo-workspace/registry.json
   echo-mcp doctor                Check overall workspace health
   echo-mcp migrate legacy-buffer  Migrate ~/.echo-buffer to workspace
+  echo-mcp all                   Run full pipeline (convert -> validate -> index -> resolve)
   echo-mcp convert               Run buffer -> article conversion
   echo-mcp validate              Validate all articles and comments
   echo-mcp resolve               Resolve all annotation anchors
   echo-mcp search                Full-text search
   echo-mcp mcp                   Start MCP server (stdio transport)
   echo-mcp capture on|off|status  Enable, disable, or check capture status
+  echo-mcp tag list    List all tags with usage counts
+  echo-mcp tag add <article-id> <tag1> [tag2...]  Add one or more tags to an article
+  echo-mcp tag remove <article-id> <tag1> [tag2...]  Remove one or more tags from an article
 `;
 
 function printDoctorResults(results) {
@@ -33,10 +37,6 @@ function printDoctorResults(results) {
 
 const args = process.argv.slice(2);
 const cmd = args[0];
-
-function runScript(name) {
-  require(path.join(__dirname, "..", "scripts", name));
-}
 
 switch (cmd) {
   case "hook": {
@@ -147,18 +147,58 @@ switch (cmd) {
   case "migrate":
     console.log("migrate — not yet implemented");
     break;
-  case "convert":
-    runScript("convert.js");
+  case "all": {
+    const { runPipeline } = require("../scripts/lib/usecases/run-pipeline");
+    const result = runPipeline();
+    const hasError = Object.values(result).some((r) => r && (r.success === false || r.broken > 0));
+    if (hasError) process.exit(1);
     break;
-  case "validate":
-    runScript("validate.js");
+  }
+  case "convert": {
+    const { runConvert } = require("../scripts/convert");
+    runConvert();
     break;
-  case "resolve":
-    runScript("resolve.js");
+  }
+  case "validate": {
+    const { runValidate } = require("../scripts/validate");
+    const result = runValidate();
+    if (result.success) {
+      console.log(`OK — ${result.articleCount} articles, ${result.commentCount} comments`);
+    } else {
+      console.log(`FAIL — ${result.errors.length} error(s):\n`);
+      for (const e of result.errors) console.log(`  ${e}`);
+      process.exit(1);
+    }
     break;
-  case "search":
-    runScript("search.js");
+  }
+  case "resolve": {
+    const { runResolve } = require("../scripts/resolve");
+    const result = runResolve();
+    if (result.broken > 0) process.exit(1);
     break;
+  }
+  case "search": {
+    const { runSearch } = require("../scripts/search");
+    const args = process.argv.slice(2);
+    const opts = { keyword: "", tag: "" };
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === "--keyword" || args[i] === "-k") opts.keyword = args[++i] || "";
+      else if (args[i] === "--tag" || args[i] === "-t") opts.tag = args[++i] || "";
+    }
+    const result = runSearch(opts);
+    if (result.count === 0) process.exit(0);
+    console.log(`${result.count} result(s):\n`);
+    for (const a of result.results) {
+      const ca = a.created_at;
+      const d = ca instanceof Date ? ca.toISOString().slice(0, 10) : String(ca || "").slice(0, 10);
+      console.log(`  ${a.title || a.id}`);
+      console.log(`  ${a._file}  ·  ${d}`);
+      if (a._snippet) console.log(`  > ${a._snippet}`);
+      if (a.tags && a.tags.length) console.log(`  tags: ${a.tags.join(", ")}`);
+      console.log();
+    }
+    break;
+  }
   case "mcp":
     require("../scripts/lib/interfaces/mcp/server").start();
     break;
@@ -175,6 +215,63 @@ switch (cmd) {
       console.log(`Capture: ${isCaptureEnabled() ? "on" : "off"}`);
     } else {
       console.error("Usage: echo-mcp capture on|off|status");
+      process.exit(1);
+    }
+    break;
+  }
+  case "tag": {
+    const { resolveDataDirs } = require("../scripts/lib/infra/echo-paths");
+    const store = require("../scripts/lib/infra/markdown-store");
+    const { listTags, addTags, removeTags } = require("../scripts/lib/usecases/query-articles");
+    const dirs = resolveDataDirs();
+    const deps = { dirs, store };
+    const sub = args[1];
+
+    if (sub === "list") {
+      const tags = listTags({}, deps);
+      if (tags.length === 0) {
+        console.log("No tags found.");
+      } else {
+        console.log(`${"Tag".padEnd(30)} Usage`);
+        console.log("-".repeat(42));
+        for (const { tag, count } of tags) {
+          console.log(`${tag.padEnd(30)} ${count}`);
+        }
+      }
+    } else if (sub === "add") {
+      const articleId = args[2];
+      const tags = args.slice(3);
+      if (!articleId || tags.length === 0) {
+        console.error("Usage: echo-mcp tag add <article-id> <tag1> [tag2...]");
+        process.exit(1);
+      }
+      try {
+        const result = addTags({ id: articleId, tags }, deps);
+        console.log(`Article: ${result.id}`);
+        console.log(`Tags:   ${result.tags.join(", ")}`);
+        console.log(`Added:  ${result.added.join(", ")}`);
+      } catch (err) {
+        console.error(`Error: ${err.message}`);
+        process.exit(1);
+      }
+    } else if (sub === "remove") {
+      const articleId = args[2];
+      const tags = args.slice(3);
+      if (!articleId || tags.length === 0) {
+        console.error("Usage: echo-mcp tag remove <article-id> <tag1> [tag2...]");
+        process.exit(1);
+      }
+      try {
+        const result = removeTags({ id: articleId, tags }, deps);
+        console.log(`Article: ${result.id}`);
+        console.log(`Tags:    ${result.tags.join(", ") || "(none)"}`);
+        console.log(`Removed: ${result.removed.join(", ")}`);
+      } catch (err) {
+        console.error(`Error: ${err.message}`);
+        process.exit(1);
+      }
+    } else {
+      console.error("Usage: echo-mcp tag list|add|remove");
       process.exit(1);
     }
     break;

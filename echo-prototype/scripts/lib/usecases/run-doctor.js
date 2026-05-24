@@ -77,7 +77,11 @@ function runDoctor({ hookOnly } = {}) {
 
     // 5. Capture status
     const captureOn = isCaptureEnabled();
-    results.push(ok("Capture", captureOn ? "enabled" : "disabled"));
+    if (captureOn) {
+      results.push(ok("Capture", "enabled"));
+    } else {
+      results.push(warn("Capture", "disabled — run: echo-mcp capture on"));
+    }
 
     // 6. Legacy ~/.echo-buffer (warning only)
     const legacyBuffer = path.join(os.homedir(), ".echo-buffer");
@@ -109,10 +113,12 @@ function runDoctor({ hookOnly } = {}) {
     }
 
     // 9. Current project registration
+    let currentProject = null;
     if (registry) {
       const cwd = process.cwd();
       const current = findProjectForPath(cwd, { echoHome });
       if (current) {
+        currentProject = current;
         results.push(ok("Current project", `${current.projectId} (data: ${current.dataRoot})`));
 
         // 10. Project data directories
@@ -128,7 +134,30 @@ function runDoctor({ hookOnly } = {}) {
           results.push(ok("Project data dirs", "all present"));
         }
       } else {
-        results.push(warn("Current project", `${cwd} not registered — run echo-mcp init project`));
+        // Check if cwd is inside Echo's data directory first
+        const projectsDir = path.join(echoHome, "projects");
+        if (cwd.startsWith(projectsDir + path.sep)) {
+          let foundProjectRoot = null;
+          for (const [id, entry] of Object.entries(registry.projects || {})) {
+            const dataRoot = path.join(echoHome, "projects", id);
+            if (cwd.startsWith(dataRoot + path.sep) || cwd === dataRoot) {
+              foundProjectRoot = entry.root;
+              break;
+            }
+          }
+          if (foundProjectRoot) {
+            results.push(warn("Data directory detected",
+              `This is an Echo internal data directory.\n` +
+              `  Use the registered project root instead:\n` +
+              `    cd ${foundProjectRoot}`));
+          } else {
+            results.push(warn("Data directory detected",
+              `This appears to be inside Echo's data storage (~/.echo-workspace/projects/).\n` +
+              `  Run echo-mcp doctor from your project directory instead.`));
+          }
+        } else {
+          results.push(warn("Current project", `${cwd} not registered — run echo-mcp init project`));
+        }
       }
     }
   }
