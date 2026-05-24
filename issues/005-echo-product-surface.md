@@ -188,9 +188,10 @@ author: vincent
 
 关键点：
 
-- 不做网页端正文编辑，正文仍由 Markdown 文件/VSCode 修改。
+- 文章正文不可变（immutable）。文章是 AI 对话转写，等同于已发表内容。即使是作者本人，也不在网页端修改正文。
 - 文内评论只写 `comments/`，不改文章正文。
-- 锚点要能处理重复文本和正文变动后的漂移。
+- 锚点只需处理重复文本消歧义，不需要处理正文变动后的漂移（正文不变，锚点永远有效）。
+- 前端展示层面的 Markdown 渲染差异不影响锚点解析（`stripInlineFormatting` 已处理 `**bold**` 等格式标记）。
 
 ## 5. 底部评论区输入框
 
@@ -334,11 +335,9 @@ project:
 
 第二意见（Claude 子代理独立审查）提出了几个关键发现：
 
-### 锚点漂移风险（最高优先级）
+### 锚点漂移风险（已消除）
 
-quote + prefix/suffix + occurrence 模型在文章被编辑后会静默失效。加一句话，occurrence 计数就对不上了；改写周围文字，prefix/suffix 就匹配不到了。Hypothesis (hypothes.is) 在这个问题上花了十年，最终采用了模糊文本匹配 + XPath + CSS 选择器 + 多层回退策略——不是简单四个字段能解决的。
-
-**建议**：在动手做评论 UI 之前，先跑一个 spike：取 5 篇 Echo 文章，每篇锚定一条评论，然后模拟 3 种编辑（插入段落、改写句子、删除句子），测量锚点存活率。低于 80% 就需要先加固锚点模型。
+~~quote + prefix/suffix + occurrence 模型在文章被编辑后会静默失效。~~ **2026-05-24 澄清**：文章正文不可变。Echo 文章是 AI 对话转写，等同于已发表内容——即使作者本人也不修改正文。这与 Hypothesis 锚定活网页的场景完全不同。锚点永远锚定不变的文本，不存在漂移问题。此风险归零，spike 取消。
 
 ### `echoctl serve` 是拱心石
 
@@ -353,7 +352,6 @@ Hypothesis 的锚点思路和 Echo 几乎一致，但其实现是浏览器扩展
 ```mermaid
 flowchart TD
   V1[v1]
-  V1 --> Spike[锚点存活率 spike]
   V1 --> CLI[echoctl 命令别名]
   V1 --> Serve[echoctl serve 本地 API]
   V1 --> Alias[alias 字段 + 搜索]
@@ -365,14 +363,13 @@ flowchart TD
 
 | 顺序 | 项目 | 原因 |
 |------|------|------|
-| 1 | **锚点存活率 spike** | 评论 UI 的前提。先验证锚点模型能扛住文章编辑，再投入 UI 开发 |
-| 2 | `echoctl` 命令别名 | 改名越早成本越低 |
-| 3 | `echoctl serve` 本地 API | 拱心石。解锁评论写入、capture 开关、MCP 配置、项目列表 |
-| 4 | alias 数据模型 + 搜索 | 解决当前命令式标题不可读，移除临时 `article-aliases.json` |
-| 5 | 评论 UI | 文内选区 + 底部输入框。前提：锚点 spike 通过 |
-| 6 | 项目筛选 | 关系到信息架构，需 `project` frontmatter 字段 |
-| 7 | MCP 配置复制 | 实用但不影响核心数据流 |
-| 8 | AI 查询链 v1 | 全局最近查询日志；v2 按文章关联 |
+| 1 | `echoctl` 命令别名 | 改名越早成本越低 |
+| 2 | `echoctl serve` 本地 API | 拱心石。解锁评论写入、capture 开关、MCP 配置、项目列表 |
+| 3 | alias 数据模型 + 搜索 | 解决当前命令式标题不可读，移除临时 `article-aliases.json` |
+| 4 | 评论 UI | 文内选区 + 底部输入框。锚点模型已足够（正文不可变） |
+| 5 | 项目筛选 | 关系到信息架构，需 `project` frontmatter 字段 |
+| 6 | MCP 配置复制 | 实用但不影响核心数据流 |
+| 7 | AI 查询链 v1 | 全局最近查询日志；v2 按文章关联 |
 
 ## 已确认
 
