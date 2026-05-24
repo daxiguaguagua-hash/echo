@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-24 (VitePress 真实文章展示已实现)
+最后更新：2026-05-24 (产品表层设计跨模型审查完成，5 项待确认已关闭)
 
 ## 已完成
 
@@ -68,7 +68,19 @@
 ### 展示层
 - [x] **VitePress 骨架** — `docs/` 目录、`.vitepress/config.mts`、首页文章列表、示例文章、`docs:dev/build/preview` 脚本，构建通过
 - [x] **文章模板** (2026-05-24) — `scripts/build-docs.js` 从 Echo articles/comments 生成 VitePress 页面；首页最近文章、文章列表、标签聚合、真实文章详情、评论区卡片和侧边栏均自动生成；转义原始 XML/HTML 片段避免 Vue 编译失败。Browser 已验证文章列表、真实文章、评论区、标签页；`npm test` 113 全绿，`npm run all` 和 `npm run docs:build` 通过。
+- [x] **文章别名优化** (2026-05-24) — 新增 `article-aliases.json`，生成 VitePress 时将 `session-2026-05-22` 展示为「幂等是什么：一次和两次为什么一样」，同步首页、文章列表、文章页和侧边栏；避免 `npm run all` 从 buffer 重建文章时覆盖别名。
+- [x] **产品表层设计讨论** (2026-05-24) — 记录 alias 数据模型、MCP 配置复制、AI 查询链、文内评论、底部评论输入、`echoctl` 命名、网页 capture 开关、项目筛选。设计文档：[issues/005-echo-product-surface.md](issues/005-echo-product-surface.md)
+- [x] **产品表层跨模型审查** (2026-05-24) — Claude 子代理独立审查了 005 设计文档。关键发现：锚点模型在文章编辑后会静默漂移（需 spike 验证）；`echoctl serve` 是拱心石，应先于评论 UI 建设；Hypothesis 的锚点策略值得学习但不值得引入。5 项待确认全部关闭（alias 单字符串、作者来自 echo.json、serve 合并 VitePress、查询链先全局日志、项目元数据 convert 时补齐）。实施顺序已调整为：spike → echoctl → serve → alias → 评论 UI → 项目筛选 → MCP 配置 → AI 查询链。
+- [ ] **锚点存活率 spike** — 取 5 篇 Echo 文章，每篇锚定一条评论，模拟 3 种编辑（插入段落、改写句子、删除句子），测量锚点存活率。低于 80% 需先加固锚点模型再投入评论 UI 开发。
+- [ ] **CLI 改名为 echoctl** — 新增 `echoctl` 主命令，保留 `echo-mcp` 兼容别名
+- [ ] **本地网页 API / serve 模式** — `echoctl serve` 同时启动 API + VitePress，支持网页读取/切换 capture、写评论、读取项目列表和 MCP 配置
+- [ ] **alias 数据模型** — 将临时 `article-aliases.json` 升级为文章 frontmatter 字段（单字符串 `alias`），并让搜索/MCP 同步检索 alias
+- [ ] **文内选区评论** — 选中文字后弹出评论输入，保存为 annotation，并在正文高亮/标记。前提：锚点 spike 通过
+- [ ] **底部评论输入框** — 支持文章级评论和后续回复链扩展。作者身份从 `echo.json` 读取。
 - [ ] **进化链 UI** — 文章底部评论区展示，回复链可视化
+- [ ] **项目筛选视图** — 统一归档下按 project 元数据显示 `全部` / 单项目文章。元数据在 convert 时根据 registry 补齐。
+- [ ] **MCP 配置按钮** — 网页提供 MCP 配置复制入口，用户自行粘贴安装
+- [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑
 - [ ] **标签/摘要编辑** — 网页端改 frontmatter 字段，写回 MD
@@ -78,6 +90,7 @@
 - [ ] **Git 仓库初始化** — `git init` + `.gitignore`（排除 `.echo-buffer/`、`node_modules/`）
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
 - [x] **项目本地管线 CLI** (2026-05-24) — 新增 `echo-mcp all` 从任意注册项目目录运行完整管线 (convert → validate → index → resolve)；所有管线脚本 (convert/validate/index/resolve/search/annotate/import-sessions) 统一走 `resolveDataDirs()` 按 cwd 匹配 project registry；新增 `run-pipeline.js` usecase；doctor 识别 Echo 内部数据目录并提示修复命令。113 测试全绿，`npm run all` 通过。设计文档：[issues/004-project-local-pipeline-cli.md](issues/004-project-local-pipeline-cli.md)
+- [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
 - [x] **Project registry** — `registry.json` schema、登记/读取 usecase、重复登记幂等和路径缺失测试
 - [x] **init project 命令** — 新增 `echo-mcp init project [--path <dir>]`：全局 `~/.echo-workspace/registry.json` 登记项目，并创建 `projects/<project-id>/` 数据目录（session-buffer/、articles/、comments/、index/）
 - [x] **hook 项目路由** — capture.js：去掉模块级路径常量，按 cwd 匹配 registry 写入对应项目数据目录或降级到 Echo home

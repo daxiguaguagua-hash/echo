@@ -9,7 +9,7 @@ export const articleSidebar = [
         items: [
             { text: "/gstack 做得不错，不过你都测试和review了吗？", link: '/articles/generated/session-2026-05-20' },
             { text: "/superpowers:using-superpowers 我们继续 @ECHO_STATUS.md 中的“进行...", link: '/articles/generated/session-2026-05-21' },
-            { text: "/understand-anything:understand --language zh", link: '/articles/generated/session-2026-05-22' },
+            { text: "幂等是什么：一次和两次为什么一样", link: '/articles/generated/session-2026-05-22' },
             { text: "你好，现在测试看看能不能实时记录。", link: '/articles/generated/session-2026-05-24' },
             { text: "我在另一个会话中，让DeepSeek TUI带着DeepSeek，正在实现mcp server的事情。我们这个会话...", link: '/articles/generated/session-2026-05-23' },
             { text: "我先说我的想法：1/当前我和ai的对话，有很多都是精妙绝伦的，但是我让ai处理之后他们总是会经过压缩，这样精妙的地...", link: '/articles/generated/session-d65985f1' },

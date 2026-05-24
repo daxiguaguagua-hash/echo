@@ -19,7 +19,7 @@
 </a>
 
 <a class="echo-article-card" href="./generated/session-2026-05-22">
-  <strong>/understand-anything:understand --language zh</strong>
+  <strong>幂等是什么：一次和两次为什么一样</strong>
   <small>2026-05-24</small>
   <p>/understand-anything:understand --language zh</p>
   <div class="echo-tags"><span>未标记</span></div>

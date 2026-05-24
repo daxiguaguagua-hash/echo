@@ -8,6 +8,7 @@ const { stripCommentSections } = require("./lib/usecases/strip-comments");
 const DOCS_ROOT = path.resolve(__dirname, "../../docs");
 const GENERATED_ARTICLES_DIR = path.join(DOCS_ROOT, "articles", "generated");
 const SIDEBAR_FILE = path.join(DOCS_ROOT, ".vitepress", "echo-sidebar.mts");
+const ARTICLE_ALIASES_FILE = path.resolve(__dirname, "../article-aliases.json");
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -38,6 +39,15 @@ function articleSlug(article) {
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return slug || encodeURIComponent(base).replace(/%/g, "").toLowerCase();
+}
+
+function loadArticleAliases(file = ARTICLE_ALIASES_FILE) {
+  if (!fs.existsSync(file)) return {};
+  return JSON.parse(fs.readFileSync(file, "utf-8"));
+}
+
+function displayTitle(article, aliases = {}) {
+  return aliases[article.id] || article.data.title || article.id;
 }
 
 function normalizeDate(value) {
@@ -121,8 +131,8 @@ function renderComments(article, comments) {
   return `## 评论区\n\n<div class="echo-comment-list">\n\n${rows.join("\n\n")}\n\n</div>`;
 }
 
-function renderArticlePage(article, comments) {
-  const title = article.data.title || article.id;
+function renderArticlePage(article, comments, aliases) {
+  const title = displayTitle(article, aliases);
   const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
   const participants = Array.isArray(article.data.participants)
     ? article.data.participants.map((p) => p.id || p.role).filter(Boolean).join(", ")
@@ -159,9 +169,9 @@ ${renderComments(article, comments)}
 `;
 }
 
-function renderArticleIndex(articles) {
+function renderArticleIndex(articles, aliases) {
   const rows = articles.map((article) => {
-    const title = article.data.title || article.id;
+    const title = displayTitle(article, aliases);
     const summary = article.data.summary || "无摘要";
     const updated = normalizeDate(article.data.updated_at || article.data.created_at);
     const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
@@ -198,11 +208,11 @@ function collectTags(articles) {
   return [...map.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
 }
 
-function renderTagsIndex(articles) {
+function renderTagsIndex(articles, aliases) {
   const groups = collectTags(articles);
   const sections = groups.map(([tag, taggedArticles]) => {
     const links = taggedArticles
-      .map((article) => `- [${article.data.title || article.id}](/articles/generated/${articleSlug(article)})`)
+      .map((article) => `- [${displayTitle(article, aliases)}](/articles/generated/${articleSlug(article)})`)
       .join("\n");
     return `## ${tag} (${taggedArticles.length})\n\n${links}`;
   });
@@ -221,15 +231,15 @@ ${sections.join("\n\n")}
 `;
 }
 
-function renderHomeArticles(articles) {
+function renderHomeArticles(articles, aliases) {
   return articles.slice(0, 6).map((article) => {
-    const title = article.data.title || article.id;
+    const title = displayTitle(article, aliases);
     const date = normalizeDate(article.data.updated_at || article.data.created_at);
     return `- [${title}](/articles/generated/${articleSlug(article)}) · ${date}`;
   }).join("\n");
 }
 
-function updateHome(articles) {
+function updateHome(articles, aliases) {
   const home = `---
 layout: home
 
@@ -262,14 +272,14 @@ features:
 
 ## 最近文章
 
-${renderHomeArticles(articles)}
+${renderHomeArticles(articles, aliases)}
 `;
   fs.writeFileSync(path.join(DOCS_ROOT, "index.md"), home, "utf-8");
 }
 
-function writeSidebar(articles) {
+function writeSidebar(articles, aliases) {
   const items = articles.slice(0, 30).map((article) => {
-    const title = article.data.title || article.id;
+    const title = displayTitle(article, aliases);
     return `            { text: ${JSON.stringify(title)}, link: '/articles/generated/${articleSlug(article)}' }`;
   }).join(",\n");
 
@@ -296,20 +306,21 @@ function runBuildDocs() {
   const dirs = resolveDataDirs();
   const articles = store.loadArticles(dirs.articlesDir).sort(sortByUpdatedDesc);
   const comments = store.loadComments(dirs.commentsDir);
+  const aliases = loadArticleAliases();
 
   cleanDir(GENERATED_ARTICLES_DIR);
   for (const article of articles) {
     fs.writeFileSync(
       path.join(GENERATED_ARTICLES_DIR, `${articleSlug(article)}.md`),
-      renderArticlePage(article, comments),
+      renderArticlePage(article, comments, aliases),
       "utf-8"
     );
   }
 
-  fs.writeFileSync(path.join(DOCS_ROOT, "articles", "index.md"), renderArticleIndex(articles), "utf-8");
-  fs.writeFileSync(path.join(DOCS_ROOT, "tags", "index.md"), renderTagsIndex(articles), "utf-8");
-  updateHome(articles);
-  writeSidebar(articles);
+  fs.writeFileSync(path.join(DOCS_ROOT, "articles", "index.md"), renderArticleIndex(articles, aliases), "utf-8");
+  fs.writeFileSync(path.join(DOCS_ROOT, "tags", "index.md"), renderTagsIndex(articles, aliases), "utf-8");
+  updateHome(articles, aliases);
+  writeSidebar(articles, aliases);
 
   console.log(`Generated VitePress docs for ${articles.length} articles and ${comments.length} comments.`);
 }
@@ -318,4 +329,4 @@ if (require.main === module) {
   runBuildDocs();
 }
 
-module.exports = { runBuildDocs };
+module.exports = { runBuildDocs, loadArticleAliases, displayTitle };
