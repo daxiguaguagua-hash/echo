@@ -71,8 +71,8 @@ describe("installClaudeHook", () => {
 
     const written = JSON.parse(fs.readFileSync(path.join(tempDir, ".claude", "settings.json"), "utf-8"));
     assert.ok(written.hooks);
-    assert.equal(written.hooks.UserPromptSubmit[0].command, "echo-mcp hook capture");
-    assert.equal(written.hooks.SessionStart[0].command, "echo-mcp hook status");
+    assert.equal(written.hooks.UserPromptSubmit[0].hooks[0].command, "echo-mcp hook capture");
+    assert.equal(written.hooks.SessionStart[0].hooks[0].command, "echo-mcp hook status");
   });
 
   it("is idempotent — second install detects all already installed", () => {
@@ -89,6 +89,66 @@ describe("installClaudeHook", () => {
 
     assert.equal(result.toAdd.length, 0);
     assert.equal(result.alreadyInstalled.length, 4);
+  });
+
+  it("detects echo-mcp in later nested hooks and preserves matcher entries", () => {
+    setupSettings({
+      hooks: {
+        UserPromptSubmit: [
+          {
+            matcher: "",
+            hooks: [
+              { type: "command", command: "custom command" },
+              { type: "command", command: "echo-mcp hook capture" },
+            ],
+          },
+        ],
+      },
+    });
+
+    const { installClaudeHook } = require("../scripts/lib/usecases/install-claude-hook");
+    const result = installClaudeHook({ write: true });
+
+    assert.equal(result.toAdd.filter((h) => h.event === "UserPromptSubmit").length, 0);
+    assert.equal(result.alreadyInstalled.filter((h) => h.event === "UserPromptSubmit").length, 1);
+
+    const written = JSON.parse(fs.readFileSync(path.join(tempDir, ".claude", "settings.json"), "utf-8"));
+    const userPromptHooks = written.hooks.UserPromptSubmit;
+    assert.equal(userPromptHooks.length, 1);
+    assert.deepEqual(userPromptHooks[0].hooks.map((h) => h.command), [
+      "custom command",
+      "echo-mcp hook capture",
+    ]);
+  });
+
+  it("preserves nested hook entries even when matcher is omitted", () => {
+    setupSettings({
+      hooks: {
+        UserPromptSubmit: [
+          {
+            hooks: [
+              { type: "command", command: "custom command" },
+              { type: "command", command: "echo-mcp hook capture" },
+            ],
+          },
+        ],
+      },
+    });
+
+    const { installClaudeHook } = require("../scripts/lib/usecases/install-claude-hook");
+    const result = installClaudeHook({ write: true });
+
+    assert.equal(result.toAdd.filter((h) => h.event === "UserPromptSubmit").length, 0);
+    assert.equal(result.alreadyInstalled.filter((h) => h.event === "UserPromptSubmit").length, 1);
+
+    const written = JSON.parse(fs.readFileSync(path.join(tempDir, ".claude", "settings.json"), "utf-8"));
+    const userPromptHooks = written.hooks.UserPromptSubmit;
+    assert.equal(userPromptHooks.length, 1);
+    assert.equal("matcher" in userPromptHooks[0], false);
+    assert.deepEqual(userPromptHooks[0].hooks.map((h) => h.command), [
+      "custom command",
+      "echo-mcp hook capture",
+    ]);
   });
 
   it("--write creates .claude directory and settings.json when both are missing", () => {

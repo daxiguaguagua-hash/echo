@@ -97,6 +97,48 @@ describe("runDoctor", () => {
     }
   });
 
+  it("detects echo-mcp hooks after earlier nested commands", () => {
+    setupWorkspace();
+    setupSettings({
+      hooks: {
+        UserPromptSubmit: [
+          { matcher: "", hooks: [
+            { type: "command", command: "custom command" },
+            { type: "command", command: "echo-mcp hook capture" },
+          ] },
+        ],
+        Stop: [
+          { matcher: "", hooks: [
+            { type: "command", command: "custom command" },
+            { type: "command", command: "echo-mcp hook capture" },
+          ] },
+        ],
+        StopFailure: [
+          { matcher: "", hooks: [
+            { type: "command", command: "custom command" },
+            { type: "command", command: "echo-mcp hook capture" },
+          ] },
+        ],
+        SessionStart: [
+          { matcher: "", hooks: [
+            { type: "command", command: "custom command" },
+            { type: "command", command: "echo-mcp hook status" },
+          ] },
+        ],
+      }
+    });
+
+    const { runDoctor } = require("../scripts/lib/usecases/run-doctor");
+    const results = runDoctor();
+
+    for (const event of ["UserPromptSubmit", "Stop", "StopFailure", "SessionStart"]) {
+      const h = results.find(r => r.name === `Hook: ${event}`);
+      assert.ok(h);
+      assert.equal(h.status, "ok");
+      assert.match(h.message, /echo-mcp hook/);
+    }
+  });
+
   it("handles non-array hook event entries without crashing", () => {
     setupWorkspace();
     setupSettings({

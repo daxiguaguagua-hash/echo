@@ -13,6 +13,18 @@ function ok(name, message) { return check(name, "ok", message); }
 function warn(name, message) { return check(name, "warn", message); }
 function error(name, message) { return check(name, "error", message); }
 
+
+function extractHookCommand(entry, matches = () => true) {
+  if (Array.isArray(entry.hooks)) {
+    const hook = entry.hooks.find(
+      (h) => typeof h.command === "string" && matches(h.command)
+    );
+    if (hook) return hook.command;
+  }
+  if (typeof entry.command === "string" && matches(entry.command)) return entry.command;
+  return null;
+}
+
 function runDoctor({ hookOnly } = {}) {
   const ws = resolveWorkspace();
   const results = [];
@@ -129,19 +141,27 @@ function runDoctor({ hookOnly } = {}) {
       const hooks = settings.hooks || {};
 
       for (const event of ["UserPromptSubmit", "Stop", "StopFailure", "SessionStart"]) {
-        const entries = hooks[event] || [];
-        const hasEchoMcp = entries.some(
-          (e) => typeof e.command === "string" && e.command.startsWith("echo-mcp")
-        );
-        const hasSh = entries.some(
-          (e) => typeof e.command === "string" && e.command.includes(".sh")
-        );
+        const entries = Array.isArray(hooks[event]) ? hooks[event] : [];
+        const hasEchoMcp = entries.some((e) => {
+          const cmd = extractHookCommand(e, (command) => command.startsWith("echo-mcp"));
+          return typeof cmd === "string" && cmd.startsWith("echo-mcp");
+        });
+        const hasSh = entries.some((e) => {
+          const cmd = extractHookCommand(e, (command) => command.includes(".sh"));
+          return typeof cmd === "string" && cmd.includes(".sh");
+        });
 
         if (hasEchoMcp) {
-          const cmds = entries.filter(e => typeof e.command === "string" && e.command.startsWith("echo-mcp")).map(e => e.command);
+          const cmds = entries.filter((e) => {
+            const cmd = extractHookCommand(e, (command) => command.startsWith("echo-mcp"));
+            return typeof cmd === "string" && cmd.startsWith("echo-mcp");
+          }).map((e) => extractHookCommand(e, (command) => command.startsWith("echo-mcp")));
           results.push(ok(`Hook: ${event}`, `echo-mcp: ${cmds.join(", ")}`));
         } else if (hasSh) {
-          const cmds = entries.filter(e => typeof e.command === "string" && e.command.includes(".sh")).map(e => e.command);
+          const cmds = entries.filter((e) => {
+            const cmd = extractHookCommand(e, (command) => command.includes(".sh"));
+            return typeof cmd === "string" && cmd.includes(".sh");
+          }).map((e) => extractHookCommand(e, (command) => command.includes(".sh")));
           results.push(warn(`Hook: ${event}`, `legacy .sh: ${cmds.join(", ")} — run echo-mcp hook install claude --write`));
         } else {
           results.push(warn(`Hook: ${event}`, "not configured — run echo-mcp hook install claude --write"));

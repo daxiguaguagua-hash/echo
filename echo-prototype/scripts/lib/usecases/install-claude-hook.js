@@ -4,11 +4,15 @@ const os = require("os");
 
 const SETTINGS_PATH = path.join(os.homedir(), ".claude", "settings.json");
 
+function hookEntry(command) {
+  return { matcher: "", hooks: [{ type: "command", command }] };
+}
+
 const DESIRED_HOOKS = {
-  UserPromptSubmit: [{ command: "echo-mcp hook capture" }],
-  Stop: [{ command: "echo-mcp hook capture" }],
-  StopFailure: [{ command: "echo-mcp hook capture" }],
-  SessionStart: [{ command: "echo-mcp hook status" }],
+  UserPromptSubmit: [hookEntry("echo-mcp hook capture")],
+  Stop: [hookEntry("echo-mcp hook capture")],
+  StopFailure: [hookEntry("echo-mcp hook capture")],
+  SessionStart: [hookEntry("echo-mcp hook status")],
 };
 
 function readSettings() {
@@ -18,6 +22,23 @@ function readSettings() {
   } catch (_) {
     return {};
   }
+}
+
+function extractCommand(entry, matches = () => true) {
+  // New format: { matcher: "", hooks: [{ type: "command", command: "..." }] }
+  if (Array.isArray(entry.hooks)) {
+    const hook = entry.hooks.find(
+      (h) => typeof h.command === "string" && matches(h.command)
+    );
+    if (hook) return hook.command;
+  }
+  // Old format: { command: "..." }
+  if (typeof entry.command === "string" && matches(entry.command)) return entry.command;
+  return null;
+}
+
+function isOldCommandEntry(entry) {
+  return typeof entry.command === "string" && !Array.isArray(entry.hooks);
 }
 
 function installClaudeHook({ write }) {
@@ -32,8 +53,9 @@ function installClaudeHook({ write }) {
   for (const [event, entries] of Object.entries(hooks)) {
     if (!Array.isArray(entries)) continue;
     for (const entry of entries) {
-      if (typeof entry.command === "string" && entry.command.includes(".sh")) {
-        legacy.push({ event, command: entry.command });
+      const cmd = extractCommand(entry, (command) => command.includes(".sh"));
+      if (cmd && cmd.includes(".sh")) {
+        legacy.push({ event, command: cmd });
       }
     }
   }
@@ -47,20 +69,25 @@ function installClaudeHook({ write }) {
     else if (!Array.isArray(hooks[event])) hooks[event] = [];
 
     for (const desired of desiredEntries) {
+      const desiredCmd = desired.hooks[0].command;
       const found = existing.find(
-        (e) => typeof e.command === "string" && e.command === desired.command
+        (e) => extractCommand(e, (command) => command === desiredCmd) === desiredCmd
       );
       if (found) {
-        alreadyInstalled.push({ event, command: desired.command });
+        alreadyInstalled.push({ event, command: desiredCmd });
+        if (isOldCommandEntry(found)) {
+          Object.assign(found, desired);
+        }
       } else {
-        toAdd.push({ event, command: desired.command });
+        toAdd.push({ event, command: desiredCmd });
       }
     }
 
     if (!hooks[event]) hooks[event] = [];
     for (const desired of desiredEntries) {
+      const desiredCmd = desired.hooks[0].command;
       const found = hooks[event].find(
-        (e) => typeof e.command === "string" && e.command === desired.command
+        (e) => extractCommand(e, (command) => command === desiredCmd) === desiredCmd
       );
       if (!found) {
         hooks[event].push(desired);
