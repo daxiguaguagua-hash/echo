@@ -119,3 +119,37 @@ npm run validate → 校验
 npm run index    → 生成评论区
 npm run resolve  → 验证锚点
 ```
+
+## 手动测试
+  空文件夹 → 跑起来（5 分钟）
+
+  1. 安装 CLI
+  cd /Users/vincenthuang/myNote/echo-prototype
+  npm install
+  npm link                         # 让 echo-mcp 命令全局可用
+
+  2. 创建你的知识库目录
+  mkdir -p ~/echo-notes
+  cd ~/echo-notes
+
+  3. 初始化工作区
+  echo-mcp init
+
+  4. 注册项目
+  echo-mcp init project
+
+  5. 安装 hook（自动捕获对话）
+  echo-mcp hook install claude --write
+
+  6. 检查一切正常
+  echo-mcp doctor
+
+  做完后，你每次跟 Claude Code 对话都会被自动捕获到 ~/.echo-workspace/projects/echo-notes/session-buffer/。
+
+  定期跑管线把 buffer 转成文章：
+
+  cd /Users/vincenthuang/myNote/echo-prototype
+  npm run all        # convert → validate → index → resolve
+  npm run search -- --keyword "你的关键词"
+
+  如果不想装 hook，也可以跳过第 5 步，先手动跑 npm run import 导入历史 JSONL 会话试试效果。
