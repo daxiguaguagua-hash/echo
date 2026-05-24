@@ -30,6 +30,9 @@ features:
 
 ## 最近文章
 
-*文章列表将在构建时从 `~/.echo-workspace/articles/` 自动生成。*
-
-> 提示：运行 `npm run all` 确保管线通过，然后 `npm run docs:build` 构建站点。
+- [/gstack 做得不错，不过你都测试和review了吗？](/articles/generated/session-2026-05-20) · 2026-05-24
+- [/superpowers:using-superpowers 我们继续 @ECHO_STATUS.md 中的“进行...](/articles/generated/session-2026-05-21) · 2026-05-24
+- [/understand-anything:understand --language zh](/articles/generated/session-2026-05-22) · 2026-05-24
+- [你好，现在测试看看能不能实时记录。](/articles/generated/session-2026-05-24) · 2026-05-24
+- [我在另一个会话中，让DeepSeek TUI带着DeepSeek，正在实现mcp server的事情。我们这个会话...](/articles/generated/session-2026-05-23) · 2026-05-24
+- [我先说我的想法：1/当前我和ai的对话，有很多都是精妙绝伦的，但是我让ai处理之后他们总是会经过压缩，这样精妙的地...](/articles/generated/session-d65985f1) · 2026-05-21

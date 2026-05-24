@@ -1,0 +1,142 @@
+.echo-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 18px 0 14px;
+}
+
+.echo-meta-grid > div,
+.echo-comment,
+.echo-article-card {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg-soft);
+}
+
+.echo-meta-grid > div {
+  padding: 12px;
+}
+
+.echo-meta-grid strong,
+.echo-meta-grid span {
+  display: block;
+}
+
+.echo-meta-grid strong {
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.echo-meta-grid span {
+  overflow-wrap: anywhere;
+}
+
+.echo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 18px;
+}
+
+.echo-tags span,
+.echo-tag-cloud a {
+  border: 1px solid var(--vp-c-brand-2);
+  border-radius: 999px;
+  color: var(--vp-c-brand-1);
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 9px;
+  text-decoration: none;
+}
+
+.echo-summary {
+  border-left: 3px solid var(--vp-c-brand-1);
+  color: var(--vp-c-text-2);
+  margin: 18px 0 28px;
+  padding-left: 14px;
+}
+
+.echo-turn-marker {
+  align-items: center;
+  border-left: 3px solid var(--vp-c-brand-1);
+  display: flex;
+  gap: 10px;
+  margin: 28px 0 12px;
+  padding: 8px 0 8px 12px;
+}
+
+.echo-turn-marker span {
+  font-weight: 700;
+}
+
+.echo-turn-marker small,
+.echo-comment-head span,
+.echo-article-card small {
+  color: var(--vp-c-text-2);
+}
+
+.echo-comment-list {
+  display: grid;
+  gap: 14px;
+}
+
+.echo-comment {
+  padding: 14px;
+}
+
+.echo-comment-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.echo-comment blockquote {
+  margin: 8px 0 12px;
+}
+
+.echo-article-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.echo-article-card {
+  color: inherit;
+  display: block;
+  padding: 16px;
+  text-decoration: none;
+}
+
+.echo-article-card:hover,
+.echo-article-card:focus,
+.echo-article-card * {
+  text-decoration: none;
+}
+
+.echo-article-card strong,
+.echo-article-card small {
+  display: block;
+}
+
+.echo-article-card p {
+  color: var(--vp-c-text-2);
+  margin: 8px 0 0;
+}
+
+.echo-article-card:hover,
+.echo-article-card:focus {
+  border-color: var(--vp-c-brand-1);
+}
+
+.echo-tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0 32px;
+}
+
+.echo-tag-cloud a span {
+  color: var(--vp-c-text-2);
+  margin-left: 6px;
+}

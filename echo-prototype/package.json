@@ -15,9 +15,10 @@
     "search": "node scripts/search.js",
     "mcp": "node bin/echo-mcp.js mcp",
     "all": "npm run convert && npm run validate && npm run index && npm run resolve",
-    "docs:dev": "vitepress dev ../docs",
-    "docs:build": "vitepress build ../docs",
-    "docs:preview": "vitepress preview ../docs"
+    "docs:generate": "node scripts/build-docs.js",
+    "docs:dev": "npm run docs:generate && vitepress dev ../docs",
+    "docs:build": "npm run docs:generate && vitepress build ../docs",
+    "docs:preview": "npm run docs:generate && vitepress preview ../docs"
   },
   "bin": {
     "echo-mcp": "./bin/echo-mcp.js"

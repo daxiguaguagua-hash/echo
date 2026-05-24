@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress'
+import { articleSidebar } from './echo-sidebar.mts'
 
 export default defineConfig({
   title: 'Echo 知识库',
@@ -12,14 +13,7 @@ export default defineConfig({
     ],
 
     sidebar: {
-      '/articles/': [
-        {
-          text: '文章列表',
-          items: [
-            { text: '示例文章', link: '/articles/sample-article' },
-          ],
-        },
-      ],
+      '/articles/': articleSidebar,
     },
 
     socialLinks: [],

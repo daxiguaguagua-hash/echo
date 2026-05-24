@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-24 (项目本地管线 CLI 已实现)
+最后更新：2026-05-24 (VitePress 真实文章展示已实现)
 
 ## 已完成
 
@@ -67,7 +67,7 @@
 
 ### 展示层
 - [x] **VitePress 骨架** — `docs/` 目录、`.vitepress/config.mts`、首页文章列表、示例文章、`docs:dev/build/preview` 脚本，构建通过
-- [ ] **文章模板** — VitePress 渲染 Echo 文章的样式
+- [x] **文章模板** (2026-05-24) — `scripts/build-docs.js` 从 Echo articles/comments 生成 VitePress 页面；首页最近文章、文章列表、标签聚合、真实文章详情、评论区卡片和侧边栏均自动生成；转义原始 XML/HTML 片段避免 Vue 编译失败。Browser 已验证文章列表、真实文章、评论区、标签页；`npm test` 113 全绿，`npm run all` 和 `npm run docs:build` 通过。
 - [ ] **进化链 UI** — 文章底部评论区展示，回复链可视化
 
 ### 编辑
