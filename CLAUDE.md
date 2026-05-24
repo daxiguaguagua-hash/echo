@@ -50,6 +50,28 @@ Echo 锚点使用 `quote` / `prefix` / `suffix` / `occurrence` 四个字段。
       +--> 要处理隐私？      走显式删除/脱敏策略
 ```
 
+### 禁止动作清单（enforcement）
+
+以下场景 AI **容易顺手改正文**，必须拒绝：
+
+| 场景 | 禁止做法 | 正确做法 |
+|------|---------|---------|
+| validate 报错 | 改正文让它通过 | 报 validation error，不改原文 |
+| Markdown 格式不统一 | 自动格式化正文 | 展示层容错（stripInlineFormatting），不改原文 |
+| frontmatter 缺失字段 | 打开文件补 frontmatter | 只改 frontmatter，不碰 `---` 之后的内容 |
+| import 时发现源数据有误 | 修正文再导入 | 用 annotation 标注差异；或重新导入覆盖整篇（不允许局部编辑） |
+| convert 生成的文章标题是命令 | 把标题改成人类可读的 | 用 `alias` frontmatter 字段提供显示标题 |
+| 正文有错别字 | 改掉 | 加 annotation |
+| 隐私信息泄漏 | 直接删那段文字 | 走独立删除/脱敏脚本，不留局部编辑记录 |
+
+### 测试覆盖
+
+以下测试确保不可变性不被破坏：
+
+- `convert` / `import` 测试：验证输出文章正文与输入源一致（逐字）
+- `validate` 测试：验证不会修改传入的文章对象
+- markdown-store 测试：验证 `readMarkdownFile` 返回原始内容，不做格式化
+
 ## 项目结构
 
 ```
