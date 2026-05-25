@@ -22,6 +22,7 @@
 | 3 | [数据审计](04-data-audit.md) | 稳定模式 | 数据状态不可信 |
 | 4 | [Issue 驱动](06-issue-driven.md) | 稳定模式 | 多步骤实现 |
 | — | [自主执行](03-autonomous-execution.md) | 元工作流 | 用户离开并授权 |
+| — | [角色分工与派发](07-roles-and-dispatch.md) | 基础规则 | 谁做什么、何时派子 agent |
 
 ## 选择指南（先问风险，再选流程）
 
