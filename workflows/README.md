@@ -23,6 +23,7 @@
 | 4 | [Issue 驱动](06-issue-driven.md) | 稳定模式 | 多步骤实现 |
 | — | [自主执行](03-autonomous-execution.md) | 元工作流 | 用户离开并授权 |
 | — | [角色分工与派发](07-roles-and-dispatch.md) | 基础规则 | 谁做什么、何时派子 agent |
+| — | [业界共识工作流](08-industry-workflow.md) | 核心流程 | Claude + Codex 独立搜索推演后的共识 |
 
 ## 选择指南（先问风险，再选流程）
 
