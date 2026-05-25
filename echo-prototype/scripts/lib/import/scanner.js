@@ -6,7 +6,6 @@ const DEFAULT_EXCLUSIONS = ["claude-mem-observer-sessions", "private-tmp"];
 
 function scanClaudeProjects(claudeProjectsDir, opts = {}) {
   const excludeList = opts.excludeDirs || opts.exclude || DEFAULT_EXCLUSIONS;
-  const exclusions = new Set(excludeList);
 
   if (!fs.existsSync(claudeProjectsDir)) return [];
 
@@ -15,7 +14,7 @@ function scanClaudeProjects(claudeProjectsDir, opts = {}) {
 
   for (const entry of entries) {
     if (entry.startsWith(".")) continue;
-    if (exclusions.has(entry)) continue;
+    if (excludeList.some((p) => entry.includes(p))) continue;
 
     const fullPath = path.join(claudeProjectsDir, entry);
     let stat;
