@@ -14,11 +14,15 @@ function validateAnnotation(record) {
   }
 
   if (!data.target?.article_id) errs.push(`${file}: missing "target.article_id"`);
-  if (!data.anchor?.quote) errs.push(`${file}: missing "anchor.quote"`);
-  if (data.anchor?.prefix === undefined) errs.push(`${file}: missing "anchor.prefix"`);
-  if (data.anchor?.suffix === undefined) errs.push(`${file}: missing "anchor.suffix"`);
-  if (data.anchor?.occurrence === undefined) errs.push(`${file}: missing "anchor.occurrence"`);
-  if (data.anchor?.line_hint === undefined) errs.push(`${file}: missing "anchor.line_hint"`);
+  if (data.anchor?.kind === "article") {
+    // Article-level comment: no quote/prefix/suffix/occurrence/line_hint required
+  } else {
+    if (!data.anchor?.quote) errs.push(`${file}: missing "anchor.quote"`);
+    if (data.anchor?.prefix === undefined) errs.push(`${file}: missing "anchor.prefix"`);
+    if (data.anchor?.suffix === undefined) errs.push(`${file}: missing "anchor.suffix"`);
+    if (data.anchor?.occurrence === undefined) errs.push(`${file}: missing "anchor.occurrence"`);
+    if (data.anchor?.line_hint === undefined) errs.push(`${file}: missing "anchor.line_hint"`);
+  }
   if (!data.author) errs.push(`${file}: missing "author"`);
   if (!data.created_at) errs.push(`${file}: missing "created_at"`);
   if (!data.status) errs.push(`${file}: missing "status"`);

@@ -1,6 +1,7 @@
 // Echo usecase — article query operations for MCP tools
 // Each handler receives (args, deps) where deps = { dirs, store }
 
+const path = require("path");
 const { ensureDir } = require("../infra/workspace");
 const { NotFoundError } = require("../domain/errors");
 
@@ -11,11 +12,49 @@ function searchArticles(args, deps) {
   const tag = (args.tag || "").toLowerCase();
   const projectFilter = args.project;
 
-  const articles = store.loadArticles(dirs.articlesDir).map((a) => ({
-    ...a.data,
-    _file: a.relPath,
-    _content: a.content,
-  }));
+  // Determine which project directories to search
+  const projectDirs = [];
+  const currentProjectId = dirs.projectId;
+
+  if (projectFilter && projectFilter !== "all" && projectFilter !== currentProjectId) {
+    // Search only the specified external project
+    try {
+      const { listProjects } = require("./project-registry");
+      const projects = listProjects();
+      const target = projects.find((p) => p.projectId === projectFilter);
+      if (target) {
+        projectDirs.push({ articlesDir: path.join(target.dataRoot, "articles"), projectId: target.projectId });
+      }
+    } catch (_) {}
+    // If project not found, fall through with empty projectDirs (returns no results)
+  } else if (projectFilter === "all") {
+    // Search current project + all registered projects
+    projectDirs.push({ articlesDir: dirs.articlesDir, projectId: currentProjectId });
+    try {
+      const { listProjects } = require("./project-registry");
+      const projects = listProjects();
+      for (const p of projects) {
+        if (p.projectId === currentProjectId) continue;
+        projectDirs.push({ articlesDir: path.join(p.dataRoot, "articles"), projectId: p.projectId });
+      }
+    } catch (_) {}
+  } else {
+    // Default: current project only
+    projectDirs.push({ articlesDir: dirs.articlesDir, projectId: currentProjectId });
+  }
+
+  // Load articles from all determined project directories
+  const articles = [];
+  for (const pd of projectDirs) {
+    store.loadArticles(pd.articlesDir).forEach((a) => {
+      articles.push({
+        ...a.data,
+        _file: a.relPath,
+        _content: a.content,
+        project: a.data.project || pd.projectId || "",
+      });
+    });
+  }
 
   let results = articles;
 

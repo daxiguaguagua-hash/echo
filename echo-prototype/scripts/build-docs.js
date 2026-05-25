@@ -393,12 +393,13 @@ function loadAllArticlesAndComments() {
     }
   } catch (_) {}
 
-  // Deduplicate by ID (keep first occurrence)
+  // Deduplicate by project-qualified ID (keep first occurrence)
   const seen = new Set();
   const uniqueArticles = [];
   for (const a of allArticles) {
-    if (!seen.has(a.id)) {
-      seen.add(a.id);
+    const key = `${a._project ?? "__none__"}:${a.id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
       uniqueArticles.push(a);
     }
   }

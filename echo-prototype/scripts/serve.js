@@ -26,10 +26,11 @@ function findFreePort(start) {
   });
 }
 
-function jsonResponse(res, code, data) {
+function jsonResponse(res, code, data, docsPort) {
+  const originPort = docsPort || DEFAULT_DOCS_PORT;
   res.writeHead(code, {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": `http://${HOST}:${DEFAULT_DOCS_PORT}`,
+    "Access-Control-Allow-Origin": `http://${HOST}:${originPort}`,
   });
   res.end(JSON.stringify(data));
 }
@@ -49,6 +50,7 @@ function readBody(req) {
 }
 
 function createRouter(deps) {
+  const docsPort = deps.docsPort || DEFAULT_DOCS_PORT;
   return async function router(req, res) {
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
@@ -64,22 +66,22 @@ function createRouter(deps) {
 
     try {
       if (p === "/api/capture" && req.method === "GET") {
-        return jsonResponse(res, 200, { enabled: isCaptureEnabled() });
+        return jsonResponse(res, 200, { enabled: isCaptureEnabled() }, docsPort);
       }
 
       if (p === "/api/capture" && req.method === "POST") {
         const body = await readBody(req);
         if (!body || typeof body.enabled !== "boolean") {
-          return jsonResponse(res, 400, { error: "body.enabled (boolean) required" });
+          return jsonResponse(res, 400, { error: "body.enabled (boolean) required" }, docsPort);
         }
         const r = setCaptureEnabled(body.enabled);
-        return jsonResponse(res, 200, { enabled: r.capture_enabled });
+        return jsonResponse(res, 200, { enabled: r.capture_enabled }, docsPort);
       }
 
       if (p === "/api/comments" && req.method === "POST") {
         const body = await readBody(req);
         if (!body || !body.articleId || !body.comment) {
-          return jsonResponse(res, 400, { error: "articleId and comment required" });
+          return jsonResponse(res, 400, { error: "articleId and comment required" }, docsPort);
         }
         const dirs = deps.dirs || resolveDataDirs();
         try {
@@ -100,9 +102,9 @@ function createRouter(deps) {
             store,
           });
           try { runBuildDocs(); } catch (_) {}
-          return jsonResponse(res, 201, result);
+          return jsonResponse(res, 201, result, docsPort);
         } catch (err) {
-          return jsonResponse(res, 422, { error: err.message });
+          return jsonResponse(res, 422, { error: err.message }, docsPort);
         }
       }
 
@@ -118,7 +120,7 @@ function createRouter(deps) {
             dataRoot: p.dataRoot,
           })),
           currentId: dirs.projectId,
-        });
+        }, docsPort);
       }
 
       if (p === "/api/mcp-config" && req.method === "GET") {
@@ -132,7 +134,7 @@ function createRouter(deps) {
             args: ["mcp"],
           })),
           serverInfo: mcpServerInfo,
-        });
+        }, docsPort);
       }
 
       if (p === "/api/query-log" && req.method === "GET") {
@@ -140,24 +142,24 @@ function createRouter(deps) {
         const dirs = deps.dirs || resolveDataDirs();
         try {
           const { readRecentQueryLog } = require("./lib/infra/query-log");
-          return jsonResponse(res, 200, readRecentQueryLog(dirs, limit));
+          return jsonResponse(res, 200, readRecentQueryLog(dirs, limit), docsPort);
         } catch (_) {
-          return jsonResponse(res, 200, []);
+          return jsonResponse(res, 200, [], docsPort);
         }
       }
 
       if (p === "/api/rebuild-docs" && req.method === "POST") {
         try {
           runBuildDocs();
-          return jsonResponse(res, 200, { ok: true });
+          return jsonResponse(res, 200, { ok: true }, docsPort);
         } catch (err) {
-          return jsonResponse(res, 500, { error: err.message });
+          return jsonResponse(res, 500, { error: err.message }, docsPort);
         }
       }
 
-      jsonResponse(res, 404, { error: "not found" });
+      jsonResponse(res, 404, { error: "not found" }, docsPort);
     } catch (err) {
-      jsonResponse(res, 500, { error: err.message });
+      jsonResponse(res, 500, { error: err.message }, docsPort);
     }
   };
 }
@@ -181,7 +183,7 @@ async function start() {
     process.exit(1);
   });
 
-  const router = createRouter({});
+  const router = createRouter({ docsPort });
   const server = http.createServer(router);
   server.listen(apiPort, HOST, () => {
     console.log(`\n  Echo serve started:`);
