@@ -119,9 +119,10 @@ function createArticle(input) {
   }
 
   const title = input.title || inferTitle(turns);
+  const alias = input.alias || title;
   const summary = input.summary || inferSummary(turns);
 
-  return {
+  const article = {
     id: input.id,
     title,
     created_at: input.created_at,
@@ -130,8 +131,13 @@ function createArticle(input) {
     summary,
     participants,
     source_session: input.source_session || undefined,
+    project: input.project || undefined,
     turns,
   };
+
+  if (alias !== title) article.alias = alias;
+
+  return article;
 }
 
 // ---- Markdown serializer (single exit point) ----
@@ -151,6 +157,8 @@ function toMarkdown(article) {
     }),
   };
   if (article.source_session) fm.source_session = article.source_session;
+  if (article.alias) fm.alias = article.alias;
+  if (article.project) fm.project = article.project;
 
   const frontmatter = yaml.dump(fm, {
     lineWidth: -1,

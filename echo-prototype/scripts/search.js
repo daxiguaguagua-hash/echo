@@ -41,16 +41,21 @@ function runSearch(opts = {}) {
     results = results
       .map((a) => {
         const body = a._content.toLowerCase();
+        const aliasMatch = (a.alias || "").toLowerCase().includes(kw);
         const idx = body.indexOf(kw);
-        if (idx === -1) return null;
+        if (idx === -1 && !aliasMatch) return null;
         const start = Math.max(0, idx - 40);
         const end = Math.min(body.length, idx + kw.length + 40);
         let snippet = a._content.slice(start, end).replace(/\n/g, " ");
         if (start > 0) snippet = "..." + snippet;
         if (end < body.length) snippet = snippet + "...";
-        return { ...a, _snippet: snippet };
+        return { ...a, alias: a.alias || "", _snippet: snippet };
       })
       .filter(Boolean);
+  }
+
+  if (!keyword) {
+    results = results.map((a) => ({ ...a, alias: a.alias || "" }));
   }
 
   return { results, count: results.length };

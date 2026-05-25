@@ -71,8 +71,8 @@ describe("installClaudeHook", () => {
 
     const written = JSON.parse(fs.readFileSync(path.join(tempDir, ".claude", "settings.json"), "utf-8"));
     assert.ok(written.hooks);
-    assert.equal(written.hooks.UserPromptSubmit[0].hooks[0].command, "echo-mcp hook capture");
-    assert.equal(written.hooks.SessionStart[0].hooks[0].command, "echo-mcp hook status");
+    assert.equal(written.hooks.UserPromptSubmit[0].hooks[0].command, "echoctl hook capture");
+    assert.equal(written.hooks.SessionStart[0].hooks[0].command, "echoctl hook status");
   });
 
   it("is idempotent — second install detects all already installed", () => {
@@ -175,5 +175,45 @@ describe("installClaudeHook", () => {
 
     // Should not crash; should treat non-array as empty and add our hooks
     assert.ok(result.toAdd.length > 0);
+  });
+
+  it("detects echo-mcp nested hooks as already installed alongside echoctl", () => {
+    setupSettings({
+      hooks: {
+        UserPromptSubmit: [
+          {
+            hooks: [
+              { type: "command", command: "echo-mcp hook capture" },
+            ],
+          },
+        ],
+        SessionStart: [
+          {
+            hooks: [
+              { type: "command", command: "echo-mcp hook status" },
+            ],
+          },
+        ],
+      },
+    });
+
+    const { installClaudeHook } = require("../scripts/lib/usecases/install-claude-hook");
+    const result = installClaudeHook({ write: true });
+
+    // Should detect existing echo-mcp hooks as already installed (same subcommand)
+    assert.equal(result.toAdd.length, 2); // Stop + StopFailure are new
+    assert.equal(result.alreadyInstalled.length, 2); // UserPromptSubmit + SessionStart
+
+    // Written file should still contain original echo-mcp commands, not duplicated
+    const written = JSON.parse(fs.readFileSync(path.join(tempDir, ".claude", "settings.json"), "utf-8"));
+    const upHooks = written.hooks.UserPromptSubmit;
+    assert.equal(upHooks.length, 1);
+    assert.equal(upHooks[0].hooks.length, 1);
+    assert.equal(upHooks[0].hooks[0].command, "echo-mcp hook capture");
+
+    const ssHooks = written.hooks.SessionStart;
+    assert.equal(ssHooks.length, 1);
+    assert.equal(ssHooks[0].hooks.length, 1);
+    assert.equal(ssHooks[0].hooks[0].command, "echo-mcp hook status");
   });
 });

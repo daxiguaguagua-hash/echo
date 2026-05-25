@@ -65,7 +65,7 @@ flowchart TD
 ```text
 echo-prototype/
   bin/
-    echo-mcp.js
+    echoctl.js
 
   scripts/
     cli/
@@ -234,7 +234,7 @@ flowchart TD
   B -->|是| C[使用 registry 对应 project data root]
   B -->|否| D{ECHO_WORKSPACE 是否设置}
   D -->|是| E[兼容 legacy workspace]
-  D -->|否| F[提示运行 echo-mcp init project]
+  D -->|否| F[提示运行 echoctl init project]
 ```
 
 测试边界：
@@ -253,7 +253,7 @@ flowchart TD
 | 阶段 | 行为 |
 |---|---|
 | 当前阶段 | 保留 `ECHO_WORKSPACE` 和单 workspace，新增项目路径函数与测试边界 |
-| 下一阶段 | 增加 `registry.json` usecase 和 `echo-mcp init project` |
+| 下一阶段 | 增加 `registry.json` usecase 和 `echoctl init project` |
 | 再下一阶段 | hook capture/status 按 registry 路由到项目数据目录 |
 | 前端阶段 | 从 `~/.echo-workspace/registry.json` 汇总所有项目 |
 
@@ -280,8 +280,8 @@ flowchart TD
 后续命令建议：
 
 ```bash
-echo-mcp doctor
-echo-mcp migrate legacy-buffer
+echoctl doctor
+echoctl migrate legacy-buffer
 ```
 
 迁移策略：
@@ -309,13 +309,13 @@ echo-mcp migrate legacy-buffer
 推荐改为：
 
 ```text
-~/.claude/settings.json -> echo-mcp hook capture
-~/.claude/settings.json -> echo-mcp hook status
+~/.claude/settings.json -> echoctl hook capture
+~/.claude/settings.json -> echoctl hook status
 ```
 
 ```mermaid
 flowchart LR
-  A[Claude Code hook event] --> B[echo-mcp hook capture]
+  A[Claude Code hook event] --> B[echoctl hook capture]
   B --> C[resolveWorkspace]
   C --> D[session-buffer]
 ```
@@ -331,22 +331,22 @@ flowchart LR
 建议命令：
 
 ```bash
-echo-mcp init
-echo-mcp hook install claude
-echo-mcp hook install claude --write
-echo-mcp hook doctor
-echo-mcp hook capture
-echo-mcp hook status
+echoctl init
+echoctl hook install claude
+echoctl hook install claude --write
+echoctl hook doctor
+echoctl hook capture
+echoctl hook status
 ```
 
 安装策略：
 
 | 命令 | 行为 |
 |---|---|
-| `echo-mcp init` | 创建 workspace、写 `echo.json`、创建目录 |
-| `echo-mcp hook install claude` | 打印建议配置，不写用户文件 |
-| `echo-mcp hook install claude --write` | 用户显式授权后修改 Claude 配置 |
-| `echo-mcp hook doctor` | 检查 hook 是否存在、路径是否旧、workspace 是否可写 |
+| `echoctl init` | 创建 workspace、写 `echo.json`、创建目录 |
+| `echoctl hook install claude` | 打印建议配置，不写用户文件 |
+| `echoctl hook install claude --write` | 用户显式授权后修改 Claude 配置 |
+| `echoctl hook doctor` | 检查 hook 是否存在、路径是否旧、workspace 是否可写 |
 
 ---
 

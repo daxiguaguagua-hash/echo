@@ -2,7 +2,7 @@
 
 目标：一步步验证 Echo 从零到全部功能的完整链路——包括项目注册、hook 路由、管线、搜索、边界情况处理。
 
-> 当前状态：Echo 未 npm 发布，开发期用 `npm link` 让系统有 `echo-mcp` 命令。
+> 当前状态：Echo 未 npm 发布，开发期用 `npm link` 让系统有 `echoctl` 命令。
 >
 > 本指南用 `ECHO_HOME` 隔离到 `/tmp/echo-test`，不会污染你的真实 `~/.echo-workspace`。
 
@@ -12,7 +12,7 @@
 cd /Users/vincenthuang/myNote/echo-prototype
 npm install
 npm link
-which echo-mcp          # 应输出 echo-mcp 的路径
+which echoctl          # 应输出 echoctl 的路径
 ```
 
 ## 1. 隔离测试环境
@@ -42,7 +42,7 @@ unset ECHO_HOME
 ### 2.1 创建工作区
 
 ```bash
-echo-mcp init
+echoctl init
 ```
 
 期望输出：
@@ -63,7 +63,7 @@ ls /tmp/echo-test
 ### 2.2 幂等性验证
 
 ```bash
-echo-mcp init
+echoctl init
 ```
 
 期望输出：
@@ -77,7 +77,7 @@ echo.json: skipped
 ### 2.3 全局健康检查
 
 ```bash
-echo-mcp doctor
+echoctl doctor
 ```
 
 期望输出（关键行）：
@@ -88,8 +88,8 @@ echo-mcp doctor
   OK   Subdirectories: all present
   OK   echo.json: valid
   OK   Echo home: exists: /tmp/echo-test
- WARN  registry.json: missing — run echo-mcp init
- WARN  Current project: ... not registered — run echo-mcp init project
+ WARN  registry.json: missing — run echoctl init
+ WARN  Current project: ... not registered — run echoctl init project
 ```
 
 ---
@@ -110,7 +110,7 @@ echo "# Sub App" > /tmp/echo-test/my-project/sub-app/ECHO_STATUS.md
 
 ```bash
 cd /tmp/echo-test/my-project
-echo-mcp init project
+echoctl init project
 ```
 
 期望输出：
@@ -136,7 +136,7 @@ ls /tmp/echo-test/projects/my-project
 ### 3.3 幂等性验证
 
 ```bash
-echo-mcp init project
+echoctl init project
 ```
 
 期望输出：
@@ -150,7 +150,7 @@ Registered: no (already exists)
 ```bash
 mkdir -p /tmp/echo-test/my-project-other
 cd /tmp/echo-test/my-project-other
-echo-mcp init project
+echoctl init project
 ```
 
 期望输出：
@@ -164,7 +164,7 @@ cannot register a different path ... under the same id.
 
 ```bash
 cd /tmp/echo-test/my-project/sub-app
-echo-mcp init project
+echoctl init project
 ```
 
 期望输出：
@@ -178,7 +178,7 @@ Registered: yes
 
 ```bash
 cd /tmp/echo-test/my-project/sub-app/lib/deep
-echo-mcp doctor
+echoctl doctor
 ```
 
 期望输出中应看到：
@@ -193,7 +193,7 @@ echo-mcp doctor
 
 ```bash
 cd /tmp/echo-test/my-project
-echo-mcp doctor
+echoctl doctor
 # Current project: my-project (data: /tmp/echo-test/projects/my-project)
 ```
 
@@ -204,7 +204,7 @@ echo-mcp doctor
 ### 4.1 预览
 
 ```bash
-echo-mcp hook install claude
+echoctl hook install claude
 ```
 
 期望：列出 4 个事件和命令，最后显示 `Run with --write to apply`。
@@ -214,7 +214,7 @@ echo-mcp hook install claude
 **注意：这会修改 `~/.claude/settings.json`。** 如果不想改，跳过此步，第 5 节用手动管道。
 
 ```bash
-echo-mcp hook install claude --write
+echoctl hook install claude --write
 ```
 
 期望：`Installed:` + `written to ~/.claude/settings.json`。
@@ -222,7 +222,7 @@ echo-mcp hook install claude --write
 ### 4.3 幂等性
 
 ```bash
-echo-mcp hook install claude --write
+echoctl hook install claude --write
 ```
 
 期望：`Already installed:` + `All hooks already up to date.`
@@ -230,7 +230,7 @@ echo-mcp hook install claude --write
 ### 4.4 Hook 健康检查
 
 ```bash
-echo-mcp hook doctor
+echoctl hook doctor
 ```
 
 期望：四个事件均显示 `OK`。
@@ -257,7 +257,7 @@ sim_hook() {
 ### 5.2 UserPromptSubmit → 已注册项目
 
 ```bash
-sim_hook UserPromptSubmit /tmp/echo-test/my-project | echo-mcp hook capture
+sim_hook UserPromptSubmit /tmp/echo-test/my-project | echoctl hook capture
 ```
 
 期望：`pending saved`
@@ -274,7 +274,7 @@ ls /tmp/echo-test/session-buffer/pending/ 2>/dev/null || echo "不存在，正�
 ### 5.3 Stop → 完整 turn
 
 ```bash
-sim_hook Stop /tmp/echo-test/my-project | echo-mcp hook capture
+sim_hook Stop /tmp/echo-test/my-project | echoctl hook capture
 ```
 
 期望：`turn t001-t002 saved`
@@ -289,8 +289,8 @@ ls /tmp/echo-test/projects/my-project/session-buffer/
 ### 5.4 降级到未注册目录
 
 ```bash
-sim_hook UserPromptSubmit /tmp/some-random-dir test-session-002 | echo-mcp hook capture
-sim_hook Stop /tmp/some-random-dir test-session-002 | echo-mcp hook capture
+sim_hook UserPromptSubmit /tmp/some-random-dir test-session-002 | echoctl hook capture
+sim_hook Stop /tmp/some-random-dir test-session-002 | echoctl hook capture
 ```
 
 期望：`pending saved` + `turn t001-t002 saved`
@@ -318,7 +318,7 @@ cat /tmp/echo-test/projects/my-project/session-buffer/failures.jsonl
 ### 5.6 捕获关闭
 
 ```bash
-ECHO_CAPTURE=off sim_hook UserPromptSubmit /tmp/echo-test/my-project | echo-mcp hook capture
+ECHO_CAPTURE=off sim_hook UserPromptSubmit /tmp/echo-test/my-project | echoctl hook capture
 echo $?   # 0, 无输出，不写文件
 ```
 
@@ -329,7 +329,7 @@ echo $?   # 0, 无输出，不写文件
 ### 6.1 项目内
 
 ```bash
-sim_hook SessionStart /tmp/echo-test/my-project | echo-mcp hook status
+sim_hook SessionStart /tmp/echo-test/my-project | echoctl hook status
 ```
 
 期望：`systemMessage` 包含 `Echo (my-project):`
@@ -337,7 +337,7 @@ sim_hook SessionStart /tmp/echo-test/my-project | echo-mcp hook status
 ### 6.2 未注册
 
 ```bash
-sim_hook SessionStart /tmp/some-random-dir | echo-mcp hook status
+sim_hook SessionStart /tmp/some-random-dir | echoctl hook status
 ```
 
 期望：`systemMessage` 为 `Echo:` (无项目标签)
@@ -346,7 +346,7 @@ sim_hook SessionStart /tmp/some-random-dir | echo-mcp hook status
 
 ```bash
 mkdir -p /tmp/echo-test/no-status
-sim_hook SessionStart /tmp/echo-test/no-status | echo-mcp hook status
+sim_hook SessionStart /tmp/echo-test/no-status | echoctl hook status
 ```
 
 期望：无输出，静默退出。
@@ -356,9 +356,9 @@ sim_hook SessionStart /tmp/echo-test/no-status | echo-mcp hook status
 ## 7. 全管线
 
 ```bash
-echo-mcp convert    # 处理 buffer → 文章
-echo-mcp validate   # OK — N articles, M comments
-echo-mcp resolve    # N ok, 0 broken
+echoctl convert    # 处理 buffer → 文章
+echoctl validate   # OK — N articles, M comments
+echoctl resolve    # N ok, 0 broken
 ```
 
 ---
@@ -369,7 +369,7 @@ echo-mcp resolve    # N ok, 0 broken
 
 ```bash
 echo 'not json!!!' > /tmp/echo-test/registry.json
-echo-mcp doctor 2>&1
+echoctl doctor 2>&1
 # ERR  registry.json: corrupt — backed up to .../registry.json.corrupt-...
 ls /tmp/echo-test/registry.json.corrupt-*   # 备份存在
 ```
@@ -378,15 +378,15 @@ ls /tmp/echo-test/registry.json.corrupt-*   # 备份存在
 
 ```bash
 echo '{bad' > /tmp/echo-test/echo.json
-echo-mcp doctor          # ERR  echo.json: invalid JSON
-echo-mcp init            # echo.json: replaced
-echo-mcp doctor          # OK   echo.json: valid
+echoctl doctor          # ERR  echo.json: invalid JSON
+echoctl init            # echo.json: replaced
+echoctl doctor          # OK   echo.json: valid
 ```
 
 ### 8.3 Hook-only 模式
 
 ```bash
-echo-mcp hook doctor     # 只输出 hook 检查
+echoctl hook doctor     # 只输出 hook 检查
 ```
 
 ---
@@ -397,7 +397,7 @@ echo-mcp hook doctor     # 只输出 hook 检查
 cd ~
 rm -rf /tmp/echo-test
 unset ECHO_HOME
-echo-mcp doctor          # 恢复检查真实环境
+echoctl doctor          # 恢复检查真实环境
 ```
 
 ---
@@ -407,18 +407,18 @@ echo-mcp doctor          # 恢复检查真实环境
 | 场景 | 命令 |
 |------|------|
 | 隔离环境 | `export ECHO_HOME=/tmp/echo-test && rm -rf "$ECHO_HOME"` |
-| 初始化工作区 | `echo-mcp init` |
-| 全局检查 | `echo-mcp doctor` |
-| 注册项目 | `echo-mcp init project` |
-| 注册项目（指定路径） | `echo-mcp init project --path /path/to/project` |
-| Hook 预览 | `echo-mcp hook install claude` |
-| Hook 安装 | `echo-mcp hook install claude --write` |
-| Hook 检查 | `echo-mcp hook doctor` |
-| 捕获（管道） | `echo '{"hook_event_name":"UserPromptSubmit","cwd":"...","session_id":"...","prompt":"..."}' \| echo-mcp hook capture` |
-| 会话状态 | `echo '{"hook_event_name":"SessionStart","cwd":"..."}' \| echo-mcp hook status` |
-| 转换 | `echo-mcp convert` |
-| 校验 | `echo-mcp validate` |
-| 解析锚点 | `echo-mcp resolve` |
+| 初始化工作区 | `echoctl init` |
+| 全局检查 | `echoctl doctor` |
+| 注册项目 | `echoctl init project` |
+| 注册项目（指定路径） | `echoctl init project --path /path/to/project` |
+| Hook 预览 | `echoctl hook install claude` |
+| Hook 安装 | `echoctl hook install claude --write` |
+| Hook 检查 | `echoctl hook doctor` |
+| 捕获（管道） | `echo '{"hook_event_name":"UserPromptSubmit","cwd":"...","session_id":"...","prompt":"..."}' \| echoctl hook capture` |
+| 会话状态 | `echo '{"hook_event_name":"SessionStart","cwd":"..."}' \| echoctl hook status` |
+| 转换 | `echoctl convert` |
+| 校验 | `echoctl validate` |
+| 解析锚点 | `echoctl resolve` |
 | 恢复环境 | `unset ECHO_HOME` |
 
 ## 11. 架构速查
@@ -471,23 +471,23 @@ session-buffer/ 子路径写入 bufferRoot 下
 # 1. 安装 CLI
 cd /Users/vincenthuang/myNote/echo-prototype
 npm install
-npm link                         # 让 echo-mcp 命令全局可用
+npm link                         # 让 echoctl 命令全局可用
 
 # 2. 创建你的知识库目录
 mkdir -p ~/echo-notes
 cd ~/echo-notes
 
 # 3. 初始化工作区
-echo-mcp init
+echoctl init
 
 # 4. 注册项目
-echo-mcp init project
+echoctl init project
 
 # 5. 安装 hook（自动捕获对话）
-echo-mcp hook install claude --write
+echoctl hook install claude --write
 
 # 6. 检查一切正常
-echo-mcp doctor
+echoctl doctor
 ```
 
 做完后，你每次跟 Claude Code 对话都会被自动捕获到 `~/.echo-workspace/projects/echo-notes/session-buffer/`。

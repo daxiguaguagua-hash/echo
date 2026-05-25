@@ -4,6 +4,7 @@ const os = require("os");
 const { resolveWorkspace, resolveEchoHomePath } = require("../infra/workspace");
 const { isCaptureEnabled } = require("../infra/config");
 const { findProjectForPath } = require("./project-registry");
+const { commandFor, isKnownCliCommand, cliNames } = require("../cli/names");
 
 function check(name, status, message) {
   return { name, status, message };
@@ -51,7 +52,7 @@ function runDoctor({ hookOnly } = {}) {
     for (const d of ["articles", "comments", "session-buffer", "index"]) {
       const full = path.join(ws, d);
       if (!fs.existsSync(full)) {
-        results.push(warn("Subdirectory", `${d}/ missing — run echo-mcp init`));
+        results.push(warn("Subdirectory", `${d}/ missing — run ${commandFor(["init"])}`));
       }
     }
     if (results.filter(r => r.name === "Subdirectory").length === 0) {
@@ -69,10 +70,10 @@ function runDoctor({ hookOnly } = {}) {
           results.push(warn("echo.json", "valid JSON but no workspace field"));
         }
       } catch (_) {
-        results.push(error("echo.json", "invalid JSON — run echo-mcp init"));
+        results.push(error("echo.json", `invalid JSON — run ${commandFor(["init"])}`));
       }
     } else {
-      results.push(warn("echo.json", "missing — run echo-mcp init"));
+      results.push(warn("echo.json", `missing — run ${commandFor(["init"])}`));
     }
 
     // 5. Capture status
@@ -80,13 +81,13 @@ function runDoctor({ hookOnly } = {}) {
     if (captureOn) {
       results.push(ok("Capture", "enabled"));
     } else {
-      results.push(warn("Capture", "disabled — run: echo-mcp capture on"));
+      results.push(warn("Capture", `disabled — run: ${commandFor(["capture", "on"])}`));
     }
 
     // 6. Legacy ~/.echo-buffer (warning only)
     const legacyBuffer = path.join(os.homedir(), ".echo-buffer");
     if (fs.existsSync(legacyBuffer)) {
-      results.push(warn("Legacy buffer", `${legacyBuffer} exists — run echo-mcp migrate legacy-buffer`));
+      results.push(warn("Legacy buffer", `${legacyBuffer} exists — run ${commandFor(["migrate", "legacy-buffer"])}`));
     }
 
     // 7. Echo home (global)
@@ -94,7 +95,7 @@ function runDoctor({ hookOnly } = {}) {
     if (fs.existsSync(echoHome)) {
       results.push(ok("Echo home", `exists: ${echoHome}`));
     } else {
-      results.push(warn("Echo home", `not found: ${echoHome} — run echo-mcp init`));
+      results.push(warn("Echo home", `not found: ${echoHome} — run ${commandFor(["init"])}`));
     }
 
     // 8. registry.json
@@ -109,7 +110,7 @@ function runDoctor({ hookOnly } = {}) {
         results.push(error("registry.json", "invalid JSON"));
       }
     } else {
-      results.push(warn("registry.json", "missing — run echo-mcp init"));
+      results.push(warn("registry.json", `missing — run ${commandFor(["init"])}`));
     }
 
     // 9. Current project registration
@@ -129,7 +130,7 @@ function runDoctor({ hookOnly } = {}) {
           }
         }
         if (missing.length > 0) {
-          results.push(warn("Project data dirs", `missing: ${missing.join(", ")} — run echo-mcp init project`));
+          results.push(warn("Project data dirs", `missing: ${missing.join(", ")} — run ${commandFor(["init", "project"])}`));
         } else {
           results.push(ok("Project data dirs", "all present"));
         }
@@ -153,10 +154,10 @@ function runDoctor({ hookOnly } = {}) {
           } else {
             results.push(warn("Data directory detected",
               `This appears to be inside Echo's data storage (~/.echo-workspace/projects/).\n` +
-              `  Run echo-mcp doctor from your project directory instead.`));
+              `  Run ${commandFor(["doctor"])} from your project directory instead.`));
           }
         } else {
-          results.push(warn("Current project", `${cwd} not registered — run echo-mcp init project`));
+          results.push(warn("Current project", `${cwd} not registered — run ${commandFor(["init", "project"])}`));
         }
       }
     }
@@ -172,8 +173,8 @@ function runDoctor({ hookOnly } = {}) {
       for (const event of ["UserPromptSubmit", "Stop", "StopFailure", "SessionStart"]) {
         const entries = Array.isArray(hooks[event]) ? hooks[event] : [];
         const hasEchoMcp = entries.some((e) => {
-          const cmd = extractHookCommand(e, (command) => command.startsWith("echo-mcp"));
-          return typeof cmd === "string" && cmd.startsWith("echo-mcp");
+          const cmd = extractHookCommand(e, (command) => isKnownCliCommand(command));
+          return typeof cmd === "string" && isKnownCliCommand(cmd);
         });
         const hasSh = entries.some((e) => {
           const cmd = extractHookCommand(e, (command) => command.includes(".sh"));
@@ -182,29 +183,29 @@ function runDoctor({ hookOnly } = {}) {
 
         if (hasEchoMcp) {
           const cmds = entries.filter((e) => {
-            const cmd = extractHookCommand(e, (command) => command.startsWith("echo-mcp"));
-            return typeof cmd === "string" && cmd.startsWith("echo-mcp");
-          }).map((e) => extractHookCommand(e, (command) => command.startsWith("echo-mcp")));
-          results.push(ok(`Hook: ${event}`, `echo-mcp: ${cmds.join(", ")}`));
+            const cmd = extractHookCommand(e, (command) => isKnownCliCommand(command));
+            return typeof cmd === "string" && isKnownCliCommand(cmd);
+          }).map((e) => extractHookCommand(e, (command) => isKnownCliCommand(command)));
+          results.push(ok(`Hook: ${event}`, `CLI: ${cmds.join(", ")}`));
         } else if (hasSh) {
           const cmds = entries.filter((e) => {
             const cmd = extractHookCommand(e, (command) => command.includes(".sh"));
             return typeof cmd === "string" && cmd.includes(".sh");
           }).map((e) => extractHookCommand(e, (command) => command.includes(".sh")));
-          results.push(warn(`Hook: ${event}`, `legacy .sh: ${cmds.join(", ")} — run echo-mcp hook install claude --write`));
+          results.push(warn(`Hook: ${event}`, `legacy .sh: ${cmds.join(", ")} — run ${commandFor(["hook", "install", "claude", "--write"])}`));
         } else {
-          results.push(warn(`Hook: ${event}`, "not configured — run echo-mcp hook install claude --write"));
+          results.push(warn(`Hook: ${event}`, `not configured — run ${commandFor(["hook", "install", "claude", "--write"])}`));
         }
       }
     } catch (_) {
       results.push(error("Hook config", `${settingsPath} is invalid JSON`));
     }
   } else {
-    results.push(warn("Hook config", "~/.claude/settings.json not found — run echo-mcp hook install claude"));
+    results.push(warn("Hook config", `~/.claude/settings.json not found — run ${commandFor(["hook", "install", "claude"])}`));
   }
 
-  // 8. echo-mcp command resolvability
-  results.push(ok("CLI", "echo-mcp is in PATH (installed via npm or linked)"));
+  // 8. CLI resolvability
+  results.push(ok("CLI", `${cliNames.canonicalName} is in PATH; echo-mcp remains supported as alias`));
 
   return results;
 }

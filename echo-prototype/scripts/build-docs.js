@@ -8,7 +8,6 @@ const { stripCommentSections } = require("./lib/usecases/strip-comments");
 const DOCS_ROOT = path.resolve(__dirname, "../../docs");
 const GENERATED_ARTICLES_DIR = path.join(DOCS_ROOT, "articles", "generated");
 const SIDEBAR_FILE = path.join(DOCS_ROOT, ".vitepress", "echo-sidebar.mts");
-const ARTICLE_ALIASES_FILE = path.resolve(__dirname, "../article-aliases.json");
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -41,13 +40,8 @@ function articleSlug(article) {
   return slug || encodeURIComponent(base).replace(/%/g, "").toLowerCase();
 }
 
-function loadArticleAliases(file = ARTICLE_ALIASES_FILE) {
-  if (!fs.existsSync(file)) return {};
-  return JSON.parse(fs.readFileSync(file, "utf-8"));
-}
-
-function displayTitle(article, aliases = {}) {
-  return aliases[article.id] || article.data.title || article.id;
+function displayTitle(article) {
+  return article.data.alias || article.data.title || article.id;
 }
 
 function normalizeDate(value) {
@@ -131,8 +125,8 @@ function renderComments(article, comments) {
   return `## 评论区\n\n<div class="echo-comment-list">\n\n${rows.join("\n\n")}\n\n</div>`;
 }
 
-function renderArticlePage(article, comments, aliases) {
-  const title = displayTitle(article, aliases);
+function renderArticlePage(article, comments) {
+  const title = displayTitle(article);
   const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
   const participants = Array.isArray(article.data.participants)
     ? article.data.participants.map((p) => p.id || p.role).filter(Boolean).join(", ")
@@ -140,9 +134,12 @@ function renderArticlePage(article, comments, aliases) {
   const created = normalizeDate(article.data.created_at);
   const updated = normalizeDate(article.data.updated_at);
   const summary = article.data.summary || "";
+  const project = article.data.project || article._project || "";
   const tagHtml = tags.length
     ? tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")
     : "<span>未标记</span>";
+
+  const projectMeta = project ? `<div><strong>项目</strong><span>${escapeHtml(project)}</span></div>` : "";
 
   return `---
 title: "${escapeFrontmatterString(title)}"
@@ -155,6 +152,7 @@ title: "${escapeFrontmatterString(title)}"
   <div><strong>更新</strong><span>${escapeHtml(updated || "-")}</span></div>
   <div><strong>参与者</strong><span>${escapeHtml(participants || "-")}</span></div>
   <div><strong>ID</strong><span>${escapeHtml(article.id)}</span></div>
+  ${projectMeta}
 </div>
 
 <div class="echo-tags">${tagHtml}</div>
@@ -169,14 +167,66 @@ ${renderComments(article, comments)}
 `;
 }
 
-function renderArticleIndex(articles, aliases) {
+function collectProjects(articles) {
+  const projects = new Map();
+  for (const article of articles) {
+    const p = article._project;
+    if (p && !projects.has(p)) {
+      projects.set(p, { projectId: p, count: 0 });
+    }
+    if (p) projects.get(p).count++;
+    else {
+      if (!projects.has("__other__")) projects.set("__other__", { projectId: null, count: 0 });
+      projects.get("__other__").count++;
+    }
+  }
+  return [...projects.values()];
+}
+
+function renderArticleIndex(articles) {
+  const projects = collectProjects(articles);
+  const hasProjects = projects.length > 1;
+
+  const filterNav = hasProjects ? `<nav class="echo-project-filter">
+  <button class="echo-filter-btn active" data-project="all">全部 (${articles.length})</button>
+${projects.map((p) => {
+    const label = p.projectId || "默认";
+    return `  <button class="echo-filter-btn" data-project="${escapeHtml(p.projectId || "__none__")}">${escapeHtml(label)} (${p.count})</button>`;
+  }).join("\n")}
+</nav>
+` : "";
+
+  const filterScript = hasProjects ? `
+<script>
+(function() {
+  const btns = document.querySelectorAll('.echo-filter-btn');
+  const cards = document.querySelectorAll('.echo-article-card');
+  btns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      btns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      const project = btn.getAttribute('data-project');
+      cards.forEach(function(card) {
+        if (project === 'all' || card.getAttribute('data-project') === project || (project === '__none__' && !card.getAttribute('data-project'))) {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  });
+})();
+</script>
+` : "";
+
   const rows = articles.map((article) => {
-    const title = displayTitle(article, aliases);
+    const title = displayTitle(article);
     const summary = article.data.summary || "无摘要";
     const updated = normalizeDate(article.data.updated_at || article.data.created_at);
     const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
     const tagHtml = tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("") || "<span>未标记</span>";
-    return `<a class="echo-article-card" href="./generated/${articleSlug(article)}">
+    const projectAttr = article._project ? ` data-project="${escapeHtml(article._project)}"` : "";
+    return `<a class="echo-article-card" href="./generated/${articleSlug(article)}"${projectAttr}>
   <strong>${escapeHtml(title)}</strong>
   <small>${escapeHtml(updated || "-")}</small>
   <p>${escapeHtml(summary)}</p>
@@ -188,11 +238,13 @@ function renderArticleIndex(articles, aliases) {
 
 共 ${articles.length} 篇 Echo 文章。
 
+${filterNav}
 <div class="echo-article-grid">
 
 ${rows.join("\n\n")}
 
 </div>
+${filterScript}
 `;
 }
 
@@ -208,11 +260,11 @@ function collectTags(articles) {
   return [...map.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
 }
 
-function renderTagsIndex(articles, aliases) {
+function renderTagsIndex(articles) {
   const groups = collectTags(articles);
   const sections = groups.map(([tag, taggedArticles]) => {
     const links = taggedArticles
-      .map((article) => `- [${displayTitle(article, aliases)}](/articles/generated/${articleSlug(article)})`)
+      .map((article) => `- [${displayTitle(article)}](/articles/generated/${articleSlug(article)})`)
       .join("\n");
     return `## ${tag} (${taggedArticles.length})\n\n${links}`;
   });
@@ -231,15 +283,15 @@ ${sections.join("\n\n")}
 `;
 }
 
-function renderHomeArticles(articles, aliases) {
+function renderHomeArticles(articles) {
   return articles.slice(0, 6).map((article) => {
-    const title = displayTitle(article, aliases);
+    const title = displayTitle(article);
     const date = normalizeDate(article.data.updated_at || article.data.created_at);
     return `- [${title}](/articles/generated/${articleSlug(article)}) · ${date}`;
   }).join("\n");
 }
 
-function updateHome(articles, aliases) {
+function updateHome(articles) {
   const home = `---
 layout: home
 
@@ -272,14 +324,14 @@ features:
 
 ## 最近文章
 
-${renderHomeArticles(articles, aliases)}
+${renderHomeArticles(articles)}
 `;
   fs.writeFileSync(path.join(DOCS_ROOT, "index.md"), home, "utf-8");
 }
 
-function writeSidebar(articles, aliases) {
+function writeSidebar(articles) {
   const items = articles.slice(0, 30).map((article) => {
-    const title = displayTitle(article, aliases);
+    const title = displayTitle(article);
     return `            { text: ${JSON.stringify(title)}, link: '/articles/generated/${articleSlug(article)}' }`;
   }).join(",\n");
 
@@ -302,25 +354,75 @@ ${items}
   fs.writeFileSync(SIDEBAR_FILE, sidebar, "utf-8");
 }
 
-function runBuildDocs() {
+function loadAllArticlesAndComments() {
   const dirs = resolveDataDirs();
-  const articles = store.loadArticles(dirs.articlesDir).sort(sortByUpdatedDesc);
+  const allArticles = [];
+  const allComments = [];
+
+  // Current project / default workspace
+  const articles = store.loadArticles(dirs.articlesDir);
+  for (const a of articles) {
+    a._project = a.data.project || dirs.projectId || null;
+  }
+  allArticles.push(...articles);
+
   const comments = store.loadComments(dirs.commentsDir);
-  const aliases = loadArticleAliases();
+  for (const c of comments) {
+    c._project = dirs.projectId || null;
+  }
+  allComments.push(...comments);
+
+  // Registered projects
+  try {
+    const { listProjects } = require("./lib/usecases/project-registry");
+    const projects = listProjects();
+    for (const p of projects) {
+      if (p.projectId === dirs.projectId) continue;
+      const pArticlesDir = path.join(p.dataRoot, "articles");
+      const pCommentsDir = path.join(p.dataRoot, "comments");
+      const pArticles = store.loadArticles(pArticlesDir);
+      const pComments = store.loadComments(pCommentsDir);
+      for (const a of pArticles) {
+        a._project = a.data.project || p.projectId;
+      }
+      for (const c of pComments) {
+        c._project = p.projectId;
+      }
+      allArticles.push(...pArticles);
+      allComments.push(...pComments);
+    }
+  } catch (_) {}
+
+  // Deduplicate by ID (keep first occurrence)
+  const seen = new Set();
+  const uniqueArticles = [];
+  for (const a of allArticles) {
+    if (!seen.has(a.id)) {
+      seen.add(a.id);
+      uniqueArticles.push(a);
+    }
+  }
+
+  return { articles: uniqueArticles, comments: allComments };
+}
+
+function runBuildDocs() {
+  const { articles, comments } = loadAllArticlesAndComments();
+  articles.sort(sortByUpdatedDesc);
 
   cleanDir(GENERATED_ARTICLES_DIR);
   for (const article of articles) {
     fs.writeFileSync(
       path.join(GENERATED_ARTICLES_DIR, `${articleSlug(article)}.md`),
-      renderArticlePage(article, comments, aliases),
+      renderArticlePage(article, comments),
       "utf-8"
     );
   }
 
-  fs.writeFileSync(path.join(DOCS_ROOT, "articles", "index.md"), renderArticleIndex(articles, aliases), "utf-8");
-  fs.writeFileSync(path.join(DOCS_ROOT, "tags", "index.md"), renderTagsIndex(articles, aliases), "utf-8");
-  updateHome(articles, aliases);
-  writeSidebar(articles, aliases);
+  fs.writeFileSync(path.join(DOCS_ROOT, "articles", "index.md"), renderArticleIndex(articles), "utf-8");
+  fs.writeFileSync(path.join(DOCS_ROOT, "tags", "index.md"), renderTagsIndex(articles), "utf-8");
+  updateHome(articles);
+  writeSidebar(articles);
 
   console.log(`Generated VitePress docs for ${articles.length} articles and ${comments.length} comments.`);
 }
@@ -329,4 +431,4 @@ if (require.main === module) {
   runBuildDocs();
 }
 
-module.exports = { runBuildDocs, loadArticleAliases, displayTitle };
+module.exports = { runBuildDocs, displayTitle };

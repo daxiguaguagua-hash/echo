@@ -1,101 +1,31 @@
 #!/usr/bin/env node
-const fs = require("fs");
-const path = require("path");
 
-const { ensureDir } = require("./lib/infra/workspace");
 const { resolveDataDirs } = require("./lib/infra/echo-paths");
 const store = require("./lib/infra/markdown-store");
-const anchor = require("./lib/domain/anchor");
-const { stripCommentSections } = require("./lib/usecases/strip-comments");
+const { writeComment } = require("./lib/usecases/write-comment");
 
 function runAnnotate(opts = {}) {
   const dirs = opts.dirs || resolveDataDirs();
-  const { articlesDir, commentsDir } = dirs;
-
-  const { articleId, quote, commentText, author, evolutionKind, evolutionOf, status } = opts;
-  const evKind = opts.evolutionKind || "null";
   const evOf = opts.evolutionOf ? opts.evolutionOf.split(",").map((s) => s.trim()).filter(Boolean) : [];
 
-  ensureDir(articlesDir);
+  const result = writeComment({
+    articleId: opts.articleId,
+    quote: opts.quote,
+    comment: opts.commentText,
+    author: opts.author,
+    evolutionKind: opts.evolutionKind || "null",
+    evolutionOf: evOf,
+    status: opts.status || "open",
+    dirs,
+    store,
+  });
 
-  // load article
-  const loaded = store.loadArticleById(articlesDir, articleId);
-  if (!loaded) {
-    const err = new Error(`Article "${articleId}" not found.`);
-    err.availableArticles = store.loadArticles(articlesDir).map(a => ({ id: a.id, relPath: a.relPath }));
-    throw err;
-  }
-
-  const body = stripCommentSections(loaded.content);
-
-  // find quote
-  const searchBody = anchor.stripInlineFormatting(body);
-  const searchQuote = anchor.stripInlineFormatting(quote);
-  const positions = anchor.findAllPositions(searchBody, searchQuote);
-
-  if (positions.length === 0) {
-    throw new Error(`Quote not found in article "${articleId}".`);
-  }
-
-  let chosen;
-  if (positions.length === 1) {
-    chosen = positions[0];
-  } else {
-    chosen = positions[0];
-    console.log(`Warning: quote appears ${positions.length} times. Using occurrence 1 (line ${chosen.line}).`);
-    console.log("  To target a different occurrence, provide a longer or more specific quote.");
-  }
-
-  // compute anchor metadata
-  const prefixRaw = searchBody.slice(Math.max(0, chosen.index - 100), chosen.index).trim();
-  const suffixRaw = searchBody.slice(chosen.index + searchQuote.length, chosen.index + searchQuote.length + 100).trim();
-
-  // generate ID
-  const newId = store.nextAnnotationId(commentsDir);
-  const now = new Date().toISOString().replace(/\.\d{3}Z$/, "+08:00");
-
-  const finalStatus = opts.status || "open";
-
-  // build file
-  const yaml = [
-    `id: ${newId}`,
-    `type: annotation`,
-    `target:`,
-    `  article_id: ${articleId}`,
-    `  path: ${loaded.relPath}`,
-    `anchor:`,
-    `  quote: ${JSON.stringify(quote)}`,
-    `  prefix: ${JSON.stringify(prefixRaw)}`,
-    `  suffix: ${JSON.stringify(suffixRaw)}`,
-    `  occurrence: ${positions.indexOf(chosen) + 1}`,
-    `  line_hint: ${chosen.line}`,
-    `author: ${author || "vincent"}`,
-    `created_at: ${now}`,
-    `updated_at: ${now}`,
-    `status: ${finalStatus}`,
-    `tags: []`,
-    `evolution:`,
-    `  of: [${evOf.map((id) => JSON.stringify(id)).join(", ")}]`,
-    `  kind: ${evKind}`,
-  ].join("\n");
-
-  const fileContent = `---\n${yaml}\n---\n\n${commentText.trim()}\n`;
-
-  if (!fs.existsSync(commentsDir)) fs.mkdirSync(commentsDir, { recursive: true });
-  const outPath = path.join(commentsDir, `${newId}.md`);
-
-  if (fs.existsSync(outPath)) {
-    throw new Error(`${newId}.md already exists in comments directory.`);
-  }
-
-  fs.writeFileSync(outPath, fileContent);
-  console.log(`Created: comments/${newId}.md`);
-  console.log(`  article: ${articleId} (${loaded.relPath})`);
-  console.log(`  quote:   ${quote.slice(0, 60)}${quote.length > 60 ? "..." : ""}`);
-  console.log(`  anchor:  line ${chosen.line}, occurrence ${positions.indexOf(chosen) + 1}`);
+  console.log(`Created: comments/${result.id}.md`);
+  console.log(`  article: ${opts.articleId}`);
+  if (opts.quote) console.log(`  quote:   ${opts.quote.slice(0, 60)}${opts.quote.length > 60 ? "..." : ""}`);
   if (evOf.length > 0) console.log(`  replies: ${evOf.join(", ")}`);
 
-  return { id: newId, articleId: articleId };
+  return result;
 }
 
 if (require.main === module) {

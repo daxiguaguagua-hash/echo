@@ -129,9 +129,25 @@ function findProjectForPath(searchPath, opts = {}) {
   return null;
 }
 
+/**
+ * @param {string} echoHome
+ * @returns {Array<{ projectId: string, root: string, dataRoot: string, registeredAt: string }>}
+ */
+function listProjects(echoHome) {
+  const home = echoHome || resolveEchoHomePath();
+  const registry = loadRegistry(home);
+  return Object.entries(registry.projects).map(([projectId, entry]) => ({
+    projectId,
+    root: entry.root,
+    dataRoot: resolveProjectDataRoot(entry.root, { echoHome: home, projectId }),
+    registeredAt: entry.registeredAt,
+  }));
+}
+
 module.exports = {
   loadRegistry,
   saveRegistry,
   registerProject,
   findProjectForPath,
+  listProjects,
 };

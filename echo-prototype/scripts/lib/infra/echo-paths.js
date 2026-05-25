@@ -8,11 +8,13 @@ function resolveDataDirs(opts = {}) {
   const echoHome = opts.echoHome || resolveEchoHomePath(opts);
 
   let projectRoot = echoHome;
+  let projectId = null;
 
   if (opts.registry) {
     const project = opts.registry.findProjectForPath(cwd, { echoHome });
     if (project) {
       projectRoot = project.dataRoot;
+      projectId = project.projectId;
     }
   } else {
     try {
@@ -20,6 +22,7 @@ function resolveDataDirs(opts = {}) {
       const project = findProjectForPath(cwd, { echoHome });
       if (project) {
         projectRoot = project.dataRoot;
+        projectId = project.projectId;
       }
     } catch (err) {
       // Only swallow MODULE_NOT_FOUND — registry may not be installed.
@@ -33,6 +36,8 @@ function resolveDataDirs(opts = {}) {
     commentsDir: path.join(projectRoot, "comments"),
     bufferDir: path.join(projectRoot, "session-buffer"),
     indexDir: path.join(projectRoot, "index"),
+    projectId,
+    projectRoot,
   };
 }
 

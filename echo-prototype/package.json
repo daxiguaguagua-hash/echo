@@ -13,7 +13,7 @@
     "annotate": "node scripts/annotate.js",
     "import": "node scripts/import-sessions.js",
     "search": "node scripts/search.js",
-    "mcp": "node bin/echo-mcp.js mcp",
+    "mcp": "node bin/echoctl.js mcp",
     "all": "npm run convert && npm run validate && npm run index && npm run resolve",
     "docs:generate": "node scripts/build-docs.js",
     "docs:dev": "npm run docs:generate && vitepress dev ../docs",
@@ -21,7 +21,8 @@
     "docs:preview": "npm run docs:generate && vitepress preview ../docs"
   },
   "bin": {
-    "echo-mcp": "./bin/echo-mcp.js"
+    "echoctl": "./bin/echoctl.js",
+    "echo-mcp": "./bin/echoctl.js"
   },
   "dependencies": {
     "gray-matter": "^4.0.3"

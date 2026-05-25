@@ -1,27 +1,28 @@
 #!/usr/bin/env node
-const path = require("path");
+const { commandFor, cliNames } = require("../scripts/lib/cli/names");
 
-const USAGE = `echo-mcp — Echo knowledge forum CLI
+const CLI = cliNames.canonicalName;
+const USAGE = `${CLI} — Echo knowledge forum CLI
 
 Usage:
-  echo-mcp hook capture          Read hook JSON from stdin, write to session-buffer
-  echo-mcp hook status           Generate SessionStart status output
-  echo-mcp hook install <provider> [--write]  Print or apply hook config
-  echo-mcp hook doctor           Check hook health
-  echo-mcp init                  Create workspace, write echo.json
-  echo-mcp init project [--path <dir>]  Register project in ~/.echo-workspace/registry.json
-  echo-mcp doctor                Check overall workspace health
-  echo-mcp migrate legacy-buffer  Migrate ~/.echo-buffer to workspace
-  echo-mcp all                   Run full pipeline (convert -> validate -> index -> resolve)
-  echo-mcp convert               Run buffer -> article conversion
-  echo-mcp validate              Validate all articles and comments
-  echo-mcp resolve               Resolve all annotation anchors
-  echo-mcp search                Full-text search
-  echo-mcp mcp                   Start MCP server (stdio transport)
-  echo-mcp capture on|off|status  Enable, disable, or check capture status
-  echo-mcp tag list    List all tags with usage counts
-  echo-mcp tag add <article-id> <tag1> [tag2...]  Add one or more tags to an article
-  echo-mcp tag remove <article-id> <tag1> [tag2...]  Remove one or more tags from an article
+  ${commandFor(["hook", "capture"])}          Read hook JSON from stdin, write to session-buffer
+  ${commandFor(["hook", "status"])}           Generate SessionStart status output
+  ${commandFor(["hook", "install", "<provider>", "[--write]"])}  Print or apply hook config
+  ${commandFor(["hook", "doctor"])}           Check hook health
+  ${commandFor(["init"])}                  Create workspace, write echo.json
+  ${commandFor(["init", "project", "[--path <dir>]"])}  Register project in ~/.echo-workspace/registry.json
+  ${commandFor(["doctor"])}                Check overall workspace health
+  ${commandFor(["migrate", "legacy-buffer"])}  Migrate ~/.echo-buffer to workspace
+  ${commandFor(["all"])}                   Run full pipeline (convert -> validate -> index -> resolve)
+  ${commandFor(["convert"])}               Run buffer -> article conversion
+  ${commandFor(["validate"])}              Validate all articles and comments
+  ${commandFor(["resolve"])}               Resolve all annotation anchors
+  ${commandFor(["search"])}                Full-text search
+  ${commandFor(["mcp"])}                   Start MCP server (stdio transport)
+  ${commandFor(["capture", "on|off|status"])}  Enable, disable, or check capture status
+  ${commandFor(["tag", "list"])}    List all tags with usage counts
+  ${commandFor(["tag", "add", "<article-id>", "<tag1>", "[tag2...]"])}  Add one or more tags to an article
+  ${commandFor(["tag", "remove", "<article-id>", "<tag1>", "[tag2...]"])}  Remove one or more tags from an article
 `;
 
 function printDoctorResults(results) {
@@ -46,7 +47,7 @@ switch (cmd) {
     else if (sub === "install") {
       const provider = args[2];
       if (!provider || provider.startsWith("-")) {
-        console.error("Error: provider required. Usage: echo-mcp hook install claude [--write]");
+        console.error(`Error: provider required. Usage: ${commandFor(["hook", "install", "claude", "[--write]"])}`);
         process.exit(1);
       }
       if (provider !== "claude") {
@@ -214,7 +215,7 @@ switch (cmd) {
     } else if (action === "status") {
       console.log(`Capture: ${isCaptureEnabled() ? "on" : "off"}`);
     } else {
-      console.error("Usage: echo-mcp capture on|off|status");
+      console.error(`Usage: ${commandFor(["capture", "on|off|status"])}`);
       process.exit(1);
     }
     break;
@@ -242,7 +243,7 @@ switch (cmd) {
       const articleId = args[2];
       const tags = args.slice(3);
       if (!articleId || tags.length === 0) {
-        console.error("Usage: echo-mcp tag add <article-id> <tag1> [tag2...]");
+        console.error(`Usage: ${commandFor(["tag", "add", "<article-id>", "<tag1>", "[tag2...]"])}`);
         process.exit(1);
       }
       try {
@@ -258,7 +259,7 @@ switch (cmd) {
       const articleId = args[2];
       const tags = args.slice(3);
       if (!articleId || tags.length === 0) {
-        console.error("Usage: echo-mcp tag remove <article-id> <tag1> [tag2...]");
+        console.error(`Usage: ${commandFor(["tag", "remove", "<article-id>", "<tag1>", "[tag2...]"])}`);
         process.exit(1);
       }
       try {
@@ -271,7 +272,7 @@ switch (cmd) {
         process.exit(1);
       }
     } else {
-      console.error("Usage: echo-mcp tag list|add|remove");
+      console.error(`Usage: ${commandFor(["tag", "list|add|remove"])}`);
       process.exit(1);
     }
     break;

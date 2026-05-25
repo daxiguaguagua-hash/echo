@@ -24,7 +24,7 @@ function parseBuffer(raw) {
   return { raw, turns };
 }
 
-function buildArticle(bufferFile, turns) {
+function buildArticle(bufferFile, turns, opts = {}) {
   const sessionName = path.basename(bufferFile, ".md");
   const dateStr = ef.extractSessionDate(sessionName);
   const id = `session-${dateStr}`;
@@ -32,10 +32,12 @@ function buildArticle(bufferFile, turns) {
   const article = ef.createArticle({
     id,
     created_at: `${dateStr}T00:00:00+08:00`,
+    alias: ef.inferTitle(turns),
     turns,
+    project: opts.project,
   });
 
-  return { id, article: ef.toMarkdown(article), title: article.title, turnCount: article.turns.length };
+  return { id, article: ef.toMarkdown(article), title: article.title, alias: article.alias, turnCount: article.turns.length };
 }
 
 module.exports = { parseBuffer, buildArticle };

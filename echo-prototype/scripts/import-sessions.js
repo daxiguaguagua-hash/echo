@@ -121,7 +121,7 @@ function parseSession(filePath) {
   return { turns, models: [...models], firstTs, lastTs };
 }
 
-function buildArticle(sessionId, turns, models, firstTs) {
+function buildArticle(sessionId, turns, models, firstTs, opts = {}) {
   const date = firstTs ? formatDate(firstTs) : "unknown-date";
   const id = `session-${sessionId.slice(0, 8)}`;
   const dateStr = `${date}T00:00:00+08:00`;
@@ -134,12 +134,14 @@ function buildArticle(sessionId, turns, models, firstTs) {
   const article = ef.createArticle({
     id,
     created_at: dateStr,
+    alias: ef.inferTitle(turns),
     source_session: sessionId,
     turns,
     speakers,
+    project: opts.project,
   });
 
-  return { id, article: ef.toMarkdown(article), title: article.title, turnCount: article.turns.length };
+  return { id, article: ef.toMarkdown(article), title: article.title, alias: article.alias, turnCount: article.turns.length };
 }
 
 function runImportSessions(opts = {}) {
@@ -149,6 +151,16 @@ function runImportSessions(opts = {}) {
   const PROJECT = opts.project || process.argv[2] || "-Users-vincenthuang-myNote";
   const SESSIONS_DIR = path.join(os.homedir(), ".claude", "projects", PROJECT);
   const MIN_REAL_TURNS = opts.minTurns || 2;
+
+  // Resolve project ID from cwd
+  let importProject = dirs.projectId;
+  if (!importProject) {
+    try {
+      const { findProjectForPath } = require("./lib/usecases/project-registry");
+      const project = findProjectForPath(opts.cwd || process.cwd());
+      if (project) importProject = project.projectId;
+    } catch (_) {}
+  }
 
   ensureDir(articlesDir);
 
@@ -179,7 +191,7 @@ function runImportSessions(opts = {}) {
         continue;
       }
 
-      const { id, article, title, turnCount } = buildArticle(sessionId, turns, models, firstTs);
+      const { id, article, title, turnCount } = buildArticle(sessionId, turns, models, firstTs, { project: importProject });
       const articlePath = path.join(articlesDir, `${id}.md`);
 
       fs.writeFileSync(articlePath, article);

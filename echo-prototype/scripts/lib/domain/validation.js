@@ -43,6 +43,9 @@ function validateArticle(record) {
 
   if (!data.title) errs.push(`${file}: missing "title"`);
   if (!data.created_at) errs.push(`${file}: missing "created_at"`);
+  if (data.alias !== undefined && data.alias !== null && typeof data.alias !== "string") {
+    errs.push(`${file}: "alias" must be a string`);
+  }
 
   return errs;
 }

@@ -19,6 +19,7 @@ const TOOLS = [
       properties: {
         keyword: { type: "string", description: "Keyword to search in article body (case-insensitive)" },
         tag: { type: "string", description: "Filter by tag (case-insensitive)" },
+        project: { type: "string", description: "Filter by project ID, or 'all' for all projects" },
       },
     },
   },

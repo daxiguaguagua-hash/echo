@@ -9,6 +9,7 @@ function searchArticles(args, deps) {
   ensureDir(dirs.articlesDir);
   const keyword = (args.keyword || "").toLowerCase();
   const tag = (args.tag || "").toLowerCase();
+  const projectFilter = args.project;
 
   const articles = store.loadArticles(dirs.articlesDir).map((a) => ({
     ...a.data,
@@ -17,6 +18,10 @@ function searchArticles(args, deps) {
   }));
 
   let results = articles;
+
+  if (projectFilter && projectFilter !== "all") {
+    results = results.filter((a) => a.project === projectFilter);
+  }
 
   if (tag) {
     results = results.filter((a) =>
@@ -28,8 +33,9 @@ function searchArticles(args, deps) {
     results = results
       .map((a) => {
         const body = a._content.toLowerCase();
+        const aliasMatch = (a.alias || "").toLowerCase().includes(keyword);
         const idx = body.indexOf(keyword);
-        if (idx === -1) return null;
+        if (idx === -1 && !aliasMatch) return null;
         const start = Math.max(0, idx - 80);
         const end = Math.min(body.length, idx + keyword.length + 80);
         let snippet = a._content.slice(start, end).replace(/\n/g, " ");
@@ -43,12 +49,14 @@ function searchArticles(args, deps) {
   return results.map((a) => ({
     id: a.id,
     title: a.title || a.id,
+    alias: a.alias || "",
     file: a._file,
     created_at: a.created_at,
     tags: a.tags || [],
     summary: a.summary || "",
     snippet: a._snippet || "",
     ai_model: a.ai_model || "",
+    project: a.project || "",
   }));
 }
 
@@ -61,6 +69,7 @@ function getArticle(args, deps) {
   return {
     id: article.data.id,
     title: article.data.title || article.data.id,
+    alias: article.data.alias || "",
     created_at: article.data.created_at,
     updated_at: article.data.updated_at,
     tags: article.data.tags || [],
@@ -212,6 +221,7 @@ function listRecent(args, deps) {
   return articles.slice(0, limit).map((a) => ({
     id: a.data.id,
     title: a.data.title || a.data.id,
+    alias: a.data.alias || "",
     created_at: a.data.created_at,
     tags: a.data.tags || [],
     summary: a.data.summary || "",

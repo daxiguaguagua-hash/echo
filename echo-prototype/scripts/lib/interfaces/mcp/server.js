@@ -7,6 +7,7 @@ const readline = require("readline");
 const { TOOLS, TOOL_HANDLERS } = require("./tools");
 const { NotFoundError } = require("../../domain/errors");
 const { resolveDataDirs } = require("../../infra/echo-paths");
+const { mcpServerInfo } = require("../../cli/names");
 
 // --- JSON-RPC 2.0 ---
 
@@ -26,7 +27,7 @@ function send(response) {
   process.stdout.write(JSON.stringify(response) + "\n");
 }
 
-const SERVER_INFO = { name: "echo-mcp", version: "0.2.0" };
+const SERVER_INFO = mcpServerInfo;
 const CAPABILITIES = { tools: {} };
 
 // --- Request dispatcher ---

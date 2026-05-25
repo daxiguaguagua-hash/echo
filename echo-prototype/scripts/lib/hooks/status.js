@@ -3,6 +3,7 @@ const path = require("path");
 const { resolveEchoHomePath } = require("../infra/workspace");
 const { isCaptureEnabled } = require("../infra/config");
 const { findProjectForPath } = require("../usecases/project-registry");
+const { commandFor } = require("../cli/names");
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -48,7 +49,7 @@ async function main() {
 
   const captureActive = isCaptureEnabled();
   const captureStatus = captureActive ? "开启中" : "已暂停";
-  const captureHint = captureActive ? "echo capture off 暂停" : "echo capture on 开启";
+  const captureHint = captureActive ? `${commandFor(["capture", "off"])} 暂停` : `${commandFor(["capture", "on"])} 开启`;
 
   const echoHome = resolveEchoHomePath();
   const project = findProjectForPath(cwd, { echoHome });

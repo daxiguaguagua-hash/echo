@@ -27,11 +27,11 @@ npm run annotate -- --article <id> --quote "原文片段" --comment "你的评�
 ## CLI
 
 ```bash
-node bin/echo-mcp.js hook capture     # stdin → session-buffer
-node bin/echo-mcp.js hook status      # SessionStart 状态输出
-node bin/echo-mcp.js convert          # buffer → 文章
-node bin/echo-mcp.js validate         # 校验
-node bin/echo-mcp.js resolve          # 锚点解析
+node bin/echoctl.js hook capture     # stdin → session-buffer
+node bin/echoctl.js hook status      # SessionStart 状态输出
+node bin/echoctl.js convert          # buffer → 文章
+node bin/echoctl.js validate         # 校验
+node bin/echoctl.js resolve          # 锚点解析
 ```
 
 ## 命令
@@ -52,7 +52,7 @@ node bin/echo-mcp.js resolve          # 锚点解析
 
 ```
 echo-prototype/
-  bin/echo-mcp.js            — CLI 入口
+  bin/echoctl.js            — CLI 入口
   scripts/
     cli/                     — CLI 层
     lib/

@@ -29,7 +29,7 @@ function runConvert(opts = {}) {
     const { turns } = parseBuffer(raw);
     if (turns.length === 0) { console.log(`${bf}: empty — skipped`); continue; }
 
-    const { id, article, title, turnCount } = buildArticle(bf, turns);
+    const { id, article, title, turnCount } = buildArticle(bf, turns, { project: dirs.projectId });
     const articlePath = path.join(articlesDir, `${id}.md`);
 
     if (fs.existsSync(articlePath)) {

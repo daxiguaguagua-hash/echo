@@ -135,7 +135,28 @@ describe("runDoctor", () => {
       const h = results.find(r => r.name === `Hook: ${event}`);
       assert.ok(h);
       assert.equal(h.status, "ok");
-      assert.match(h.message, /echo-mcp hook/);
+      assert.match(h.message, /CLI: echo-mcp/);
+    }
+  });
+
+  it("detects echoctl hooks as ok", () => {
+    setupWorkspace();
+    setupSettings({
+      hooks: {
+        UserPromptSubmit: [{ command: "echoctl hook capture" }],
+        Stop: [{ command: "echoctl hook capture" }],
+        StopFailure: [{ command: "echoctl hook capture" }],
+        SessionStart: [{ command: "echoctl hook status" }],
+      }
+    });
+
+    const { runDoctor } = require("../scripts/lib/usecases/run-doctor");
+    const results = runDoctor();
+
+    for (const event of ["UserPromptSubmit", "Stop", "StopFailure", "SessionStart"]) {
+      const h = results.find(r => r.name === `Hook: ${event}`);
+      assert.ok(h);
+      assert.equal(h.status, "ok");
     }
   });
 
