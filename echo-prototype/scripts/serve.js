@@ -65,6 +65,16 @@ function createRouter(deps) {
     const p = url.pathname;
 
     try {
+      if (p === "/api/status" && req.method === "GET") {
+        const dirs = deps.dirs || resolveDataDirs();
+        return jsonResponse(res, 200, {
+          ok: true,
+          captureEnabled: isCaptureEnabled(),
+          projectId: dirs.projectId || null,
+          version: mcpServerInfo.version,
+        }, docsPort);
+      }
+
       if (p === "/api/capture" && req.method === "GET") {
         return jsonResponse(res, 200, { enabled: isCaptureEnabled() }, docsPort);
       }
@@ -83,7 +93,9 @@ function createRouter(deps) {
         if (!body || !body.articleId || !body.comment) {
           return jsonResponse(res, 400, { error: "articleId and comment required" }, docsPort);
         }
-        const dirs = deps.dirs || resolveDataDirs();
+        const dirs = body.projectId
+          ? resolveDataDirs({ cwd: body.projectId })
+          : (deps.dirs || resolveDataDirs());
         try {
           const { writeComment } = require("./lib/usecases/write-comment");
           const result = writeComment({
@@ -174,7 +186,10 @@ async function start() {
   const vitepress = spawn("npx", ["vitepress", "dev", DOCS_DIR, "--port", String(docsPort), "--host", HOST], {
     cwd: path.resolve(__dirname, "../.."),
     stdio: "pipe",
-    env: { ...process.env },
+    env: {
+      ...process.env,
+      VITE_ECHO_API_BASE: `http://${HOST}:${apiPort}`,
+    },
   });
 
   vitepress.stderr.on("data", (d) => process.stderr.write(d));
@@ -209,4 +224,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { start };
+module.exports = { start, createRouter };

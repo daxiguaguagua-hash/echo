@@ -125,122 +125,6 @@ function renderComments(article, comments) {
   return `## 评论区\n\n<div class="echo-comment-list">\n\n${rows.join("\n\n")}\n\n</div>`;
 }
 
-function echoClientScript() {
-  return `<script>
-(function() {
-  if (typeof document === 'undefined') return;
-  var API = 'http://127.0.0.1:8787';
-  var articleId = 'ARTICLE_ID_PLACEHOLDER';
-
-  function ready(fn) {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', fn, { once: true });
-    } else {
-      setTimeout(fn, 0);
-    }
-  }
-
-  // --- Check if serve is running ---
-  function checkServe() {
-    if (typeof fetch !== 'function') return;
-    fetch(API + '/api/capture').then(function(r) { return r.json(); }).then(function(d) {
-      var el = document.getElementById('echo-serve-status');
-      if (el) el.style.display = 'none';
-      initCapture(d.enabled);
-    }).catch(function() {
-      var el = document.getElementById('echo-serve-status');
-      if (el) el.style.display = 'block';
-    });
-  }
-
-  // --- Capture toggle ---
-  function initCapture(enabled) {
-    var btn = document.getElementById('echo-capture-btn');
-    if (!btn) return;
-    btn.textContent = enabled ? '\\u6536\\u96c6: \\u5f00' : '\\u6536\\u96c6: \\u5173';
-    btn.className = enabled ? 'echo-btn echo-btn-on' : 'echo-btn echo-btn-off';
-    btn.onclick = function() {
-      fetch(API + '/api/capture', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({enabled: !enabled}) })
-        .then(function(r) { return r.json(); }).then(function(d) { initCapture(d.enabled); });
-    };
-  }
-
-  // --- MCP config ---
-  function init() {
-    var mcpBtn = document.getElementById('echo-mcp-btn');
-    if (mcpBtn) mcpBtn.onclick = function() {
-      fetch(API + '/api/mcp-config').then(function(r) { return r.json(); }).then(function(d) {
-        var cfg = JSON.stringify({mcpServers:{echo:{command:d.canonical.command,args:d.canonical.args}}}, null, 2);
-        var modal = document.getElementById('echo-mcp-modal');
-        var pre = document.getElementById('echo-mcp-config');
-        if (pre) pre.textContent = cfg;
-        if (modal) modal.style.display = 'flex';
-      });
-    };
-    var closeModal = document.getElementById('echo-mcp-close');
-    if (closeModal) closeModal.onclick = function() {
-      var modal = document.getElementById('echo-mcp-modal');
-      if (modal) modal.style.display = 'none';
-    };
-    var copyBtn = document.getElementById('echo-mcp-copy');
-    if (copyBtn) copyBtn.onclick = function() {
-      var pre = document.getElementById('echo-mcp-config');
-      if (!pre || !navigator.clipboard) return;
-      navigator.clipboard.writeText(pre.textContent).then(function() {
-        copyBtn.textContent = '\\u5df2\\u590d\\u5236';
-        setTimeout(function() { copyBtn.textContent = '\\u590d\\u5236'; }, 1500);
-      });
-    };
-
-    // --- Text selection comment ---
-    var selPopup = document.getElementById('echo-sel-popup');
-    if (selPopup) {
-      document.addEventListener('mouseup', function(e) {
-        var sel = window.getSelection();
-        var text = sel.toString().trim();
-        if (text.length > 2 && text.length < 500) {
-          var r = sel.getRangeAt(0);
-          var rect = r.getBoundingClientRect();
-          selPopup.style.display = 'block';
-          selPopup.style.top = (window.scrollY + rect.bottom + 8) + 'px';
-          selPopup.style.left = (window.scrollX + rect.left) + 'px';
-          selPopup.dataset.quote = text;
-        } else {
-          selPopup.style.display = 'none';
-        }
-      });
-    }
-    var selComment = document.getElementById('echo-sel-comment');
-    if (selComment && selPopup) selComment.onclick = function() {
-      var quote = selPopup.dataset.quote || '';
-      var comment = prompt('\\u8bc4\\u8bba "' + quote.slice(0, 60) + '...":');
-      if (!comment) return;
-      fetch(API + '/api/comments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({articleId:articleId, quote:quote, comment:comment}) })
-        .then(function(r) { return r.json(); }).then(function() { location.reload(); })
-        .catch(function(e) { alert('\\u8bc4\\u8bba\\u5931\\u8d25: ' + e.message); });
-      selPopup.style.display = 'none';
-    };
-
-    // --- Bottom comment ---
-    var submitBtn = document.getElementById('echo-comment-submit');
-    if (submitBtn) submitBtn.onclick = function() {
-      var ta = document.getElementById('echo-comment-input');
-      if (!ta) return;
-      var comment = ta.value.trim();
-      if (!comment) return;
-      fetch(API + '/api/comments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({articleId:articleId, comment:comment, scope:'article'}) })
-        .then(function(r) { return r.json(); }).then(function() { location.reload(); })
-        .catch(function(e) { alert('\\u8bc4\\u8bba\\u5931\\u8d25: ' + e.message); });
-    };
-
-    checkServe();
-  }
-
-  ready(init);
-})();
-</script>`;
-}
-
 function renderArticlePage(article, comments) {
   const title = displayTitle(article);
   const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
@@ -259,6 +143,10 @@ function renderArticlePage(article, comments) {
 
   return `---
 title: "${escapeFrontmatterString(title)}"
+echo:
+  articleId: ${article.id}
+  projectId: ${project ? JSON.stringify(project) : 'null'}
+  interactive: ${project && project.startsWith('echo-') ? 'false' : 'true'}
 ---
 
 # ${title}
@@ -281,39 +169,7 @@ ${renderBody(article)}
 
 ${renderComments(article, comments)}
 
-<div class="echo-toolbar">
-  <div id="echo-serve-status" style="display:none; color:var(--vp-c-danger-1); font-size:13px; padding:8px 0;">
-    API 服务未运行 — 运行 <code>echoctl serve</code> 以启用交互功能
-  </div>
-  <div class="echo-toolbar-btns">
-    <button id="echo-capture-btn" class="echo-btn">收集: --</button>
-    <button id="echo-mcp-btn" class="echo-btn">MCP 配置</button>
-  </div>
-</div>
 
-<div id="echo-mcp-modal" class="echo-modal" style="display:none;">
-  <div class="echo-modal-content">
-    <h3>MCP 配置</h3>
-    <p>将此 JSON 添加到你的 Claude/Codex MCP 配置文件中：</p>
-    <pre id="echo-mcp-config"></pre>
-    <div class="echo-modal-btns">
-      <button id="echo-mcp-copy" class="echo-btn">复制</button>
-      <button id="echo-mcp-close" class="echo-btn">关闭</button>
-    </div>
-  </div>
-</div>
-
-<div id="echo-sel-popup" class="echo-sel-popup" style="display:none;">
-  <button id="echo-sel-comment" class="echo-btn">评论选中文字</button>
-</div>
-
-<div class="echo-comment-box">
-  <h3>发表评论</h3>
-  <textarea id="echo-comment-input" placeholder="对整篇文章的评论..." rows="3"></textarea>
-  <button id="echo-comment-submit" class="echo-btn">提交评论</button>
-</div>
-
-${echoClientScript().replace('ARTICLE_ID_PLACEHOLDER', article.id)}
 `;
 }
 
@@ -338,36 +194,11 @@ function renderArticleIndex(articles) {
   const hasProjects = projects.length > 1;
 
   const filterNav = hasProjects ? `<nav class="echo-project-filter">
-  <button class="echo-filter-btn active" data-project="all">全部 (${articles.length})</button>
-${projects.map((p) => {
-    const label = p.projectId || "默认";
-    return `  <button class="echo-filter-btn" data-project="${escapeHtml(p.projectId || "__none__")}">${escapeHtml(label)} (${p.count})</button>`;
-  }).join("\n")}
+  <span>项目: ${projects.map((p) => `${escapeHtml(p.projectId || "默认")} (${p.count})`).join(", ")}</span>
 </nav>
 ` : "";
 
-  const filterScript = hasProjects ? `
-<script>
-(function() {
-  const btns = document.querySelectorAll('.echo-filter-btn');
-  const cards = document.querySelectorAll('.echo-article-card');
-  btns.forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      btns.forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      const project = btn.getAttribute('data-project');
-      cards.forEach(function(card) {
-        if (project === 'all' || card.getAttribute('data-project') === project || (project === '__none__' && !card.getAttribute('data-project'))) {
-          card.style.display = '';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    });
-  });
-})();
-</script>
-` : "";
+  const filterScript = "";
 
   const rows = articles.map((article) => {
     const title = displayTitle(article);
@@ -375,8 +206,7 @@ ${projects.map((p) => {
     const updated = normalizeDate(article.data.updated_at || article.data.created_at);
     const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
     const tagHtml = tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("") || "<span>未标记</span>";
-    const projectAttr = article._project ? ` data-project="${escapeHtml(article._project)}"` : "";
-    return `<a class="echo-article-card" href="./generated/${articleSlug(article)}"${projectAttr}>
+        return `<a class="echo-article-card" href="./generated/${articleSlug(article)}">
   <strong>${escapeHtml(title)}</strong>
   <small>${escapeHtml(updated || "-")}</small>
   <p>${escapeHtml(summary)}</p>

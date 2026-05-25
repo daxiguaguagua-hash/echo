@@ -73,7 +73,7 @@
 - [x] **产品表层设计讨论** (2026-05-24) — 记录 alias 数据模型、MCP 配置复制、AI 查询链、文内评论、底部评论输入、`echoctl` 命名、网页 capture 开关、项目筛选。设计文档：[issues/005-echo-product-surface.md](issues/005-echo-product-surface.md)
 - [x] **产品表层跨模型审查** (2026-05-24) — Claude 子代理独立审查了 005 设计文档。锚点漂移风险已澄清为不适用（文章正文不可变，锚点永远有效）。`echoctl serve` 是拱心石。5 项待确认全部关闭。实施顺序：echoctl → serve → alias → 评论 UI → 项目筛选 → MCP 配置 → AI 查询链。
 - [x] **CLI 改名为 echoctl** — 新增 `echoctl` 主命令，保留 `echo-mcp` 兼容别名 (2026-05-24 — names.js 中央模块 + echoctl bin + echo-mcp 兼容别名)
-- [ ] **VitePress Vue 组件化重构** — 不 fork/改造 VitePress 源码；用官方 `enhanceApp`、默认主题 Layout slots、Vue 组件替代 `build-docs.js` 中的内联 `echoClientScript()`。设计文档：[issues/006-vitepress-vue-component-refactor.md](issues/006-vitepress-vue-component-refactor.md)
+- [x] **VitePress Vue 组件化重构** — 不 fork/改造 VitePress 源码；用官方 `enhanceApp`、默认主题 Layout slots、Vue 组件替代 `build-docs.js` 中的内联 `echoClientScript()`。设计文档：[issues/006-vitepress-vue-component-refactor.md](issues/006-vitepress-vue-component-refactor.md)
 - [ ] **本地网页 API / serve 模式** — `echoctl serve` 同时启动 API + VitePress，支持网页读取/切换 capture、写评论、读取项目列表和 MCP 配置
 - [ ] **alias 数据模型** — 将临时 `article-aliases.json` 升级为文章 frontmatter 字段（单字符串 `alias`），并让搜索/MCP 同步检索 alias
 - [ ] **文内选区评论** — 选中文字后弹出评论输入，保存为 annotation，并在正文高亮/标记。
