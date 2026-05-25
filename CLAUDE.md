@@ -99,6 +99,8 @@ ECHO_STATUS.md           — 项目进度表（活的，随时更新）
 - `npm run convert` — 将 buffer 中的原始对话转为正式文章
 - `npm run validate` — 校验所有文章和评论
 - `npm run import` — 从 `~/.claude/projects/<project>/*.jsonl` 导入历史会话
+- `echoctl import claude --all --dry-run` — 预览多项目导入（开发中）
+- `echoctl import claude --all --apply` — 执行多项目导入（开发中）
 - `npm run annotate -- --article <id> --quote "..." --comment "..."` — 添加评论
 
 ## 做完任何事后
