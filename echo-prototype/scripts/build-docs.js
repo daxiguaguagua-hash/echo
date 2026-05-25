@@ -132,8 +132,17 @@ function echoClientScript() {
   var API = 'http://127.0.0.1:8787';
   var articleId = 'ARTICLE_ID_PLACEHOLDER';
 
+  function ready(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
+    } else {
+      setTimeout(fn, 0);
+    }
+  }
+
   // --- Check if serve is running ---
   function checkServe() {
+    if (typeof fetch !== 'function') return;
     fetch(API + '/api/capture').then(function(r) { return r.json(); }).then(function(d) {
       var el = document.getElementById('echo-serve-status');
       if (el) el.style.display = 'none';
@@ -157,67 +166,77 @@ function echoClientScript() {
   }
 
   // --- MCP config ---
-  var mcpBtn = document.getElementById('echo-mcp-btn');
-  if (mcpBtn) mcpBtn.onclick = function() {
-    fetch(API + '/api/mcp-config').then(function(r) { return r.json(); }).then(function(d) {
-      var cfg = JSON.stringify({mcpServers:{echo:{command:d.canonical.command,args:d.canonical.args}}}, null, 2);
+  function init() {
+    var mcpBtn = document.getElementById('echo-mcp-btn');
+    if (mcpBtn) mcpBtn.onclick = function() {
+      fetch(API + '/api/mcp-config').then(function(r) { return r.json(); }).then(function(d) {
+        var cfg = JSON.stringify({mcpServers:{echo:{command:d.canonical.command,args:d.canonical.args}}}, null, 2);
+        var modal = document.getElementById('echo-mcp-modal');
+        var pre = document.getElementById('echo-mcp-config');
+        if (pre) pre.textContent = cfg;
+        if (modal) modal.style.display = 'flex';
+      });
+    };
+    var closeModal = document.getElementById('echo-mcp-close');
+    if (closeModal) closeModal.onclick = function() {
       var modal = document.getElementById('echo-mcp-modal');
+      if (modal) modal.style.display = 'none';
+    };
+    var copyBtn = document.getElementById('echo-mcp-copy');
+    if (copyBtn) copyBtn.onclick = function() {
       var pre = document.getElementById('echo-mcp-config');
-      if (pre) pre.textContent = cfg;
-      if (modal) modal.style.display = 'flex';
-    });
-  };
-  var closeModal = document.getElementById('echo-mcp-close');
-  if (closeModal) closeModal.onclick = function() {
-    document.getElementById('echo-mcp-modal').style.display = 'none';
-  };
-  var copyBtn = document.getElementById('echo-mcp-copy');
-  if (copyBtn) copyBtn.onclick = function() {
-    var pre = document.getElementById('echo-mcp-config');
-    navigator.clipboard.writeText(pre.textContent).then(function() {
-      copyBtn.textContent = '\\u5df2\\u590d\\u5236';
-      setTimeout(function() { copyBtn.textContent = '\\u590d\\u5236'; }, 1500);
-    });
-  };
+      if (!pre || !navigator.clipboard) return;
+      navigator.clipboard.writeText(pre.textContent).then(function() {
+        copyBtn.textContent = '\\u5df2\\u590d\\u5236';
+        setTimeout(function() { copyBtn.textContent = '\\u590d\\u5236'; }, 1500);
+      });
+    };
 
-  // --- Text selection comment ---
-  var selPopup = document.getElementById('echo-sel-popup');
-  document.addEventListener('mouseup', function(e) {
-    var sel = window.getSelection();
-    var text = sel.toString().trim();
-    if (text.length > 2 && text.length < 500) {
-      var r = sel.getRangeAt(0);
-      var rect = r.getBoundingClientRect();
-      selPopup.style.display = 'block';
-      selPopup.style.top = (window.scrollY + rect.bottom + 8) + 'px';
-      selPopup.style.left = (window.scrollX + rect.left) + 'px';
-      selPopup.dataset.quote = text;
-    } else {
-      selPopup.style.display = 'none';
+    // --- Text selection comment ---
+    var selPopup = document.getElementById('echo-sel-popup');
+    if (selPopup) {
+      document.addEventListener('mouseup', function(e) {
+        var sel = window.getSelection();
+        var text = sel.toString().trim();
+        if (text.length > 2 && text.length < 500) {
+          var r = sel.getRangeAt(0);
+          var rect = r.getBoundingClientRect();
+          selPopup.style.display = 'block';
+          selPopup.style.top = (window.scrollY + rect.bottom + 8) + 'px';
+          selPopup.style.left = (window.scrollX + rect.left) + 'px';
+          selPopup.dataset.quote = text;
+        } else {
+          selPopup.style.display = 'none';
+        }
+      });
     }
-  });
-  document.getElementById('echo-sel-comment').onclick = function() {
-    var quote = selPopup.dataset.quote;
-    var comment = prompt('\\u8bc4\\u8bba "' + quote.slice(0, 60) + '...":');
-    if (!comment) return;
-    fetch(API + '/api/comments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({articleId:articleId, quote:quote, comment:comment}) })
-      .then(function(r) { return r.json(); }).then(function() { location.reload(); })
-      .catch(function(e) { alert('\\u8bc4\\u8bba\\u5931\\u8d25: ' + e.message); });
-    selPopup.style.display = 'none';
-  };
+    var selComment = document.getElementById('echo-sel-comment');
+    if (selComment && selPopup) selComment.onclick = function() {
+      var quote = selPopup.dataset.quote || '';
+      var comment = prompt('\\u8bc4\\u8bba "' + quote.slice(0, 60) + '...":');
+      if (!comment) return;
+      fetch(API + '/api/comments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({articleId:articleId, quote:quote, comment:comment}) })
+        .then(function(r) { return r.json(); }).then(function() { location.reload(); })
+        .catch(function(e) { alert('\\u8bc4\\u8bba\\u5931\\u8d25: ' + e.message); });
+      selPopup.style.display = 'none';
+    };
 
-  // --- Bottom comment ---
-  var submitBtn = document.getElementById('echo-comment-submit');
-  if (submitBtn) submitBtn.onclick = function() {
-    var ta = document.getElementById('echo-comment-input');
-    var comment = ta.value.trim();
-    if (!comment) return;
-    fetch(API + '/api/comments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({articleId:articleId, comment:comment, scope:'article'}) })
-      .then(function(r) { return r.json(); }).then(function() { location.reload(); })
-      .catch(function(e) { alert('\\u8bc4\\u8bba\\u5931\\u8d25: ' + e.message); });
-  };
+    // --- Bottom comment ---
+    var submitBtn = document.getElementById('echo-comment-submit');
+    if (submitBtn) submitBtn.onclick = function() {
+      var ta = document.getElementById('echo-comment-input');
+      if (!ta) return;
+      var comment = ta.value.trim();
+      if (!comment) return;
+      fetch(API + '/api/comments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({articleId:articleId, comment:comment, scope:'article'}) })
+        .then(function(r) { return r.json(); }).then(function() { location.reload(); })
+        .catch(function(e) { alert('\\u8bc4\\u8bba\\u5931\\u8d25: ' + e.message); });
+    };
 
-  checkServe();
+    checkServe();
+  }
+
+  ready(init);
 })();
 </script>`;
 }
@@ -489,40 +508,60 @@ function loadAllArticlesAndComments() {
   const dirs = resolveDataDirs();
   const allArticles = [];
   const allComments = [];
+  const sources = [];
+  const seenRoots = new Set();
 
-  // Current project / default workspace
-  const articles = store.loadArticles(dirs.articlesDir);
-  for (const a of articles) {
-    a._project = a.data.project || dirs.projectId || null;
+  function addSource(source) {
+    const root = path.resolve(source.root);
+    if (seenRoots.has(root)) return;
+    seenRoots.add(root);
+    sources.push({ ...source, root });
   }
-  allArticles.push(...articles);
 
-  const comments = store.loadComments(dirs.commentsDir);
-  for (const c of comments) {
-    c._project = dirs.projectId || null;
+  addSource({
+    projectId: dirs.projectId || null,
+    root: dirs.projectRoot,
+    articlesDir: dirs.articlesDir,
+    commentsDir: dirs.commentsDir,
+  });
+
+  if (dirs.projectId) {
+    const { resolveEchoHomePath } = require("./lib/infra/workspace");
+    const echoHome = resolveEchoHomePath();
+    addSource({
+      projectId: null,
+      root: echoHome,
+      articlesDir: path.join(echoHome, "articles"),
+      commentsDir: path.join(echoHome, "comments"),
+    });
   }
-  allComments.push(...comments);
 
-  // Registered projects
   try {
     const { listProjects } = require("./lib/usecases/project-registry");
     const projects = listProjects();
     for (const p of projects) {
-      if (p.projectId === dirs.projectId) continue;
-      const pArticlesDir = path.join(p.dataRoot, "articles");
-      const pCommentsDir = path.join(p.dataRoot, "comments");
-      const pArticles = store.loadArticles(pArticlesDir);
-      const pComments = store.loadComments(pCommentsDir);
-      for (const a of pArticles) {
-        a._project = a.data.project || p.projectId;
-      }
-      for (const c of pComments) {
-        c._project = p.projectId;
-      }
-      allArticles.push(...pArticles);
-      allComments.push(...pComments);
+      addSource({
+        projectId: p.projectId,
+        root: p.dataRoot,
+        articlesDir: path.join(p.dataRoot, "articles"),
+        commentsDir: path.join(p.dataRoot, "comments"),
+      });
     }
   } catch (_) {}
+
+  for (const source of sources) {
+    const articles = store.loadArticles(source.articlesDir);
+    for (const a of articles) {
+      a._project = a.data.project || source.projectId || null;
+    }
+    allArticles.push(...articles);
+
+    const comments = store.loadComments(source.commentsDir);
+    for (const c of comments) {
+      c._project = source.projectId || null;
+    }
+    allComments.push(...comments);
+  }
 
   // Deduplicate by project-qualified ID (keep first occurrence)
   const seen = new Set();
@@ -563,4 +602,4 @@ if (require.main === module) {
   runBuildDocs();
 }
 
-module.exports = { runBuildDocs, displayTitle };
+module.exports = { runBuildDocs, displayTitle, loadAllArticlesAndComments };
