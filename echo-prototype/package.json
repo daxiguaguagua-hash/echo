@@ -1,8 +1,17 @@
 {
   "name": "echo-prototype",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "description": "Echo knowledge forum — local-first, Markdown-based, with annotation chains",
+  "keywords": ["echo", "knowledge-forum", "ai-conversations", "markdown", "local-first", "mcp"],
+  "files": [
+    "bin/",
+    "scripts/",
+    "docs/.vitepress/",
+    "docs/index.md",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "node --test",
     "verify": "npm run test && npm run validate && npm run resolve",
