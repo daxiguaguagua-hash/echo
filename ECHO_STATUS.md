@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-25 (Issue 008 跨模型审查完成 — 多项目导入 + npm 发布设计；P0 数据清理 + import 框架建设启动)
+最后更新：2026-05-25 (P0 数据清理 + import 框架完成 — 251 测试全绿；`echoctl import` CLI 待接線)
 
 ## 已完成
 
@@ -79,8 +79,8 @@
 - [x] **本地网页 API / serve 模式** (2026-05-25) — `echoctl serve` 同时启动 API + VitePress；修复 `runBuildDocs()` 缺失 `docsRoot` 导致评论后重建写入包内 `docs/` 的 bug；修复 `projectId` 被当 `cwd` 用的语义错误；新增 `findProjectById`；新增 runtime site vitepress symlink；新增 9 个 serve API 测试。
 - [x] **alias 数据模型** (2026-05-25) — frontmatter `alias` 已全面接入 search/MCP/build-docs；清理 `article-aliases.json` 临时文件；新增 MCP E2E 回归测试验证 alias 在 search_articles/get_article/list_recent 中可用。
 - [x] **文内选区评论** (2026-05-25) — 修复 `EchoSelectionComment.vue` 只传 `quote` 缺失 `prefix/suffix/occurrence` 的问题；新增 `computeAnchor()` 从 DOM 提取完整锚点数据；`build-docs.js` 新增 `highlightAnnotations()` 在渲染时为已标注文字包裹 `<mark class="echo-highlight">`；新增 highlight CSS 样式。
-- [ ] **P0 数据清理** (Issue 008) — 移除 `template-conversation.md` 或让 loader 忽略它；注册 myNote 到 registry；清理 `example.md`；给历史文章回填 `project` 字段。阻塞后续功能。
-- [ ] **Import provider adapter + manifest** (Issue 008) — `import/providers/claude-code.js` 隔离 Claude 私有格式；`import-manifest.json` 防重复导入；`writeFileSync` 改为 write-once + skip-exists。
+- [x] **P0 数据清理** (Issue 008, 2026-05-25) — `template-conversation.md` 和 `example.md` 移出 articles/；16 篇历史文章迁移到 `projects/mynote/articles/` 并回填 `project: mynote` 字段；mynote 注册到 registry。管线 16 articles + 10 comments。
+- [x] **Import provider adapter + manifest** (Issue 008, 2026-05-25) — `import/providers/claude-code.js`：JSONL 解析、噪声过滤、会话分类、元数据提取、不可变文章生成；`import/manifest.js`：导入记录防重；`import/scanner.js`：多项目扫描、路径解码、`buildImportPlan`。Codex 106 测试 + TDD 实现，251 全绿。
 - [ ] **`echoctl import` CLI** (Issue 008) — `echoctl import claude --all --dry-run/--apply`；`--project <dir> --as-project <id>`；`--exclude` 过滤系统目录。
 - [ ] **npm 发布准备** (Issue 008) — `"private": false`；确定包名；配置 `bin`/`files`/`keywords`；用户 onboarding 文档。
 - [ ] **底部评论输入框** — 支持文章级评论和后续回复链扩展。作者身份从 `echo.json` 读取。
