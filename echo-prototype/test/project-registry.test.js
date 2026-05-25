@@ -9,6 +9,7 @@ const {
   saveRegistry,
   registerProject,
   findProjectForPath,
+  findProjectById,
 } = require("../scripts/lib/usecases/project-registry");
 
 function tempDir() {
@@ -244,4 +245,31 @@ test("findProjectForPath returns longest-prefix match for nested projects", () =
 
   fs.rmSync(echoHome, { recursive: true, force: true });
   fs.rmSync(projectA, { recursive: true, force: true });
+});
+
+test("findProjectById returns project for registered id", () => {
+  const echoHome = tempDir();
+  const projectPath = tempDir();
+  fs.mkdirSync(projectPath, { recursive: true });
+  const { projectId } = registerProject(projectPath, { echoHome });
+
+  const found = findProjectById(projectId, { echoHome });
+
+  assert.notEqual(found, null);
+  assert.equal(found.projectId, projectId);
+  assert.equal(found.projectRoot, path.resolve(projectPath));
+  assert.ok(found.dataRoot.startsWith(echoHome));
+
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(projectPath, { recursive: true, force: true });
+});
+
+test("findProjectById returns null for unknown id", () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(echoHome, { recursive: true });
+
+  const found = findProjectById("nonexistent-project", { echoHome });
+
+  assert.equal(found, null);
+  fs.rmSync(echoHome, { recursive: true, force: true });
 });

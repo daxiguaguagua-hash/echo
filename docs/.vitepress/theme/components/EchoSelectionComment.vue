@@ -23,6 +23,31 @@ const visible = ref(false)
 const popupTop = ref(0)
 const popupLeft = ref(0)
 let currentQuote = ''
+let currentPrefix = ''
+let currentSuffix = ''
+let currentOccurrence = 1
+
+function getArticleText(): string {
+  const doc = document.querySelector('.vp-doc')
+  if (!doc) return ''
+  return (doc as HTMLElement).innerText || ''
+}
+
+function computeAnchor(quote: string): { prefix: string; suffix: string; occurrence: number } {
+  const body = getArticleText()
+  const idx = body.indexOf(quote)
+  const prefix = body.slice(Math.max(0, idx - 100), idx).trim()
+  const suffix = body.slice(idx + quote.length, idx + quote.length + 100).trim()
+
+  let occurrence = 0
+  let pos = -1
+  while ((pos = body.indexOf(quote, pos + 1)) !== -1) {
+    occurrence++
+    if (pos === idx) break
+  }
+
+  return { prefix, suffix, occurrence }
+}
 
 function handleMouseUp(e: MouseEvent) {
   const target = e.target as HTMLElement
@@ -48,6 +73,12 @@ function handleMouseUp(e: MouseEvent) {
   popupTop.value = window.scrollY + rect.bottom + 8
   popupLeft.value = window.scrollX + rect.left
   currentQuote = text
+
+  const anchor = computeAnchor(text)
+  currentPrefix = anchor.prefix
+  currentSuffix = anchor.suffix
+  currentOccurrence = anchor.occurrence
+
   visible.value = true
 }
 
@@ -63,6 +94,9 @@ function startComment() {
     articleId: articleId.value || '',
     comment: comment.trim(),
     quote: currentQuote,
+    prefix: currentPrefix,
+    suffix: currentSuffix,
+    occurrence: currentOccurrence,
     projectId: projectId.value ?? null,
   }).then(() => {
     location.reload()

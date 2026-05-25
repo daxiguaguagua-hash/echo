@@ -146,6 +146,32 @@ function renderComments(article, comments) {
   return `## 评论区\n\n<div class="echo-comment-list">\n\n${rows.join("\n\n")}\n\n</div>`;
 }
 
+function highlightAnnotations(body, article, comments) {
+  const inlineAnnotations = comments.filter(
+    (c) => c.target?.article_id === article.id && c.anchor?.quote && c.anchor?.kind !== "article"
+  );
+  if (inlineAnnotations.length === 0) return body;
+
+  let result = body;
+  for (const ann of inlineAnnotations) {
+    const q = ann.anchor.quote;
+    const occ = ann.anchor.occurrence || 1;
+    const escaped = escapeHtml(q);
+
+    let idx = -1;
+    for (let i = 0; i < occ; i++) {
+      idx = result.indexOf(escaped, idx + 1);
+      if (idx === -1) break;
+    }
+    if (idx === -1) continue;
+
+    const before = result.slice(0, idx);
+    const after = result.slice(idx + escaped.length);
+    result = `${before}<mark class="echo-highlight" data-ann="${ann.id}">${escaped}</mark>${after}`;
+  }
+  return result;
+}
+
 function renderArticlePage(article, comments) {
   const title = displayTitle(article);
   const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
@@ -161,6 +187,8 @@ function renderArticlePage(article, comments) {
     : "<span>未标记</span>";
 
   const projectMeta = project ? `<div><strong>项目</strong><span>${escapeHtml(project)}</span></div>` : "";
+
+  const bodyHtml = highlightAnnotations(renderBody(article), article, comments);
 
   return `---
 title: "${escapeFrontmatterString(title)}"
@@ -184,7 +212,7 @@ echo:
 
 ${summary ? `<p class="echo-summary">${escapeHtml(summary)}</p>` : ""}
 
-${renderBody(article)}
+${bodyHtml}
 
 ---
 

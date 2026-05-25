@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-25 (新增 MCP 安装与 AI 访问端到端验证 issue)
+最后更新：2026-05-25 (Issue 006+007 实施完成 — serve API 修复/MCP E2E/alias 回归/选区评论锚点/highlight 渲染；145 测试全绿)
 
 ## 已完成
 
@@ -75,14 +75,14 @@
 - [x] **产品表层跨模型审查** (2026-05-24) — Claude 子代理独立审查了 005 设计文档。锚点漂移风险已澄清为不适用（文章正文不可变，锚点永远有效）。`echoctl serve` 是拱心石。5 项待确认全部关闭。实施顺序：echoctl → serve → alias → 评论 UI → 项目筛选 → MCP 配置 → AI 查询链。
 - [x] **CLI 改名为 echoctl** — 新增 `echoctl` 主命令，保留 `echo-mcp` 兼容别名 (2026-05-24 — names.js 中央模块 + echoctl bin + echo-mcp 兼容别名)
 - [x] **VitePress Vue 组件化重构** — 不 fork/改造 VitePress 源码；用官方 `enhanceApp`、默认主题 Layout slots、Vue 组件替代 `build-docs.js` 中的内联 `echoClientScript()`。设计文档：[issues/006-vitepress-vue-component-refactor.md](issues/006-vitepress-vue-component-refactor.md)
-- [ ] **本地网页 API / serve 模式** — `echoctl serve` 同时启动 API + VitePress，支持网页读取/切换 capture、写评论、读取项目列表和 MCP 配置
-- [ ] **alias 数据模型** — 将临时 `article-aliases.json` 升级为文章 frontmatter 字段（单字符串 `alias`），并让搜索/MCP 同步检索 alias
-- [ ] **文内选区评论** — 选中文字后弹出评论输入，保存为 annotation，并在正文高亮/标记。
+- [x] **本地网页 API / serve 模式** (2026-05-25) — `echoctl serve` 同时启动 API + VitePress；修复 `runBuildDocs()` 缺失 `docsRoot` 导致评论后重建写入包内 `docs/` 的 bug；修复 `projectId` 被当 `cwd` 用的语义错误；新增 `findProjectById`；新增 runtime site vitepress symlink；新增 9 个 serve API 测试。
+- [x] **alias 数据模型** (2026-05-25) — frontmatter `alias` 已全面接入 search/MCP/build-docs；清理 `article-aliases.json` 临时文件；新增 MCP E2E 回归测试验证 alias 在 search_articles/get_article/list_recent 中可用。
+- [x] **文内选区评论** (2026-05-25) — 修复 `EchoSelectionComment.vue` 只传 `quote` 缺失 `prefix/suffix/occurrence` 的问题；新增 `computeAnchor()` 从 DOM 提取完整锚点数据；`build-docs.js` 新增 `highlightAnnotations()` 在渲染时为已标注文字包裹 `<mark class="echo-highlight">`；新增 highlight CSS 样式。
 - [ ] **底部评论输入框** — 支持文章级评论和后续回复链扩展。作者身份从 `echo.json` 读取。
 - [ ] **进化链 UI** — 文章底部评论区展示，回复链可视化
 - [ ] **项目筛选视图** — 统一归档下按 project 元数据显示 `全部` / 单项目文章。元数据在 convert 时根据 registry 补齐。
-- [ ] **MCP 配置按钮** — 网页提供 MCP 配置复制入口，用户自行粘贴安装
-- [ ] **MCP 安装与 AI 访问端到端验证** — 让另一个 AI 按网页复制出的 MCP 配置安装 Echo MCP，并验证 `list_recent`、`search_articles`、`get_article`、`get_article_context`、`list_tags`、`add_tags`、`remove_tags` 全链路正常。设计文档：[issues/007-mcp-install-e2e.md](issues/007-mcp-install-e2e.md)
+- [x] **MCP 配置按钮** (2026-05-24) — `EchoArticleActions.vue` 已实现 MCP 配置弹窗和复制功能。
+- [x] **MCP 安装与 AI 访问端到端验证** (2026-05-25) — 新增 `mcp-e2e.test.js`：spawn `echoctl mcp` 从临时 `ECHO_HOME`，测试真实 JSON-RPC 通信覆盖 initialize、tools/list、全部 7 个 tool（含 add_tags/remove_tags 回环和 alias 搜索）。设计文档：[issues/007-mcp-install-e2e.md](issues/007-mcp-install-e2e.md)
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑

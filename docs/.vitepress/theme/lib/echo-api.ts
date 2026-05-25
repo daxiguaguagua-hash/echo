@@ -11,6 +11,9 @@ interface CommentPayload {
   articleId: string
   comment: string
   quote?: string
+  prefix?: string
+  suffix?: string
+  occurrence?: number
   author?: string
   scope?: string
   projectId?: string | null

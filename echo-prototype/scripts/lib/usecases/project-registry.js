@@ -144,10 +144,27 @@ function listProjects(echoHome) {
   }));
 }
 
+/**
+ * @param {string} projectId
+ * @param {{ echoHome?: string }} [opts]
+ */
+function findProjectById(projectId, opts = {}) {
+  const echoHome = opts.echoHome || resolveEchoHomePath(opts);
+  const registry = loadRegistry(echoHome);
+  const entry = registry.projects[projectId];
+  if (!entry) return null;
+  return {
+    projectId,
+    projectRoot: entry.root,
+    dataRoot: resolveProjectDataRoot(entry.root, { echoHome, projectId }),
+  };
+}
+
 module.exports = {
   loadRegistry,
   saveRegistry,
   registerProject,
   findProjectForPath,
+  findProjectById,
   listProjects,
 };

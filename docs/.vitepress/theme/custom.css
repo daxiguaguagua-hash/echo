@@ -245,3 +245,15 @@
   margin-bottom: 12px;
   padding: 8px 12px;
 }
+
+mark.echo-highlight {
+  background: rgba(255, 213, 79, 0.35);
+  border-radius: 2px;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 1px;
+}
+
+mark.echo-highlight:hover {
+  background: rgba(255, 213, 79, 0.6);
+}

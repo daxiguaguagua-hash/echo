@@ -1,3 +1,4 @@
+const fs = require("fs");
 const http = require("http");
 const { spawn } = require("child_process");
 const path = require("path");
@@ -98,7 +99,11 @@ function createRouter(deps) {
           return jsonResponse(res, 400, { error: "articleId and comment required" }, docsPort);
         }
         const dirs = body.projectId
-          ? resolveDataDirs({ cwd: body.projectId })
+          ? (() => {
+              const { findProjectById } = require("./lib/usecases/project-registry");
+              const project = findProjectById(body.projectId);
+              return project ? resolveDataDirs({ cwd: project.projectRoot }) : (deps.dirs || resolveDataDirs());
+            })()
           : (deps.dirs || resolveDataDirs());
         try {
           const { writeComment } = require("./lib/usecases/write-comment");
@@ -117,7 +122,7 @@ function createRouter(deps) {
             dirs,
             store,
           });
-          try { runBuildDocs(); } catch (_) {}
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (_) {}
           return jsonResponse(res, 201, result, docsPort);
         } catch (err) {
           return jsonResponse(res, 422, { error: err.message }, docsPort);
@@ -187,6 +192,15 @@ async function start() {
     runBuildDocs({ docsRoot: docsDir });
   } catch (e) {
     console.error("[echoctl] build-docs warning:", e.message);
+  }
+
+  // Ensure vitepress is resolvable from the runtime site directory
+  const siteModules = path.join(docsDir, "node_modules");
+  const pkgVitepress = path.join(PACKAGE_ROOT, "node_modules", "vitepress");
+  if (!fs.existsSync(siteModules)) fs.mkdirSync(siteModules, { recursive: true });
+  const vpLink = path.join(siteModules, "vitepress");
+  if (!fs.existsSync(vpLink)) {
+    try { fs.symlinkSync(pkgVitepress, vpLink, "dir"); } catch (_) {}
   }
 
   const apiPort = await findFreePort(DEFAULT_API_PORT);
