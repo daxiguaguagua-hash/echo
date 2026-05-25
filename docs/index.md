@@ -30,9 +30,9 @@ features:
 
 ## 最近文章
 
-- [/gstack 做得不错，不过你都测试和review了吗？](/articles/generated/session-2026-05-20) · 2026-05-24
-- [/superpowers:using-superpowers 我们继续 @ECHO_STATUS.md 中的“进行...](/articles/generated/session-2026-05-21) · 2026-05-24
-- [幂等是什么：一次和两次为什么一样](/articles/generated/session-2026-05-22) · 2026-05-24
-- [你好，现在测试看看能不能实时记录。](/articles/generated/session-2026-05-24) · 2026-05-24
-- [我在另一个会话中，让DeepSeek TUI带着DeepSeek，正在实现mcp server的事情。我们这个会话...](/articles/generated/session-2026-05-23) · 2026-05-24
-- [我先说我的想法：1/当前我和ai的对话，有很多都是精妙绝伦的，但是我让ai处理之后他们总是会经过压缩，这样精妙的地...](/articles/generated/session-d65985f1) · 2026-05-21
+- [/claude-mem:learn-codebase](/articles/generated/session-2026-05-25) · 2026-05-25
+- [/gstack 做得不错，不过你都测试和review了吗？](/articles/generated/session-2026-05-20) · 2026-05-25
+- [/office-hours 针对 @ECHO_STATUS.md 中的“产品表层设计讨论 (2026-05-24)...](/articles/generated/session-2026-05-24) · 2026-05-25
+- [/superpowers:using-superpowers 我们继续 @ECHO_STATUS.md 中的“进行...](/articles/generated/session-2026-05-21) · 2026-05-25
+- [/understand-anything:understand --language zh](/articles/generated/session-2026-05-22) · 2026-05-25
+- [我在另一个会话中，让DeepSeek TUI带着DeepSeek，正在实现mcp server的事情。我们这个会话...](/articles/generated/session-2026-05-23) · 2026-05-25

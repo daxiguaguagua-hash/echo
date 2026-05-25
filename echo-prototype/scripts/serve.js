@@ -1,0 +1,210 @@
+const http = require("http");
+const { spawn } = require("child_process");
+const path = require("path");
+const { runBuildDocs } = require("./build-docs");
+const { isCaptureEnabled, setCaptureEnabled } = require("./lib/infra/config");
+const { resolveDataDirs } = require("./lib/infra/echo-paths");
+const { listProjects } = require("./lib/usecases/project-registry");
+const { resolveEchoHomePath } = require("./lib/infra/workspace");
+const { cliNames, mcpServerInfo } = require("./lib/cli/names");
+const store = require("./lib/infra/markdown-store");
+
+const DOCS_DIR = path.resolve(__dirname, "../../docs");
+const DEFAULT_API_PORT = 8787;
+const DEFAULT_DOCS_PORT = 5173;
+const HOST = "127.0.0.1";
+
+function findFreePort(start) {
+  const net = require("net");
+  return new Promise((resolve) => {
+    const s = net.createServer();
+    s.listen(start, HOST, () => {
+      const port = s.address().port;
+      s.close(() => resolve(port));
+    });
+    s.on("error", () => resolve(findFreePort(start + 1)));
+  });
+}
+
+function jsonResponse(res, code, data) {
+  res.writeHead(code, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": `http://${HOST}:${DEFAULT_DOCS_PORT}`,
+  });
+  res.end(JSON.stringify(data));
+}
+
+function readBody(req) {
+  return new Promise((resolve) => {
+    let data = "";
+    req.on("data", (c) => (data += c));
+    req.on("end", () => {
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch (_) {
+        resolve(null);
+      }
+    });
+  });
+}
+
+function createRouter(deps) {
+  return async function router(req, res) {
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      });
+      return res.end();
+    }
+
+    const url = new URL(req.url, `http://${HOST}`);
+    const p = url.pathname;
+
+    try {
+      if (p === "/api/capture" && req.method === "GET") {
+        return jsonResponse(res, 200, { enabled: isCaptureEnabled() });
+      }
+
+      if (p === "/api/capture" && req.method === "POST") {
+        const body = await readBody(req);
+        if (!body || typeof body.enabled !== "boolean") {
+          return jsonResponse(res, 400, { error: "body.enabled (boolean) required" });
+        }
+        const r = setCaptureEnabled(body.enabled);
+        return jsonResponse(res, 200, { enabled: r.capture_enabled });
+      }
+
+      if (p === "/api/comments" && req.method === "POST") {
+        const body = await readBody(req);
+        if (!body || !body.articleId || !body.comment) {
+          return jsonResponse(res, 400, { error: "articleId and comment required" });
+        }
+        const dirs = deps.dirs || resolveDataDirs();
+        try {
+          const { writeComment } = require("./lib/usecases/write-comment");
+          const result = writeComment({
+            articleId: body.articleId,
+            quote: body.quote,
+            comment: body.comment,
+            author: body.author || "vincent",
+            scope: body.scope || (body.quote ? undefined : "article"),
+            prefix: body.prefix,
+            suffix: body.suffix,
+            occurrence: body.occurrence,
+            evolutionKind: body.evolutionKind || "null",
+            evolutionOf: body.evolutionOf || [],
+            status: body.status || "open",
+            dirs,
+            store,
+          });
+          try { runBuildDocs(); } catch (_) {}
+          return jsonResponse(res, 201, result);
+        } catch (err) {
+          return jsonResponse(res, 422, { error: err.message });
+        }
+      }
+
+      if (p === "/api/projects" && req.method === "GET") {
+        const echoHome = resolveEchoHomePath();
+        const projects = listProjects(echoHome);
+        const dirs = resolveDataDirs();
+        return jsonResponse(res, 200, {
+          projects: projects.map((p) => ({
+            id: p.projectId,
+            name: p.projectId,
+            root: p.root,
+            dataRoot: p.dataRoot,
+          })),
+          currentId: dirs.projectId,
+        });
+      }
+
+      if (p === "/api/mcp-config" && req.method === "GET") {
+        return jsonResponse(res, 200, {
+          canonical: {
+            command: cliNames.canonicalName,
+            args: ["mcp"],
+          },
+          legacy: cliNames.legacyNames.map((name) => ({
+            command: name,
+            args: ["mcp"],
+          })),
+          serverInfo: mcpServerInfo,
+        });
+      }
+
+      if (p === "/api/query-log" && req.method === "GET") {
+        const limit = parseInt(url.searchParams.get("limit") || "50", 10);
+        const dirs = deps.dirs || resolveDataDirs();
+        try {
+          const { readRecentQueryLog } = require("./lib/infra/query-log");
+          return jsonResponse(res, 200, readRecentQueryLog(dirs, limit));
+        } catch (_) {
+          return jsonResponse(res, 200, []);
+        }
+      }
+
+      if (p === "/api/rebuild-docs" && req.method === "POST") {
+        try {
+          runBuildDocs();
+          return jsonResponse(res, 200, { ok: true });
+        } catch (err) {
+          return jsonResponse(res, 500, { error: err.message });
+        }
+      }
+
+      jsonResponse(res, 404, { error: "not found" });
+    } catch (err) {
+      jsonResponse(res, 500, { error: err.message });
+    }
+  };
+}
+
+async function start() {
+  console.log("[echoctl] Building docs...");
+  try { runBuildDocs(); } catch (e) { console.error("[echoctl] build-docs warning:", e.message); }
+
+  const apiPort = await findFreePort(DEFAULT_API_PORT);
+  const docsPort = await findFreePort(DEFAULT_DOCS_PORT);
+
+  const vitepress = spawn("npx", ["vitepress", "dev", DOCS_DIR, "--port", String(docsPort), "--host", HOST], {
+    cwd: path.resolve(__dirname, "../.."),
+    stdio: "pipe",
+    env: { ...process.env },
+  });
+
+  vitepress.stderr.on("data", (d) => process.stderr.write(d));
+  vitepress.on("error", (err) => {
+    console.error("[echoctl] VitePress failed:", err.message);
+    process.exit(1);
+  });
+
+  const router = createRouter({});
+  const server = http.createServer(router);
+  server.listen(apiPort, HOST, () => {
+    console.log(`\n  Echo serve started:`);
+    console.log(`  API:       http://${HOST}:${apiPort}`);
+    console.log(`  Docs:      http://${HOST}:${docsPort}`);
+    console.log(`  MCP name:  ${mcpServerInfo.name} v${mcpServerInfo.version}\n`);
+  });
+
+  function shutdown() {
+    console.log("\n[echoctl] shutting down...");
+    server.close();
+    vitepress.kill("SIGTERM");
+    process.exit(0);
+  }
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+}
+
+if (require.main === module) {
+  start().catch((err) => {
+    console.error("[echoctl] serve failed:", err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { start };

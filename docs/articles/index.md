@@ -1,40 +1,48 @@
 # 文章
 
-共 16 篇 Echo 文章。
+共 17 篇 Echo 文章。
+
 
 <div class="echo-article-grid">
 
+<a class="echo-article-card" href="./generated/session-2026-05-25">
+  <strong>/claude-mem:learn-codebase</strong>
+  <small>2026-05-25</small>
+  <p>/claude-mem:learn-codebase</p>
+  <div class="echo-tags"><span>未标记</span></div>
+</a>
+
 <a class="echo-article-card" href="./generated/session-2026-05-20">
   <strong>/gstack 做得不错，不过你都测试和review了吗？</strong>
-  <small>2026-05-24</small>
+  <small>2026-05-25</small>
   <p>/gstack 做得不错，不过你都测试和review了吗？</p>
+  <div class="echo-tags"><span>未标记</span></div>
+</a>
+
+<a class="echo-article-card" href="./generated/session-2026-05-24">
+  <strong>/office-hours 针对 @ECHO_STATUS.md 中的“产品表层设计讨论 (2026-05-24)...</strong>
+  <small>2026-05-25</small>
+  <p>/office-hours 针对 @ECHO_STATUS.md 中的“产品表层设计讨论 (2026-05-24) — 记录 alias 数据模型、MCP...</p>
   <div class="echo-tags"><span>未标记</span></div>
 </a>
 
 <a class="echo-article-card" href="./generated/session-2026-05-21">
   <strong>/superpowers:using-superpowers 我们继续 @ECHO_STATUS.md 中的“进行...</strong>
-  <small>2026-05-24</small>
+  <small>2026-05-25</small>
   <p>/superpowers:using-superpowers 我们继续 @ECHO_STATUS.md 中的“进行中”，同时保持和codex的沟通。</p>
   <div class="echo-tags"><span>未标记</span></div>
 </a>
 
 <a class="echo-article-card" href="./generated/session-2026-05-22">
-  <strong>幂等是什么：一次和两次为什么一样</strong>
-  <small>2026-05-24</small>
+  <strong>/understand-anything:understand --language zh</strong>
+  <small>2026-05-25</small>
   <p>/understand-anything:understand --language zh</p>
-  <div class="echo-tags"><span>未标记</span></div>
-</a>
-
-<a class="echo-article-card" href="./generated/session-2026-05-24">
-  <strong>你好，现在测试看看能不能实时记录。</strong>
-  <small>2026-05-24</small>
-  <p>你好，现在测试看看能不能实时记录。</p>
   <div class="echo-tags"><span>未标记</span></div>
 </a>
 
 <a class="echo-article-card" href="./generated/session-2026-05-23">
   <strong>我在另一个会话中，让DeepSeek TUI带着DeepSeek，正在实现mcp server的事情。我们这个会话...</strong>
-  <small>2026-05-24</small>
+  <small>2026-05-25</small>
   <p>我在另一个会话中，让DeepSeek TUI带着DeepSeek，正在实现mcp server的事情。我们这个会话准备审查看看情况。</p>
   <div class="echo-tags"><span>未标记</span></div>
 </a>
@@ -117,3 +125,4 @@
 </a>
 
 </div>
+

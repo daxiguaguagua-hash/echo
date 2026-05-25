@@ -203,6 +203,12 @@ switch (cmd) {
   case "mcp":
     require("../scripts/lib/interfaces/mcp/server").start();
     break;
+  case "serve":
+    require("../scripts/serve").start().catch((err) => {
+      console.error(`${CLI} serve failed:`, err.message);
+      process.exit(1);
+    });
+    break;
   case "capture": {
     const action = args[1];
     const { isCaptureEnabled, setCaptureEnabled } = require("../scripts/lib/infra/config");

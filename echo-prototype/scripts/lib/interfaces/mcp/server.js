@@ -56,11 +56,34 @@ function createHandleRequest(deps) {
         if (!handler) {
           return jsonRpcError(id, -32601, `Unknown tool: ${toolName}`);
         }
+        const t0 = Date.now();
         try {
           const result = handler(params?.arguments || {}, deps);
           const text = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+          try {
+            const { appendQueryLog } = require("../../infra/query-log");
+            appendQueryLog(deps.dirs, {
+              time: new Date().toISOString(),
+              tool: toolName,
+              args: params?.arguments || {},
+              ok: true,
+              result_count: Array.isArray(result) ? result.length : 1,
+              duration_ms: Date.now() - t0,
+            });
+          } catch (_) {}
           return jsonRpcResult(id, { content: [{ type: "text", text }] });
         } catch (err) {
+          try {
+            const { appendQueryLog } = require("../../infra/query-log");
+            appendQueryLog(deps.dirs, {
+              time: new Date().toISOString(),
+              tool: toolName,
+              args: params?.arguments || {},
+              ok: false,
+              result_count: 0,
+              duration_ms: Date.now() - t0,
+            });
+          } catch (_) {}
           if (err instanceof NotFoundError) {
             return jsonRpcError(id, -32002, err.message);
           }
