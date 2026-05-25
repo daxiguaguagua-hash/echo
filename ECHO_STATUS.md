@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-25 (Issue 006+007 实施完成 — serve API 修复/MCP E2E/alias 回归/选区评论锚点/highlight 渲染；145 测试全绿)
+最后更新：2026-05-25 (Codex Desktop Echo MCP 已安装并完成真实链路验证；Issue 006+007 实施完成 — serve API 修复/MCP E2E/alias 回归/选区评论锚点/highlight 渲染；145 测试全绿)
 
 ## 已完成
 
@@ -37,6 +37,7 @@
 - [x] **Project registry 第一阶段** — `lib/usecases/project-registry.js`：`loadRegistry`、`saveRegistry`、`registerProject`（幂等，同名冲突抛错）、`findProjectForPath`（最长前缀匹配）。`echo-mcp init project [--path <dir>]` 命令。`run-doctor` 扩展 Echo home、registry.json、当前项目注册、项目数据目录检查。15 测试，79 全绿，管线通过。
 - [x] **hook 项目路由** — `capture.js`：去掉模块级路径常量，`resolveBufferRoot()` 根据 cwd 查 registry → 匹配则写入 `projects/<project-id>/session-buffer/`，未匹配降级到 `~/.echo-workspace/session-buffer/`。`status.js`：SessionStart 输出加入当前项目名和数据目录。Code Reviewer 审查了 registry，发现并修复 2 项 blocker（同名目录碰撞检测 + 损坏 JSON 备份）。79 测试全绿，管线通过。
 - [x] **MCP server 第一阶段** — `scripts/lib/mcp-server.js`：JSON-RPC 2.0 over stdio，实现 5 个工具（`search_articles`、`get_article`、`get_article_context`、`list_tags`、`list_recent`）。零外部 MCP 依赖，纯 Node stdlib。CLI：`echo-mcp mcp` / `npm run mcp`。`markdown-store.loadComments` 新增 `content` 字段。79 测试全绿，管线通过。
+- [x] **Codex Desktop MCP 实机安装验证** (2026-05-25) — VitePress `/api/mcp-config` 返回 canonical 配置 `{ command: "echoctl", args: ["mcp"] }`；已通过 `codex mcp add echo -- echoctl mcp` 写入 `/Users/vincenthuang/.codex/config.toml`。`codex mcp get/list` 显示 `echo` enabled；stdio JSON-RPC 验证 `initialize`、`tools/list`、`search_articles` 均成功。当前会话工具发现层未热加载 Echo，需新线程/重载后作为 Codex MCP 工具出现。
 - [x] **Hook installer/doctor P2 修复** — nested hook 命令改为全量扫描；旧格式 `{ command }` 才迁移，nested entry 原样保留，避免覆盖同 entry 里的其他命令。新增 3 个回归测试，`npm test` 106 全绿，`npm run all` 通过。
 
 ## 进行中
