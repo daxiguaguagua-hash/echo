@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-25 (`echoctl serve` runtime VitePress site 改造完成)
+最后更新：2026-05-25 (新增 MCP 安装与 AI 访问端到端验证 issue)
 
 ## 已完成
 
@@ -82,6 +82,7 @@
 - [ ] **进化链 UI** — 文章底部评论区展示，回复链可视化
 - [ ] **项目筛选视图** — 统一归档下按 project 元数据显示 `全部` / 单项目文章。元数据在 convert 时根据 registry 补齐。
 - [ ] **MCP 配置按钮** — 网页提供 MCP 配置复制入口，用户自行粘贴安装
+- [ ] **MCP 安装与 AI 访问端到端验证** — 让另一个 AI 按网页复制出的 MCP 配置安装 Echo MCP，并验证 `list_recent`、`search_articles`、`get_article`、`get_article_context`、`list_tags`、`add_tags`、`remove_tags` 全链路正常。设计文档：[issues/007-mcp-install-e2e.md](issues/007-mcp-install-e2e.md)
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑
