@@ -9,10 +9,14 @@ const { resolveEchoHomePath } = require("./lib/infra/workspace");
 const { cliNames, mcpServerInfo } = require("./lib/cli/names");
 const store = require("./lib/infra/markdown-store");
 
-const DOCS_DIR = path.resolve(__dirname, "../../docs");
+const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_API_PORT = 8787;
 const DEFAULT_DOCS_PORT = 5173;
 const HOST = "127.0.0.1";
+
+function resolveRuntimeSiteDir() {
+  return path.join(resolveEchoHomePath(), ".site");
+}
 
 function findFreePort(start) {
   const net = require("net");
@@ -162,7 +166,7 @@ function createRouter(deps) {
 
       if (p === "/api/rebuild-docs" && req.method === "POST") {
         try {
-          runBuildDocs();
+          runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() });
           return jsonResponse(res, 200, { ok: true }, docsPort);
         } catch (err) {
           return jsonResponse(res, 500, { error: err.message }, docsPort);
@@ -177,14 +181,19 @@ function createRouter(deps) {
 }
 
 async function start() {
+  const docsDir = resolveRuntimeSiteDir();
   console.log("[echoctl] Building docs...");
-  try { runBuildDocs(); } catch (e) { console.error("[echoctl] build-docs warning:", e.message); }
+  try {
+    runBuildDocs({ docsRoot: docsDir });
+  } catch (e) {
+    console.error("[echoctl] build-docs warning:", e.message);
+  }
 
   const apiPort = await findFreePort(DEFAULT_API_PORT);
   const docsPort = await findFreePort(DEFAULT_DOCS_PORT);
 
-  const vitepress = spawn("npx", ["vitepress", "dev", DOCS_DIR, "--port", String(docsPort), "--host", HOST], {
-    cwd: path.resolve(__dirname, "../.."),
+  const vitepress = spawn("npx", ["vitepress", "dev", docsDir, "--port", String(docsPort), "--host", HOST], {
+    cwd: PACKAGE_ROOT,
     stdio: "pipe",
     env: {
       ...process.env,
@@ -198,12 +207,13 @@ async function start() {
     process.exit(1);
   });
 
-  const router = createRouter({ docsPort });
+  const router = createRouter({ docsPort, docsRoot: docsDir });
   const server = http.createServer(router);
   server.listen(apiPort, HOST, () => {
     console.log(`\n  Echo serve started:`);
     console.log(`  API:       http://${HOST}:${apiPort}`);
     console.log(`  Docs:      http://${HOST}:${docsPort}`);
+    console.log(`  Site dir:  ${docsDir}`);
     console.log(`  MCP name:  ${mcpServerInfo.name} v${mcpServerInfo.version}\n`);
   });
 
@@ -224,4 +234,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { start, createRouter };
+module.exports = { start, createRouter, resolveRuntimeSiteDir };

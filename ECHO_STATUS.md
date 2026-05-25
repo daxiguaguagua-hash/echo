@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-25 (VitePress Vue 组件化重构方案已记录)
+最后更新：2026-05-25 (`echoctl serve` runtime VitePress site 改造完成)
 
 ## 已完成
 
@@ -70,6 +70,7 @@
 - [x] **文章模板** (2026-05-24) — `scripts/build-docs.js` 从 Echo articles/comments 生成 VitePress 页面；首页最近文章、文章列表、标签聚合、真实文章详情、评论区卡片和侧边栏均自动生成；转义原始 XML/HTML 片段避免 Vue 编译失败。Browser 已验证文章列表、真实文章、评论区、标签页；`npm test` 113 全绿，`npm run all` 和 `npm run docs:build` 通过。
 - [x] **文章别名优化** (2026-05-24) — 新增 `article-aliases.json`，生成 VitePress 时将 `session-2026-05-22` 展示为「幂等是什么：一次和两次为什么一样」，同步首页、文章列表、文章页和侧边栏；避免 `npm run all` 从 buffer 重建文章时覆盖别名。
 - [x] **serve 文章展示修复** (2026-05-25) — 修复从已注册但暂无文章的项目目录运行 `echoctl serve` 时文章列表显示 0 篇的问题；docs 生成现在汇总「当前项目 + 全局归档 + 其他注册项目」并去重。同步修复文章详情页点击后变成 VitePress 404 的问题：交互脚本延迟到 DOM 就绪后初始化并补齐判空。Browser 验证 `http://127.0.0.1:5173/articles/` 显示 17 篇，且 `/claude-mem`、`/gstack`、`/office-hours` 三篇详情页可打开；`npm test` 122 全绿，`npm run all` 通过。
+- [x] **serve runtime site 路径分离** (2026-05-25) — `echoctl serve` 不再把用户文章生成到 npm 包内 `docs/`，而是在 Echo home 下创建/刷新 `~/.echo-workspace/.site` 并从该目录启动 VitePress；repo `docs/` 只作为包内主题/模板来源和开发调试目录。新增 `runBuildDocs({ docsRoot })` 测试，确认可在包外 runtime site 生成页面。Browser 验证 runtime site `http://127.0.0.1:5174/articles/` 文章列表和详情页可打开；`npm test` 124 全绿，`npm run docs:build` 与 `npm run all` 通过。
 - [x] **产品表层设计讨论** (2026-05-24) — 记录 alias 数据模型、MCP 配置复制、AI 查询链、文内评论、底部评论输入、`echoctl` 命名、网页 capture 开关、项目筛选。设计文档：[issues/005-echo-product-surface.md](issues/005-echo-product-surface.md)
 - [x] **产品表层跨模型审查** (2026-05-24) — Claude 子代理独立审查了 005 设计文档。锚点漂移风险已澄清为不适用（文章正文不可变，锚点永远有效）。`echoctl serve` 是拱心石。5 项待确认全部关闭。实施顺序：echoctl → serve → alias → 评论 UI → 项目筛选 → MCP 配置 → AI 查询链。
 - [x] **CLI 改名为 echoctl** — 新增 `echoctl` 主命令，保留 `echo-mcp` 兼容别名 (2026-05-24 — names.js 中央模块 + echoctl bin + echo-mcp 兼容别名)

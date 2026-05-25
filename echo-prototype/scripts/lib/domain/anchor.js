@@ -24,6 +24,10 @@ function findAllPositions(text, quote) {
 }
 
 function resolveAnchor(comment, articleBody) {
+  if (comment.anchor?.kind === "article") {
+    return { status: "ok", note: "article-level annotation" };
+  }
+
   const { quote, prefix, suffix, line_hint } = comment.anchor || {};
   if (!quote) return { status: "broken", reason: "no quote" };
 

@@ -5,9 +5,15 @@ const { resolveDataDirs } = require("./lib/infra/echo-paths");
 const store = require("./lib/infra/markdown-store");
 const { stripCommentSections } = require("./lib/usecases/strip-comments");
 
-const DOCS_ROOT = path.resolve(__dirname, "../../docs");
-const GENERATED_ARTICLES_DIR = path.join(DOCS_ROOT, "articles", "generated");
-const SIDEBAR_FILE = path.join(DOCS_ROOT, ".vitepress", "echo-sidebar.mts");
+const PACKAGE_DOCS_ROOT = path.resolve(__dirname, "../../docs");
+
+function sitePaths(docsRoot) {
+  return {
+    docsRoot,
+    generatedArticlesDir: path.join(docsRoot, "articles", "generated"),
+    sidebarFile: path.join(docsRoot, ".vitepress", "echo-sidebar.mts"),
+  };
+}
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -16,6 +22,21 @@ function ensureDir(dir) {
 function cleanDir(dir) {
   fs.rmSync(dir, { recursive: true, force: true });
   ensureDir(dir);
+}
+
+function copyDir(src, dest) {
+  fs.rmSync(dest, { recursive: true, force: true });
+  fs.cpSync(src, dest, { recursive: true });
+}
+
+function ensureSiteScaffold(docsRoot) {
+  ensureDir(docsRoot);
+  ensureDir(path.join(docsRoot, "articles"));
+  ensureDir(path.join(docsRoot, "tags"));
+
+  if (path.resolve(docsRoot) !== path.resolve(PACKAGE_DOCS_ROOT)) {
+    copyDir(path.join(PACKAGE_DOCS_ROOT, ".vitepress"), path.join(docsRoot, ".vitepress"));
+  }
 }
 
 function escapeHtml(value) {
@@ -271,7 +292,7 @@ function renderHomeArticles(articles) {
   }).join("\n");
 }
 
-function updateHome(articles) {
+function updateHome(articles, docsRoot) {
   const home = `---
 layout: home
 
@@ -306,10 +327,10 @@ features:
 
 ${renderHomeArticles(articles)}
 `;
-  fs.writeFileSync(path.join(DOCS_ROOT, "index.md"), home, "utf-8");
+  fs.writeFileSync(path.join(docsRoot, "index.md"), home, "utf-8");
 }
 
-function writeSidebar(articles) {
+function writeSidebar(articles, sidebarFile) {
   const items = articles.slice(0, 30).map((article) => {
     const title = displayTitle(article);
     return `            { text: ${JSON.stringify(title)}, link: '/articles/generated/${articleSlug(article)}' }`;
@@ -331,7 +352,7 @@ ${items}
   },
 ]
 `;
-  fs.writeFileSync(SIDEBAR_FILE, sidebar, "utf-8");
+  fs.writeFileSync(sidebarFile, sidebar, "utf-8");
 }
 
 function loadAllArticlesAndComments() {
@@ -407,29 +428,39 @@ function loadAllArticlesAndComments() {
   return { articles: uniqueArticles, comments: allComments };
 }
 
-function runBuildDocs() {
+function runBuildDocs(opts = {}) {
+  const docsRoot = opts.docsRoot || PACKAGE_DOCS_ROOT;
+  const paths = sitePaths(docsRoot);
   const { articles, comments } = loadAllArticlesAndComments();
   articles.sort(sortByUpdatedDesc);
 
-  cleanDir(GENERATED_ARTICLES_DIR);
+  ensureSiteScaffold(docsRoot);
+  cleanDir(paths.generatedArticlesDir);
   for (const article of articles) {
     fs.writeFileSync(
-      path.join(GENERATED_ARTICLES_DIR, `${articleSlug(article)}.md`),
+      path.join(paths.generatedArticlesDir, `${articleSlug(article)}.md`),
       renderArticlePage(article, comments),
       "utf-8"
     );
   }
 
-  fs.writeFileSync(path.join(DOCS_ROOT, "articles", "index.md"), renderArticleIndex(articles), "utf-8");
-  fs.writeFileSync(path.join(DOCS_ROOT, "tags", "index.md"), renderTagsIndex(articles), "utf-8");
-  updateHome(articles);
-  writeSidebar(articles);
+  fs.writeFileSync(path.join(docsRoot, "articles", "index.md"), renderArticleIndex(articles), "utf-8");
+  fs.writeFileSync(path.join(docsRoot, "tags", "index.md"), renderTagsIndex(articles), "utf-8");
+  updateHome(articles, docsRoot);
+  writeSidebar(articles, paths.sidebarFile);
 
   console.log(`Generated VitePress docs for ${articles.length} articles and ${comments.length} comments.`);
+  return { articles: articles.length, comments: comments.length, docsRoot };
 }
 
 if (require.main === module) {
   runBuildDocs();
 }
 
-module.exports = { runBuildDocs, displayTitle, loadAllArticlesAndComments };
+module.exports = {
+  runBuildDocs,
+  displayTitle,
+  loadAllArticlesAndComments,
+  ensureSiteScaffold,
+  PACKAGE_DOCS_ROOT,
+};

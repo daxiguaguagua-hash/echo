@@ -13,7 +13,10 @@
 - 每篇文章重复注入脚本，和 VitePress/Vue 的组件模型不一致。
 - 交互功能继续增长后，`build-docs.js` 会混杂数据生成、页面结构、前端状态和 API 调用。
 
-结论：**不 fork VitePress，不改 VitePress 源码。用官方 Vue/theme 扩展点重构。**
+结论：
+
+1. **不 fork VitePress，不改 VitePress 源码。用官方 Vue/theme 扩展点重构。**
+2. **npm 包目录和用户 Echo workspace 必须分离。`echoctl serve` 不应把用户文章生成到包内 `docs/`。**
 
 ## 官方能力
 
@@ -36,19 +39,39 @@ VitePress 官方文档支持这条路线：
 
 ```mermaid
 flowchart TD
-  A["build-docs.js"] --> B["只生成静态 Markdown + frontmatter"]
-  B --> C["frontmatter: echoArticleId / echoProjectId"]
-  C --> D["VitePress theme wrapper"]
-  D --> E["doc-bottom slot"]
-  E --> F["EchoArticleActions.vue"]
-  F --> G["echo-api.ts"]
+  A["npm package"] --> B["CLI / API / VitePress theme"]
+  C["~/.echo-workspace"] --> D["articles / comments / registry"]
+  C --> E[".site runtime VitePress root"]
+  B --> E
+  D --> F["build-docs reads Echo data"]
+  F --> E
+  E --> G["localhost VitePress"]
 ```
+
+运行时目录：
+
+```text
+~/.echo-workspace/.site/
+  .vitepress/
+    config.mts
+    echo-sidebar.mts
+    theme/
+  index.md
+  articles/
+    index.md
+    generated/*.md
+  tags/
+    index.md
+```
+
+开发期仍可用 repo 内 `docs/` 做模板和本地调试；发布后 `echoctl serve` 以 `~/.echo-workspace/.site` 为 VitePress project root。
 
 ## 文件职责
 
 | 文件 | 职责 |
 |------|------|
 | `scripts/build-docs.js` | 生成不可变文章页面、索引、标签页、侧栏；不再生成内联交互脚本 |
+| `scripts/serve.js` | 在 Echo home 下创建/刷新 `.site`，从该目录启动 VitePress |
 | `docs/.vitepress/theme/index.ts` | 扩展默认主题，注册 Echo 组件 |
 | `docs/.vitepress/theme/Layout.vue` | 包装 `DefaultTheme.Layout`，在 `doc-bottom` 注入 Echo 交互组件 |
 | `docs/.vitepress/theme/components/EchoArticleActions.vue` | capture 开关、MCP 配置、文章级评论 |
@@ -85,12 +108,15 @@ const articleId = computed(() => frontmatter.value.echo?.articleId)
 3. 新增 `echo-api.ts`，集中处理 API 地址、fetch、错误提示。
 4. 从 `build-docs.js` 删除 `echoClientScript()`，生成文章时只写 frontmatter 和静态 HTML/Markdown。
 5. 再拆 `EchoSelectionComment.vue`，用 Vue `onMounted/onUnmounted` 管理 selection 事件。
-6. Browser 回归：文章列表、三篇详情页、capture 开关、MCP 配置、底部评论、选区评论。
-7. 跑 `npm test`、`npm run docs:build`、`npm run all`。
+6. `build-docs.js` 支持 `runBuildDocs({ docsRoot })`，默认仍写 repo `docs/`，serve 时写 `~/.echo-workspace/.site`。
+7. `serve.js` 使用 runtime site root 启动 VitePress，避免 npm 包目录被用户数据污染。
+8. Browser 回归：文章列表、三篇详情页、capture 开关、MCP 配置、底部评论、选区评论。
+9. 跑 `npm test`、`npm run docs:build`、`npm run all`。
 
 ## 验收标准
 
 - `build-docs.js` 不再包含大段内联 `<script>` 字符串。
+- `echoctl serve` 不写入 npm 包内 `docs/articles/generated`，而是写入 Echo home 的 `.site`。
 - 文章正文仍保持不可变，重构只影响展示层和交互层。
 - 文章详情页点击不会 404。
 - API 未运行时，组件显示明确的不可用状态，不影响文章阅读。

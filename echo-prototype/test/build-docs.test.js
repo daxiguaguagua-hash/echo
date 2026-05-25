@@ -4,7 +4,7 @@ const path = require("node:path");
 const os = require("node:os");
 const test = require("node:test");
 
-const { loadAllArticlesAndComments } = require("../scripts/build-docs");
+const { loadAllArticlesAndComments, runBuildDocs } = require("../scripts/build-docs");
 const { registerProject } = require("../scripts/lib/usecases/project-registry");
 
 function tempDir() {
@@ -50,4 +50,35 @@ test("docs generation includes global articles when run inside an empty register
 
   assert.deepEqual(articles.map((a) => a.id), ["global-article"]);
   assert.equal(articles[0]._project, null);
+});
+
+test("runBuildDocs can generate a runtime VitePress site outside the package docs dir", (t) => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const docsRoot = tempDir();
+
+  t.after(() => {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(docsRoot, { recursive: true, force: true });
+  });
+
+  process.env.ECHO_HOME = echoHome;
+  writeArticle(path.join(echoHome, "articles"), "runtime-article", "Runtime Article");
+  process.chdir(echoHome);
+
+  const result = runBuildDocs({ docsRoot });
+
+  assert.equal(result.articles, 1);
+  assert.equal(result.docsRoot, docsRoot);
+  assert.ok(fs.existsSync(path.join(docsRoot, ".vitepress", "config.mts")));
+  assert.ok(fs.existsSync(path.join(docsRoot, ".vitepress", "theme", "index.ts")));
+  assert.ok(fs.existsSync(path.join(docsRoot, "articles", "generated", "runtime-article.md")));
+  assert.match(
+    fs.readFileSync(path.join(docsRoot, "articles", "index.md"), "utf-8"),
+    /Runtime Article/
+  );
 });

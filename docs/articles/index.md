@@ -5,6 +5,13 @@
 
 <div class="echo-article-grid">
 
+<a class="echo-article-card" href="./generated/session-2026-05-25">
+  <strong>/claude-mem:learn-codebase</strong>
+  <small>2026-05-25</small>
+  <p>/claude-mem:learn-codebase</p>
+  <div class="echo-tags"><span>未标记</span></div>
+</a>
+
 <a class="echo-article-card" href="./generated/session-2026-05-20">
   <strong>/gstack 做得不错，不过你都测试和review了吗？</strong>
   <small>2026-05-25</small>
@@ -37,13 +44,6 @@
   <strong>我在另一个会话中，让DeepSeek TUI带着DeepSeek，正在实现mcp server的事情。我们这个会话...</strong>
   <small>2026-05-25</small>
   <p>我在另一个会话中，让DeepSeek TUI带着DeepSeek，正在实现mcp server的事情。我们这个会话准备审查看看情况。</p>
-  <div class="echo-tags"><span>未标记</span></div>
-</a>
-
-<a class="echo-article-card" href="./generated/session-2026-05-25">
-  <strong>/claude-mem:learn-codebase</strong>
-  <small>2026-05-25</small>
-  <p>/claude-mem:learn-codebase</p>
   <div class="echo-tags"><span>未标记</span></div>
 </a>
 

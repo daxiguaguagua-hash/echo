@@ -32,6 +32,13 @@ test("resolveAnchor reports missing quote metadata as broken", () => {
   });
 });
 
+test("resolveAnchor accepts article-level annotations without quote metadata", () => {
+  assert.deepEqual(resolveAnchor({ anchor: { kind: "article" } }, "body"), {
+    status: "ok",
+    note: "article-level annotation",
+  });
+});
+
 test("resolveAnchor reports a missing quote as broken", () => {
   const result = resolveAnchor({ anchor: { quote: "missing" } }, "body");
 
