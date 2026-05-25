@@ -125,6 +125,103 @@ function renderComments(article, comments) {
   return `## 评论区\n\n<div class="echo-comment-list">\n\n${rows.join("\n\n")}\n\n</div>`;
 }
 
+function echoClientScript() {
+  return `<script>
+(function() {
+  if (typeof document === 'undefined') return;
+  var API = 'http://127.0.0.1:8787';
+  var articleId = 'ARTICLE_ID_PLACEHOLDER';
+
+  // --- Check if serve is running ---
+  function checkServe() {
+    fetch(API + '/api/capture').then(function(r) { return r.json(); }).then(function(d) {
+      var el = document.getElementById('echo-serve-status');
+      if (el) el.style.display = 'none';
+      initCapture(d.enabled);
+    }).catch(function() {
+      var el = document.getElementById('echo-serve-status');
+      if (el) el.style.display = 'block';
+    });
+  }
+
+  // --- Capture toggle ---
+  function initCapture(enabled) {
+    var btn = document.getElementById('echo-capture-btn');
+    if (!btn) return;
+    btn.textContent = enabled ? '\\u6536\\u96c6: \\u5f00' : '\\u6536\\u96c6: \\u5173';
+    btn.className = enabled ? 'echo-btn echo-btn-on' : 'echo-btn echo-btn-off';
+    btn.onclick = function() {
+      fetch(API + '/api/capture', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({enabled: !enabled}) })
+        .then(function(r) { return r.json(); }).then(function(d) { initCapture(d.enabled); });
+    };
+  }
+
+  // --- MCP config ---
+  var mcpBtn = document.getElementById('echo-mcp-btn');
+  if (mcpBtn) mcpBtn.onclick = function() {
+    fetch(API + '/api/mcp-config').then(function(r) { return r.json(); }).then(function(d) {
+      var cfg = JSON.stringify({mcpServers:{echo:{command:d.canonical.command,args:d.canonical.args}}}, null, 2);
+      var modal = document.getElementById('echo-mcp-modal');
+      var pre = document.getElementById('echo-mcp-config');
+      if (pre) pre.textContent = cfg;
+      if (modal) modal.style.display = 'flex';
+    });
+  };
+  var closeModal = document.getElementById('echo-mcp-close');
+  if (closeModal) closeModal.onclick = function() {
+    document.getElementById('echo-mcp-modal').style.display = 'none';
+  };
+  var copyBtn = document.getElementById('echo-mcp-copy');
+  if (copyBtn) copyBtn.onclick = function() {
+    var pre = document.getElementById('echo-mcp-config');
+    navigator.clipboard.writeText(pre.textContent).then(function() {
+      copyBtn.textContent = '\\u5df2\\u590d\\u5236';
+      setTimeout(function() { copyBtn.textContent = '\\u590d\\u5236'; }, 1500);
+    });
+  };
+
+  // --- Text selection comment ---
+  var selPopup = document.getElementById('echo-sel-popup');
+  document.addEventListener('mouseup', function(e) {
+    var sel = window.getSelection();
+    var text = sel.toString().trim();
+    if (text.length > 2 && text.length < 500) {
+      var r = sel.getRangeAt(0);
+      var rect = r.getBoundingClientRect();
+      selPopup.style.display = 'block';
+      selPopup.style.top = (window.scrollY + rect.bottom + 8) + 'px';
+      selPopup.style.left = (window.scrollX + rect.left) + 'px';
+      selPopup.dataset.quote = text;
+    } else {
+      selPopup.style.display = 'none';
+    }
+  });
+  document.getElementById('echo-sel-comment').onclick = function() {
+    var quote = selPopup.dataset.quote;
+    var comment = prompt('\\u8bc4\\u8bba "' + quote.slice(0, 60) + '...":');
+    if (!comment) return;
+    fetch(API + '/api/comments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({articleId:articleId, quote:quote, comment:comment}) })
+      .then(function(r) { return r.json(); }).then(function() { location.reload(); })
+      .catch(function(e) { alert('\\u8bc4\\u8bba\\u5931\\u8d25: ' + e.message); });
+    selPopup.style.display = 'none';
+  };
+
+  // --- Bottom comment ---
+  var submitBtn = document.getElementById('echo-comment-submit');
+  if (submitBtn) submitBtn.onclick = function() {
+    var ta = document.getElementById('echo-comment-input');
+    var comment = ta.value.trim();
+    if (!comment) return;
+    fetch(API + '/api/comments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({articleId:articleId, comment:comment, scope:'article'}) })
+      .then(function(r) { return r.json(); }).then(function() { location.reload(); })
+      .catch(function(e) { alert('\\u8bc4\\u8bba\\u5931\\u8d25: ' + e.message); });
+  };
+
+  checkServe();
+})();
+</script>`;
+}
+
 function renderArticlePage(article, comments) {
   const title = displayTitle(article);
   const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
@@ -164,6 +261,40 @@ ${renderBody(article)}
 ---
 
 ${renderComments(article, comments)}
+
+<div class="echo-toolbar">
+  <div id="echo-serve-status" style="display:none; color:var(--vp-c-danger-1); font-size:13px; padding:8px 0;">
+    API 服务未运行 — 运行 <code>echoctl serve</code> 以启用交互功能
+  </div>
+  <div class="echo-toolbar-btns">
+    <button id="echo-capture-btn" class="echo-btn">收集: --</button>
+    <button id="echo-mcp-btn" class="echo-btn">MCP 配置</button>
+  </div>
+</div>
+
+<div id="echo-mcp-modal" class="echo-modal" style="display:none;">
+  <div class="echo-modal-content">
+    <h3>MCP 配置</h3>
+    <p>将此 JSON 添加到你的 Claude/Codex MCP 配置文件中：</p>
+    <pre id="echo-mcp-config"></pre>
+    <div class="echo-modal-btns">
+      <button id="echo-mcp-copy" class="echo-btn">复制</button>
+      <button id="echo-mcp-close" class="echo-btn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="echo-sel-popup" class="echo-sel-popup" style="display:none;">
+  <button id="echo-sel-comment" class="echo-btn">评论选中文字</button>
+</div>
+
+<div class="echo-comment-box">
+  <h3>发表评论</h3>
+  <textarea id="echo-comment-input" placeholder="对整篇文章的评论..." rows="3"></textarea>
+  <button id="echo-comment-submit" class="echo-btn">提交评论</button>
+</div>
+
+${echoClientScript().replace('ARTICLE_ID_PLACEHOLDER', article.id)}
 `;
 }
 

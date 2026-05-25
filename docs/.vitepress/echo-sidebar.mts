@@ -7,12 +7,12 @@ export const articleSidebar = [
         text: '最近文章',
         collapsed: false,
         items: [
-            { text: "/claude-mem:learn-codebase", link: '/articles/generated/session-2026-05-25' },
             { text: "/gstack 做得不错，不过你都测试和review了吗？", link: '/articles/generated/session-2026-05-20' },
             { text: "/office-hours 针对 @ECHO_STATUS.md 中的“产品表层设计讨论 (2026-05-24)...", link: '/articles/generated/session-2026-05-24' },
             { text: "/superpowers:using-superpowers 我们继续 @ECHO_STATUS.md 中的“进行...", link: '/articles/generated/session-2026-05-21' },
             { text: "/understand-anything:understand --language zh", link: '/articles/generated/session-2026-05-22' },
             { text: "我在另一个会话中，让DeepSeek TUI带着DeepSeek，正在实现mcp server的事情。我们这个会话...", link: '/articles/generated/session-2026-05-23' },
+            { text: "/claude-mem:learn-codebase", link: '/articles/generated/session-2026-05-25' },
             { text: "我先说我的想法：1/当前我和ai的对话，有很多都是精妙绝伦的，但是我让ai处理之后他们总是会经过压缩，这样精妙的地...", link: '/articles/generated/session-d65985f1' },
             { text: "把gstack叫出来，我们理解好当前项目之后。就继续干活吧。", link: '/articles/generated/session-e5239574' },
             { text: "hello，早上好。我发现了一个小问题，你看 ~/.echo-buffer/session-2026-05-19....", link: '/articles/generated/session-66a8dd03' },

@@ -140,3 +140,108 @@
   color: var(--vp-c-text-2);
   margin-left: 6px;
 }
+
+.echo-toolbar {
+  border-top: 1px solid var(--vp-c-divider);
+  margin: 32px 0 0;
+  padding: 16px 0 8px;
+}
+
+.echo-toolbar-btns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.echo-btn {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  color: var(--vp-c-text-1);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+.echo-btn:hover {
+  border-color: var(--vp-c-brand-1);
+}
+
+.echo-btn-on { border-color: var(--vp-c-brand-1); color: var(--vp-c-brand-1); }
+.echo-btn-off { opacity: 0.6; }
+
+.echo-modal {
+  align-items: center;
+  background: rgba(0,0,0,0.4);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 1000;
+}
+
+.echo-modal-content {
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  max-width: 560px;
+  padding: 24px;
+  width: 90%;
+}
+
+.echo-modal-content h3 { margin: 0 0 8px; }
+
+.echo-modal-content pre {
+  background: var(--vp-c-bg-soft);
+  border-radius: 6px;
+  font-size: 12px;
+  overflow-x: auto;
+  padding: 12px;
+}
+
+.echo-modal-btns { display: flex; gap: 8px; margin-top: 14px; }
+
+.echo-sel-popup {
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-brand-1);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  padding: 4px;
+  position: absolute;
+  z-index: 100;
+}
+
+.echo-comment-box {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  margin-top: 24px;
+  padding: 16px;
+}
+
+.echo-comment-box h3 { font-size: 15px; margin: 0 0 10px; }
+
+.echo-comment-box textarea {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  color: var(--vp-c-text-1);
+  font-size: 14px;
+  padding: 10px;
+  resize: vertical;
+  width: 100%;
+}
+
+.echo-comment-box .echo-btn { margin-top: 10px; }
+
+.echo-serve-notice {
+  background: var(--vp-c-danger-soft);
+  border: 1px solid var(--vp-c-danger-1);
+  border-radius: 6px;
+  color: var(--vp-c-danger-1);
+  font-size: 13px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+}
