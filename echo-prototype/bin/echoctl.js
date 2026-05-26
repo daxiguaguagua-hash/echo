@@ -43,6 +43,12 @@ function printDoctorResults(results) {
 const args = process.argv.slice(2);
 const cmd = args[0];
 
+if (cmd === "--version" || cmd === "-v" || cmd === "-V") {
+  const { version } = require("../package.json");
+  console.log(version);
+  process.exit(0);
+}
+
 switch (cmd) {
   case "hook": {
     const sub = args[1];

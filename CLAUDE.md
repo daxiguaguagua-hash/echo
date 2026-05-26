@@ -6,7 +6,7 @@
 
 **每次会话启动时**，自动执行以下操作：
 1. 读取 `ECHO_STATUS.md` 了解项目进度（hook 已将摘要注入你的上下文）
-2. 使用 Skill 工具调用 gstack 了解项目全貌
+2. 使用 /codegraph 工具了解项目的代码全貌
 3. 向用户简要汇报：当前进度、进行中的任务、下一步做什么
 
 ## 核心设计约束：文章不可变
@@ -102,6 +102,10 @@ ECHO_STATUS.md           — 项目进度表（活的，随时更新）
 - `echoctl import claude --all --dry-run` — 预览多项目导入（开发中）
 - `echoctl import claude --all --apply` — 执行多项目导入（开发中）
 - `npm run annotate -- --article <id> --quote "..." --comment "..."` — 添加评论
+
+## 关于issues
+1. **新增** issue，要在issues文件夹下面创建一个新的md文档，记录issue的特征和修改方案
+2. 在 ECHO_STATUS.md 中留下链接，指向 1 中新增的issues的md文档
 
 ## 做完任何事后
 

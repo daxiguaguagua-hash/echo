@@ -136,6 +136,8 @@
 - [ ] **Karpathy wiki 模式改造** — **已搁置**（2026-05-23 决定不上）。原计划：wikilink 替代 frontmatter 引用、index.md 内容目录、log.md 操作日志。
   - **替代想法**：不做内置 wiki，改为可选的 `sync-to-wiki` 桥接脚本。检测 `~/Documents/SilentBrain/` 等已有 wiki vault，Echo 的 convert/import 输出自动同步到 wiki 的 `raw/articles/` 目录。用户自己决定是否将 Echo 文章提升为 wiki 的 concept/entity 页。这样 Echo 管线不受影响，wiki 作为独立的知识精炼层存在。架构影响评估已存档于 session-2026-05-23。
 - [ ] **Code Review 改进项** — 11 项代码质量问题，详见 [issues/009-code-review-findings.md](issues/009-code-review-findings.md)（2026-05-26，CodeGraph 全项目扫描）
+- [ ] **echoctl 查找已注册项目 + MCP 同步** — CLI 新增 `echoctl project list` / `echoctl project find <id>`，MCP 新增 `list_projects` / `get_project` 工具，详见 [issues/011-echoctl-list-projects-mcp-sync.md](issues/011-echoctl-list-projects-mcp-sync.md)（2026-05-26）
+- [ ] **多项目网页端不可见** — `resolveDataDirs()` 只解析当前 cwd 匹配的单个项目，缺少跨项目文章聚合层。`build-docs.js` 需改为扫描所有已注册项目。详见 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)（2026-05-26）
 
 ## 数据来源
 
