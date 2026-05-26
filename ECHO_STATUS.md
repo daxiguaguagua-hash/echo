@@ -92,6 +92,7 @@
 - [x] **底部评论区布局修复** (2026-05-26) — `doc-bottom` 插槽中的 Echo 交互区重新约束到正文宽度，避免长文章底部评论表单和右侧 `On this page` 目录重叠；Browser 验证当前页面横向不再相交。
 - [x] **serve 交互按钮恢复** (2026-05-26) — 修复 `localhost` / `127.0.0.1` 混用导致 API CORS 不匹配的问题；前端在缺少 `VITE_ECHO_API_BASE` 时默认探测 `http://127.0.0.1:8787`，避免普通 docs 页面直接降级隐藏 MCP 配置和收集开关。新增 serve API 回归测试，`npm test` 252 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [x] **顶部导航高亮修复** (2026-05-26) — VitePress nav 为 `文章` / `标签` 增加 `activeMatch`，确保从首页按钮、顶部导航或文章卡片进入 `/articles/` 与 `/articles/generated/...` 后仍保持正确高亮。
+- [x] **侧边栏项目分组** (2026-05-26) — 文章 sidebar 从单一“最近文章”列表调整为“全部文章 / 最近文章 / 项目”结构；项目分组按 `project` 元数据展示，如 `mynote (16)`，最近文章保留为折叠快捷入口。新增 build-docs 回归测试；Browser 验证 `http://localhost:5174/articles/` 渲染正确；`npm test` 253 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑

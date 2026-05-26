@@ -11,14 +11,18 @@ function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "echo-build-docs-test-"));
 }
 
-function writeArticle(dir, id, title) {
+function writeArticle(dir, id, title, opts = {}) {
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, `${id}.md`), [
+  const frontmatter = [
     "---",
     `id: ${id}`,
     `title: ${title}`,
-    "created_at: 2026-05-25T00:00:00.000Z",
-    "---",
+    `created_at: ${opts.createdAt || "2026-05-25T00:00:00.000Z"}`,
+  ];
+  if (opts.project) frontmatter.push(`project: ${opts.project}`);
+  frontmatter.push("---");
+  fs.writeFileSync(path.join(dir, `${id}.md`), [
+    ...frontmatter,
     "",
     `# ${title}`,
     "",
@@ -81,4 +85,41 @@ test("runBuildDocs can generate a runtime VitePress site outside the package doc
     fs.readFileSync(path.join(docsRoot, "articles", "index.md"), "utf-8"),
     /Runtime Article/
   );
+});
+
+test("runBuildDocs groups sidebar articles by project while keeping recent shortcut", (t) => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const docsRoot = tempDir();
+  const projectRoot = tempDir();
+
+  t.after(() => {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(docsRoot, { recursive: true, force: true });
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  process.env.ECHO_HOME = echoHome;
+  writeArticle(path.join(echoHome, "articles"), "global-article", "Global Article");
+  const registered = registerProject(projectRoot, { echoHome, projectId: "mynote" });
+  writeArticle(path.join(registered.dataRoot, "articles"), "project-article", "Project Article", {
+    project: "mynote",
+    createdAt: "2026-05-26T00:00:00.000Z",
+  });
+  process.chdir(projectRoot);
+
+  runBuildDocs({ docsRoot });
+
+  const sidebar = fs.readFileSync(path.join(docsRoot, ".vitepress", "echo-sidebar.mts"), "utf-8");
+  assert.match(sidebar, /text: '最近文章'/);
+  assert.match(sidebar, /text: '项目'/);
+  assert.match(sidebar, /text: "mynote \(1\)"/);
+  assert.match(sidebar, /text: "未归类 \(1\)"/);
+  assert.match(sidebar, /Project Article/);
+  assert.match(sidebar, /Global Article/);
+  assert.ok(sidebar.indexOf("text: '项目'") < sidebar.indexOf('text: "mynote (1)"'));
 });

@@ -65,6 +65,10 @@ function displayTitle(article) {
   return article.data.alias || article.data.title || article.id;
 }
 
+function displayProjectName(projectId) {
+  return projectId || "未归类";
+}
+
 function normalizeDate(value) {
   if (!value) return "";
   if (typeof value === "string") {
@@ -238,6 +242,28 @@ function collectProjects(articles) {
   return [...projects.values()];
 }
 
+function groupArticlesByProject(articles) {
+  const groups = new Map();
+  for (const article of articles) {
+    const projectId = article._project || null;
+    const key = projectId || "__unassigned__";
+    if (!groups.has(key)) {
+      groups.set(key, {
+        projectId,
+        text: displayProjectName(projectId),
+        articles: [],
+      });
+    }
+    groups.get(key).articles.push(article);
+  }
+  return [...groups.values()].sort((a, b) => {
+    if (a.projectId === b.projectId) return 0;
+    if (a.projectId === null) return 1;
+    if (b.projectId === null) return -1;
+    return a.text.localeCompare(b.text);
+  });
+}
+
 function renderArticleIndex(articles) {
   const projects = collectProjects(articles);
   const hasProjects = projects.length > 1;
@@ -359,9 +385,21 @@ ${renderHomeArticles(articles)}
 }
 
 function writeSidebar(articles, sidebarFile) {
-  const items = articles.slice(0, 30).map((article) => {
+  const renderItem = (article, indent = "            ") => {
     const title = displayTitle(article);
-    return `            { text: ${JSON.stringify(title)}, link: '/articles/generated/${articleSlug(article)}' }`;
+    return `${indent}{ text: ${JSON.stringify(title)}, link: '/articles/generated/${articleSlug(article)}' }`;
+  };
+
+  const recentItems = articles.slice(0, 10).map((article) => renderItem(article)).join(",\n");
+  const projectGroups = groupArticlesByProject(articles).map((group) => {
+    const items = group.articles.slice(0, 30).map((article) => renderItem(article, "                ")).join(",\n");
+    return `          {
+            text: ${JSON.stringify(`${group.text} (${group.articles.length})`)},
+            collapsed: false,
+            items: [
+${items}
+            ],
+          }`;
   }).join(",\n");
 
   const sidebar = `export const articleSidebar = [
@@ -371,9 +409,16 @@ function writeSidebar(articles, sidebarFile) {
       { text: '全部文章', link: '/articles/' },
       {
         text: '最近文章',
+        collapsed: true,
+        items: [
+${recentItems}
+        ],
+      },
+      {
+        text: '项目',
         collapsed: false,
         items: [
-${items}
+${projectGroups}
         ],
       },
     ],
