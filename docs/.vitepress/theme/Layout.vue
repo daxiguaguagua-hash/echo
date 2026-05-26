@@ -11,7 +11,11 @@ const echoInteractive = computed(() => !!(frontmatter.value as any)?.echo?.inter
   <EchoSearchLanding />
   <DefaultTheme.Layout>
     <template #doc-bottom>
-      <EchoArticleActions v-if="echoInteractive" />
+      <div v-if="echoInteractive" class="echo-doc-bottom">
+        <div class="echo-doc-bottom-inner">
+          <EchoArticleActions />
+        </div>
+      </div>
       <EchoSelectionComment v-if="echoInteractive" />
     </template>
   </DefaultTheme.Layout>

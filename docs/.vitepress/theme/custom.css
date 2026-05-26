@@ -147,6 +147,21 @@
   padding: 16px 0 8px;
 }
 
+.echo-doc-bottom {
+  padding: 0 32px;
+}
+
+.echo-doc-bottom-inner {
+  margin: 0 auto;
+  max-width: 688px;
+}
+
+@media (min-width: 960px) {
+  .VPDoc.has-aside .echo-doc-bottom {
+    padding-right: 288px;
+  }
+}
+
 .echo-toolbar-btns {
   display: flex;
   gap: 10px;
