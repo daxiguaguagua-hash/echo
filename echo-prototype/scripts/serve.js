@@ -15,6 +15,56 @@ const DEFAULT_API_PORT = 8787;
 const DEFAULT_DOCS_PORT = 5173;
 const HOST = "127.0.0.1";
 
+function servePidFile() {
+  return path.join(resolveEchoHomePath(), ".serve.pid");
+}
+
+function serveInfoFile() {
+  return path.join(resolveEchoHomePath(), ".serve.json");
+}
+
+function writeServeInfo(apiPort, docsPort) {
+  fs.writeFileSync(servePidFile(), String(process.pid));
+  fs.writeFileSync(serveInfoFile(), JSON.stringify({
+    pid: process.pid,
+    apiPort,
+    docsPort,
+    startedAt: new Date().toISOString(),
+    identity: "echo-serve",
+  }, null, 2));
+}
+
+function clearServeInfo() {
+  try { fs.unlinkSync(servePidFile()); } catch (_) {}
+  try { fs.unlinkSync(serveInfoFile()); } catch (_) {}
+}
+
+function readServeInfo() {
+  let raw;
+  try {
+    raw = fs.readFileSync(serveInfoFile(), "utf-8");
+  } catch (e) {
+    if (e.code === "ENOENT") return null;
+    throw e;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    throw new Error(`Corrupted serve state file: ${serveInfoFile()}. Delete it manually or re-run serve.`);
+  }
+}
+
+function isValidPositivePid(pid) {
+  return Number.isInteger(pid) && pid > 0;
+}
+
+function verifyProcessIdentity(info) {
+  // File-level identity marker guards against stale or manually-created state files.
+  // PID reuse is extremely unlikely because serve's SIGTERM handler calls
+  // clearServeInfo() on graceful shutdown, and EPERM prevents cross-user kills.
+  return info.identity === "echo-serve";
+}
+
 function resolveRuntimeSiteDir() {
   return path.join(resolveEchoHomePath(), ".site");
 }
@@ -258,6 +308,7 @@ async function start() {
   const router = createRouter({ docsPort, docsRoot: docsDir });
   const server = http.createServer(router);
   server.listen(apiPort, HOST, () => {
+    writeServeInfo(apiPort, docsPort);
     console.log(`\n  Echo serve started:`);
     console.log(`  API:       http://${HOST}:${apiPort}`);
     console.log(`  Docs:      http://${HOST}:${docsPort}`);
@@ -267,6 +318,7 @@ async function start() {
 
   function shutdown() {
     console.log("\n[echoctl] shutting down...");
+    clearServeInfo();
     server.close();
     vitepress.kill("SIGTERM");
     process.exit(0);
@@ -282,4 +334,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { start, createRouter, resolveRuntimeSiteDir };
+module.exports = { start, createRouter, resolveRuntimeSiteDir, readServeInfo, clearServeInfo, servePidFile, isValidPositivePid, verifyProcessIdentity };
