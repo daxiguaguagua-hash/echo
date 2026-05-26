@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-26 (底部评论区布局修复 — doc-bottom 交互区与正文同宽，避开右侧目录；Browser 验证通过)
+最后更新：2026-05-26 (serve 交互按钮恢复 — 前端默认探测 8787 API，API CORS 兼容 localhost/127.0.0.1)
 
 ## 已完成
 
@@ -90,6 +90,7 @@
 - [x] **MCP 安装与 AI 访问端到端验证** (2026-05-25) — 新增 `mcp-e2e.test.js`：spawn `echoctl mcp` 从临时 `ECHO_HOME`，测试真实 JSON-RPC 通信覆盖 initialize、tools/list、全部 7 个 tool（含 add_tags/remove_tags 回环和 alias 搜索）。设计文档：[issues/007-mcp-install-e2e.md](issues/007-mcp-install-e2e.md)
 - [x] **搜索落点增强** (2026-05-26) — VitePress local search 点击结果后记录搜索词，文章页落地时在正文中高亮命中词，并选择离当前 hash 标题最近的命中滚入视口；仅改主题 UI 层，不改文章正文和数据管线。
 - [x] **底部评论区布局修复** (2026-05-26) — `doc-bottom` 插槽中的 Echo 交互区重新约束到正文宽度，避免长文章底部评论表单和右侧 `On this page` 目录重叠；Browser 验证当前页面横向不再相交。
+- [x] **serve 交互按钮恢复** (2026-05-26) — 修复 `localhost` / `127.0.0.1` 混用导致 API CORS 不匹配的问题；前端在缺少 `VITE_ECHO_API_BASE` 时默认探测 `http://127.0.0.1:8787`，避免普通 docs 页面直接降级隐藏 MCP 配置和收集开关。新增 serve API 回归测试，`npm test` 252 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑

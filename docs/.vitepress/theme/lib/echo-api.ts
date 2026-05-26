@@ -1,4 +1,6 @@
-const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ECHO_API_BASE) || ''
+const CONFIGURED_API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ECHO_API_BASE) || ''
+const DEFAULT_API_BASE = 'http://127.0.0.1:8787'
+const API_CANDIDATES = [CONFIGURED_API_BASE, DEFAULT_API_BASE].filter(Boolean)
 
 interface EchoStatus {
   ok: boolean
@@ -29,13 +31,27 @@ class EchoApiError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  if (!API_BASE) {
-    throw new EchoApiError('API not available (no VITE_ECHO_API_BASE)', 0)
+  if (API_CANDIDATES.length === 0) {
+    throw new EchoApiError('API not available', 0)
   }
+
+  let lastError: EchoApiError | null = null
+  for (const base of API_CANDIDATES) {
+    try {
+      return await requestFrom<T>(base, path, options)
+    } catch (err) {
+      lastError = err instanceof EchoApiError ? err : new EchoApiError((err as Error).message || 'Network error', 0)
+    }
+  }
+
+  throw lastError || new EchoApiError('Network error', 0)
+}
+
+async function requestFrom<T>(base: string, path: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 5000)
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${base}${path}`, {
       ...options,
       signal: controller.signal,
       headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -82,5 +98,5 @@ export function postComment(payload: CommentPayload): Promise<any> {
   })
 }
 
-export { EchoApiError, API_BASE }
+export { EchoApiError, CONFIGURED_API_BASE, DEFAULT_API_BASE }
 export type { EchoStatus, CommentPayload }

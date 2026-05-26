@@ -31,11 +31,24 @@ function findFreePort(start) {
   });
 }
 
+function allowedOrigin(origin, docsPort) {
+  if (!origin) return `http://${HOST}:${docsPort || DEFAULT_DOCS_PORT}`;
+  try {
+    const url = new URL(origin);
+    const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    const isDocsPort = url.port === String(docsPort || DEFAULT_DOCS_PORT);
+    if ((url.protocol === "http:" || url.protocol === "https:") && isLocalhost && isDocsPort) {
+      return origin;
+    }
+  } catch (_) {}
+  return `http://${HOST}:${docsPort || DEFAULT_DOCS_PORT}`;
+}
+
 function jsonResponse(res, code, data, docsPort) {
-  const originPort = docsPort || DEFAULT_DOCS_PORT;
+  const origin = allowedOrigin(res.req?.headers?.origin, docsPort);
   res.writeHead(code, {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": `http://${HOST}:${originPort}`,
+    "Access-Control-Allow-Origin": origin,
   });
   res.end(JSON.stringify(data));
 }
@@ -57,9 +70,10 @@ function readBody(req) {
 function createRouter(deps) {
   const docsPort = deps.docsPort || DEFAULT_DOCS_PORT;
   return async function router(req, res) {
+    res.req = req;
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": allowedOrigin(req.headers.origin, docsPort),
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
       });

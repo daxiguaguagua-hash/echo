@@ -12,12 +12,13 @@ function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "echo-serve-test-"));
 }
 
-function jsonRequest(router, method, pathname, body) {
+function jsonRequest(router, method, pathname, body, headers = {}) {
   return new Promise((resolve) => {
     const url = new URL(pathname, "http://127.0.0.1");
     const req = new http.IncomingMessage(null);
     req.method = method;
     req.url = url.pathname;
+    req.headers = headers;
     const chunks = [];
     const res = {
       _chunks: chunks,
@@ -64,6 +65,21 @@ test("GET /api/mcp-config has valid CORS headers", async () => {
   const res = await jsonRequest(router, "GET", "/api/mcp-config");
   assert.equal(res.statusCode, 200);
   assert.ok(res.headers["Access-Control-Allow-Origin"]);
+
+  delete process.env.ECHO_HOME;
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("GET /api/status allows localhost origin for docs port", async () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(echoHome, { recursive: true });
+  process.env.ECHO_HOME = echoHome;
+
+  const router = createRouter({ docsPort: 5173 });
+
+  const res = await jsonRequest(router, "GET", "/api/status", null, { origin: "http://localhost:5173" });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.headers["Access-Control-Allow-Origin"], "http://localhost:5173");
 
   delete process.env.ECHO_HOME;
   fs.rmSync(echoHome, { recursive: true, force: true });
