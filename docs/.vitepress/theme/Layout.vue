@@ -8,6 +8,7 @@ const echoInteractive = computed(() => !!(frontmatter.value as any)?.echo?.inter
 </script>
 
 <template>
+  <EchoSearchLanding />
   <DefaultTheme.Layout>
     <template #doc-bottom>
       <EchoArticleActions v-if="echoInteractive" />

@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-25 (P0 清理 + import 框架 + CLI + 工作流文档完成 — 251 测试全绿；Codex 跨模型审查全部通过)
+最后更新：2026-05-26 (搜索落点增强完成 — VitePress local search 可滚到命中词；251 测试全绿；管线通过)
 
 ## 已完成
 
@@ -88,6 +88,7 @@
 - [ ] **项目筛选视图** — 统一归档下按 project 元数据显示 `全部` / 单项目文章。元数据在 convert 时根据 registry 补齐。
 - [x] **MCP 配置按钮** (2026-05-24) — `EchoArticleActions.vue` 已实现 MCP 配置弹窗和复制功能。
 - [x] **MCP 安装与 AI 访问端到端验证** (2026-05-25) — 新增 `mcp-e2e.test.js`：spawn `echoctl mcp` 从临时 `ECHO_HOME`，测试真实 JSON-RPC 通信覆盖 initialize、tools/list、全部 7 个 tool（含 add_tags/remove_tags 回环和 alias 搜索）。设计文档：[issues/007-mcp-install-e2e.md](issues/007-mcp-install-e2e.md)
+- [x] **搜索落点增强** (2026-05-26) — VitePress local search 点击结果后记录搜索词，文章页落地时在正文中高亮命中词，并选择离当前 hash 标题最近的命中滚入视口；仅改主题 UI 层，不改文章正文和数据管线。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑
