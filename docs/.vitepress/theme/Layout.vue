@@ -9,6 +9,7 @@ const echoInteractive = computed(() => !!(frontmatter.value as any)?.echo?.inter
 
 <template>
   <EchoSearchLanding />
+  <EchoChatBubbles />
   <DefaultTheme.Layout>
     <template #doc-bottom>
       <div v-if="echoInteractive" class="echo-doc-bottom">

@@ -4,6 +4,7 @@ import EchoArticleActions from './components/EchoArticleActions.vue'
 import EchoSelectionComment from './components/EchoSelectionComment.vue'
 import EchoSearchLanding from './components/EchoSearchLanding.vue'
 import EchoTagsPage from './components/EchoTagsPage.vue'
+import EchoChatBubbles from './components/EchoChatBubbles.vue'
 import './custom.css'
 
 export default {
@@ -14,5 +15,6 @@ export default {
     app.component('EchoSelectionComment', EchoSelectionComment)
     app.component('EchoSearchLanding', EchoSearchLanding)
     app.component('EchoTagsPage', EchoTagsPage)
+    app.component('EchoChatBubbles', EchoChatBubbles)
   },
 }

@@ -1,9 +1,20 @@
 {
-  "name": "echo-prototype",
+  "name": "echoctl",
   "version": "0.1.0",
   "private": false,
-  "description": "Echo knowledge forum — local-first, Markdown-based, with annotation chains",
-  "keywords": ["echo", "knowledge-forum", "ai-conversations", "markdown", "local-first", "mcp"],
+  "description": "Local-first AI conversation knowledge forum — capture, search, and annotate Claude Code sessions as Markdown articles with MCP server support",
+  "keywords": ["echo", "knowledge-forum", "ai-conversations", "markdown", "local-first", "mcp", "claude-code", "cli"],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daxiguaguagua-hash/echo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/daxiguaguagua-hash/echo/issues"
+  },
+  "homepage": "https://github.com/daxiguaguagua-hash/echo#readme",
   "files": [
     "bin/",
     "scripts/",

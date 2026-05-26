@@ -100,3 +100,5 @@ npm test && npm run all
 ### 8. Codex 审查
 
 调 `/codex review` 对变更做最终审查。
+
+### 9. 如果用户明确表示自动运行，或者把所有的issues都清理掉。那么就从头开始执行当前流程，直到所有issues都修复。

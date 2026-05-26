@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-26 (标签页筛选 — 点击标签只显示对应文章，选中/未选中颜色区分)
+最后更新：2026-05-26 (聊天气泡完成，评论作者/进化链 UI/项目筛选 回退)
 
 ## 已完成
 
@@ -82,7 +82,7 @@
 - [x] **P0 数据清理** (Issue 008, 2026-05-25) — `template-conversation.md` 和 `example.md` 移出 articles/；16 篇历史文章迁移到 `projects/mynote/articles/` 并回填 `project: mynote` 字段；mynote 注册到 registry。管线 16 articles + 10 comments。
 - [x] **Import provider adapter + manifest** (Issue 008, 2026-05-25) — `import/providers/claude-code.js`：JSONL 解析、噪声过滤、会话分类、元数据提取、不可变文章生成；`import/manifest.js`：导入记录防重；`import/scanner.js`：多项目扫描、路径解码、`buildImportPlan`。Codex 106 测试 + TDD 实现，251 全绿。
 - [x] **`echoctl import` CLI** (Issue 008, 2026-05-25) — `echoctl import claude --all --dry-run/--apply`；`--project <dir> --as-project <id>`；`--exclude` 过滤系统目录。已接线 import 框架，dry-run 已验证。
-- [ ] **npm 发布准备** (Issue 008) — `"private": false`；确定包名；配置 `bin`/`files`/`keywords`；用户 onboarding 文档。
+- [x] **npm 发布准备** (Issue 008) — `echoctl@0.1.0`：包名已确定、`"private": false`、`bin`/`files`/`keywords`/`engines` 已配置、npm pack 产物 38 文件 43KB 无污染。用户 onboarding 文档后续按需补充。
 - [ ] **底部评论输入框** — 支持文章级评论和后续回复链扩展。作者身份从 `echo.json` 读取。
 - [ ] **进化链 UI** — 文章底部评论区展示，回复链可视化
 - [ ] **项目筛选视图** — 统一归档下按 project 元数据显示 `全部` / 单项目文章。元数据在 convert 时根据 registry 补齐。
@@ -96,9 +96,13 @@
 - [x] **标签页锚点修复** (2026-05-26) — `/tags/` 标签云不再猜测 VitePress 标题 slug，改为生成显式 `tag-...` section anchor；仅影响标签页本身，不改文章页搜索落点和 annotation anchor。新增中文标签回归测试；Browser 验证 `AI 协作` 点击后滚动到对应 section；`npm test` 254 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [x] **网页标签创建** (2026-05-26) — 文章列表和文章详情页将 `project` 作为第一枚虚拟标签展示，`/tags/` 同步纳入项目标签；文章详情页新增“创建标记”输入框，调用 `/api/tags` 复用 `addTags` 写回 frontmatter 并重建站点。新增 build-docs 与 serve API 回归测试；Browser 验证标签展示与按钮可用态；`npm test` 256 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [x] **标签页筛选** (2026-05-26) — `/tags/` 改为 Vue 组件 `EchoTagsPage`，点击标签后仅显示该标签对应文章，URL hash 保持可分享；选中标签使用品牌色高亮，未选中标签弱化为灰色。Browser 验证 `知识管理` 只显示 3 篇文章且样式状态正确；`npm test` 256 全绿，`npm run docs:build` 和 `npm run all` 通过。
+- [x] **Turn marker 隐藏展示** (2026-05-26) — 文章页不再显示 `claude t004 · reply t003` 这类 turn marker；`build-docs.js` 改为输出隐藏 metadata 节点，保留 `data-turn-id`、`data-speaker`、`data-reply-to`，CSS 兜底隐藏旧节点。新增 build-docs 回归测试，`node --test test/build-docs.test.js` 和 `npm run docs:build` 通过。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑
+- [ ] **全局控制入口迁移** — `收集: 开/关` 和 `MCP 配置` 是全局控制，不应出现在每篇文章末尾；迁移到顶部导航（“首页 / 文章 / 标签”附近）或独立设置入口，文章页底部只保留与当前文章相关的评论/标记操作。
+- [x] **文章正文聊天气泡化** — 用户发言靠右、AI 回复靠左，基于隐藏 `echo-turn-marker` 在 VitePress 渲染后分组，不修改原文且不影响 search landing / annotation anchor。设计记录：[issues/010-article-chat-bubbles.md](issues/010-article-chat-bubbles.md)
+- [ ] **创建标记表单样式重设计** — 功能保留，但当前文章底部“创建标记”区域像临时表单且视觉重复；需要重新设计为更轻量的文章级标记入口，和评论区/底部导航形成清晰层级。
 - [ ] **标签/摘要编辑** — 网页端改 frontmatter 字段，写回 MD
 - [ ] **剪贴板导入脚本** — `paste-to-md.sh`（macOS 优先）
 

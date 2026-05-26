@@ -120,8 +120,8 @@ function renderTurnMarker(raw) {
   const id = raw.match(/turn:\s*([^\s]+)/)?.[1] || "";
   const speaker = raw.match(/speaker=([^\s]+)/)?.[1] || "unknown";
   const replyTo = raw.match(/reply_to=([^\s]+)/)?.[1];
-  const reply = replyTo ? ` · reply ${escapeHtml(replyTo)}` : "";
-  return `\n\n<div class="echo-turn-marker"><span>${escapeHtml(speaker)}</span><small>${escapeHtml(id)}${reply}</small></div>\n\n`;
+  const replyAttr = replyTo ? ` data-reply-to="${escapeHtml(replyTo)}"` : "";
+  return `\n\n<span class="echo-turn-marker" hidden aria-hidden="true" data-turn-id="${escapeHtml(id)}" data-speaker="${escapeHtml(speaker)}"${replyAttr}></span>\n\n`;
 }
 
 function escapeHtmlTagsOutsideCode(content) {

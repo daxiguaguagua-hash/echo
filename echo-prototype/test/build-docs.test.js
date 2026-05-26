@@ -30,7 +30,7 @@ function writeArticle(dir, id, title, opts = {}) {
     "",
     `# ${title}`,
     "",
-    "Body",
+    opts.body || "Body",
     "",
   ].join("\n"));
 }
@@ -202,4 +202,37 @@ test("runBuildDocs writes tag cloud links to explicit tag section anchors", (t) 
   assert.equal(aiCoop.articles.length, 2);
   assert.match(tagsIndex, /<EchoTagsPage payload="/);
   assert.doesNotMatch(tagsIndex, /href="#ai%20/);
+});
+
+test("runBuildDocs keeps turn markers as hidden metadata", (t) => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const docsRoot = tempDir();
+
+  t.after(() => {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(docsRoot, { recursive: true, force: true });
+  });
+
+  process.env.ECHO_HOME = echoHome;
+  writeArticle(path.join(echoHome, "articles"), "turns", "Turns", {
+    body: [
+      "<!-- turn: t001 speaker=vincent -->",
+      "Question",
+      "<!-- turn: t002 speaker=claude reply_to=t001 -->",
+      "Answer",
+    ].join("\n\n"),
+  });
+  process.chdir(echoHome);
+
+  runBuildDocs({ docsRoot });
+
+  const articlePage = fs.readFileSync(path.join(docsRoot, "articles", "generated", "turns.md"), "utf-8");
+  assert.match(articlePage, /<span class="echo-turn-marker" hidden aria-hidden="true" data-turn-id="t001" data-speaker="vincent"><\/span>/);
+  assert.match(articlePage, /data-turn-id="t002" data-speaker="claude" data-reply-to="t001"/);
+  assert.doesNotMatch(articlePage, /reply t001/);
 });
