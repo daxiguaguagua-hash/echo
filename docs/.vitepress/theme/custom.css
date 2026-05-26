@@ -62,6 +62,10 @@
   display: none !important;
 }
 
+.echo-turn-boundary {
+  display: none !important;
+}
+
 .echo-comment-head span,
 .echo-article-card small {
   color: var(--vp-c-text-2);
@@ -334,10 +338,12 @@ mark.echo-search-hit-active {
 
 /* Chat bubbles */
 .echo-chat-turn {
+  box-sizing: border-box;
   border-radius: 8px;
   margin: 16px 0;
   padding: 12px 16px;
   position: relative;
+  width: fit-content;
 }
 
 .echo-chat-user {
@@ -387,4 +393,3 @@ mark.echo-search-hit-active {
     max-width: 96%;
   }
 }
-

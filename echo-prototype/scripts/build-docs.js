@@ -2,10 +2,16 @@ const fs = require("fs");
 const path = require("path");
 
 const { resolveDataDirs } = require("./lib/infra/echo-paths");
+const { resolveEchoHomePath } = require("./lib/infra/workspace");
 const store = require("./lib/infra/markdown-store");
 const { stripCommentSections } = require("./lib/usecases/strip-comments");
 
 const PACKAGE_DOCS_ROOT = path.resolve(__dirname, "../../docs");
+const PACKAGE_ROOT = path.resolve(__dirname, "..");
+
+function defaultDocsRoot() {
+  return path.join(resolveEchoHomePath(), ".site");
+}
 
 function sitePaths(docsRoot) {
   return {
@@ -29,6 +35,22 @@ function copyDir(src, dest) {
   fs.cpSync(src, dest, { recursive: true });
 }
 
+function ensureRuntimeDependencies(docsRoot) {
+  if (path.resolve(docsRoot) === path.resolve(PACKAGE_DOCS_ROOT)) return;
+
+  const siteModules = path.join(docsRoot, "node_modules");
+  ensureDir(siteModules);
+
+  for (const name of ["vitepress", "vue"]) {
+    const target = path.join(PACKAGE_ROOT, "node_modules", name);
+    const link = path.join(siteModules, name);
+    if (!fs.existsSync(target) || fs.existsSync(link)) continue;
+    try {
+      fs.symlinkSync(target, link, "dir");
+    } catch (_) {}
+  }
+}
+
 function ensureSiteScaffold(docsRoot) {
   ensureDir(docsRoot);
   ensureDir(path.join(docsRoot, "articles"));
@@ -37,6 +59,8 @@ function ensureSiteScaffold(docsRoot) {
   if (path.resolve(docsRoot) !== path.resolve(PACKAGE_DOCS_ROOT)) {
     copyDir(path.join(PACKAGE_DOCS_ROOT, ".vitepress"), path.join(docsRoot, ".vitepress"));
   }
+
+  ensureRuntimeDependencies(docsRoot);
 }
 
 function escapeHtml(value) {
@@ -527,7 +551,7 @@ function loadAllArticlesAndComments() {
 }
 
 function runBuildDocs(opts = {}) {
-  const docsRoot = opts.docsRoot || PACKAGE_DOCS_ROOT;
+  const docsRoot = opts.docsRoot || defaultDocsRoot();
   const paths = sitePaths(docsRoot);
   const { articles, comments } = loadAllArticlesAndComments();
   articles.sort(sortByUpdatedDesc);
@@ -563,4 +587,6 @@ module.exports = {
   articleDisplayTags,
   tagAnchor,
   PACKAGE_DOCS_ROOT,
+  defaultDocsRoot,
+  ensureRuntimeDependencies,
 };

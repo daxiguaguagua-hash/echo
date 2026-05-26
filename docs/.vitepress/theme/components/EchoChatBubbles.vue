@@ -29,27 +29,44 @@ function shouldStopAt(el: Element): boolean {
   return false
 }
 
+function markerBoundary(marker: Element): Element {
+  const parent = marker.parentElement
+  if (
+    parent?.tagName === 'P' &&
+    parent.children.length === 1 &&
+    parent.textContent?.trim() === ''
+  ) {
+    return parent
+  }
+  return marker
+}
+
 function chatify() {
   const doc = document.querySelector('.vp-doc')
   if (!doc) return
 
-  if (doc.querySelector('[data-echo-chatified]')) return
+  if (doc.hasAttribute('data-echo-chatified')) return
 
   const markers = Array.from(doc.querySelectorAll('.echo-turn-marker'))
   if (markers.length === 0) return
+  const boundaries = markers.map(markerBoundary)
 
   for (let i = 0; i < markers.length; i++) {
     const marker = markers[i]
     const speaker = marker.getAttribute('data-speaker') || 'unknown'
-    const nextMarker = markers[i + 1] || null
+    const boundary = boundaries[i]
+    const nextBoundary = boundaries[i + 1] || null
+
+    boundary.classList.add('echo-turn-boundary')
 
     const nodes: Node[] = []
-    let cursor: Node | null = marker.nextSibling
+    let cursor: Node | null = boundary.nextSibling
 
     while (cursor) {
-      if (nextMarker && cursor === nextMarker) break
+      if (nextBoundary && cursor === nextBoundary) break
       if (cursor instanceof Element && shouldStopAt(cursor)) break
       if (cursor instanceof Element && cursor.classList.contains('echo-turn-marker')) break
+      if (cursor instanceof Element && cursor.classList.contains('echo-turn-boundary')) break
 
       const next: Node | null = cursor.nextSibling
       nodes.push(cursor)
@@ -68,7 +85,7 @@ function chatify() {
     const wrapper = document.createElement('div')
     wrapper.className = `echo-chat-turn ${bubbleClass}`
 
-    marker.after(wrapper)
+    boundary.after(wrapper)
     for (const node of nodes) {
       wrapper.appendChild(node)
     }
@@ -91,6 +108,10 @@ function dechatify() {
     }
     parent.removeChild(turn)
   }
+
+  for (const boundary of Array.from(doc.querySelectorAll('.echo-turn-boundary'))) {
+    boundary.classList.remove('echo-turn-boundary')
+  }
 }
 
 let observer: MutationObserver | null = null
@@ -100,13 +121,13 @@ function setup() {
   if (observer) observer.disconnect()
 
   const doc = document.querySelector('.vp-doc')
-  if (doc && !doc.querySelector('[data-echo-chatified]')) {
+  if (doc && !doc.hasAttribute('data-echo-chatified')) {
     chatify()
   }
 
   observer = new MutationObserver(() => {
     const d = document.querySelector('.vp-doc')
-    if (d && !d.querySelector('[data-echo-chatified]') && d.querySelector('.echo-turn-marker')) {
+    if (d && !d.hasAttribute('data-echo-chatified') && d.querySelector('.echo-turn-marker')) {
       chatify()
     }
   })
