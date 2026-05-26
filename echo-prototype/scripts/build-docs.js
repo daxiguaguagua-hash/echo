@@ -61,6 +61,20 @@ function articleSlug(article) {
   return slug || encodeURIComponent(base).replace(/%/g, "").toLowerCase();
 }
 
+function slugText(value) {
+  const slug = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^\p{L}\p{N}._-]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "tag";
+}
+
+function tagAnchor(tag, count) {
+  return `tag-${slugText(tag)}-${count}`;
+}
+
 function displayTitle(article) {
   return article.data.alias || article.data.title || article.id;
 }
@@ -318,10 +332,11 @@ function collectTags(articles) {
 function renderTagsIndex(articles) {
   const groups = collectTags(articles);
   const sections = groups.map(([tag, taggedArticles]) => {
+    const anchor = tagAnchor(tag, taggedArticles.length);
     const links = taggedArticles
       .map((article) => `- [${displayTitle(article)}](/articles/generated/${articleSlug(article)})`)
       .join("\n");
-    return `## ${tag} (${taggedArticles.length})\n\n${links}`;
+    return `<h2 id="${escapeHtml(anchor)}">${escapeHtml(tag)} (${taggedArticles.length})</h2>\n\n${links}`;
   });
 
   return `# 标签
@@ -330,7 +345,10 @@ function renderTagsIndex(articles) {
 
 <div class="echo-tag-cloud">
 
-${groups.map(([tag, taggedArticles]) => `<a href="#${encodeURIComponent(tag).toLowerCase()}">${escapeHtml(tag)}<span>${taggedArticles.length}</span></a>`).join("\n")}
+${groups.map(([tag, taggedArticles]) => {
+  const anchor = tagAnchor(tag, taggedArticles.length);
+  return `<a href="#${encodeURI(anchor)}">${escapeHtml(tag)}<span>${taggedArticles.length}</span></a>`;
+}).join("\n")}
 
 </div>
 
@@ -535,5 +553,6 @@ module.exports = {
   displayTitle,
   loadAllArticlesAndComments,
   ensureSiteScaffold,
+  tagAnchor,
   PACKAGE_DOCS_ROOT,
 };

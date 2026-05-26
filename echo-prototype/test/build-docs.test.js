@@ -4,7 +4,7 @@ const path = require("node:path");
 const os = require("node:os");
 const test = require("node:test");
 
-const { loadAllArticlesAndComments, runBuildDocs } = require("../scripts/build-docs");
+const { loadAllArticlesAndComments, runBuildDocs, tagAnchor } = require("../scripts/build-docs");
 const { registerProject } = require("../scripts/lib/usecases/project-registry");
 
 function tempDir() {
@@ -20,6 +20,10 @@ function writeArticle(dir, id, title, opts = {}) {
     `created_at: ${opts.createdAt || "2026-05-25T00:00:00.000Z"}`,
   ];
   if (opts.project) frontmatter.push(`project: ${opts.project}`);
+  if (opts.tags) {
+    frontmatter.push("tags:");
+    for (const tag of opts.tags) frontmatter.push(`  - ${tag}`);
+  }
   frontmatter.push("---");
   fs.writeFileSync(path.join(dir, `${id}.md`), [
     ...frontmatter,
@@ -122,4 +126,32 @@ test("runBuildDocs groups sidebar articles by project while keeping recent short
   assert.match(sidebar, /Project Article/);
   assert.match(sidebar, /Global Article/);
   assert.ok(sidebar.indexOf("text: '项目'") < sidebar.indexOf('text: "mynote (1)"'));
+});
+
+test("runBuildDocs writes tag cloud links to explicit tag section anchors", (t) => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const docsRoot = tempDir();
+
+  t.after(() => {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(docsRoot, { recursive: true, force: true });
+  });
+
+  process.env.ECHO_HOME = echoHome;
+  writeArticle(path.join(echoHome, "articles"), "ai-one", "AI One", { tags: ["AI 协作"] });
+  writeArticle(path.join(echoHome, "articles"), "ai-two", "AI Two", { tags: ["AI 协作"] });
+  process.chdir(echoHome);
+
+  runBuildDocs({ docsRoot });
+
+  const tagsIndex = fs.readFileSync(path.join(docsRoot, "tags", "index.md"), "utf-8");
+  const anchor = tagAnchor("AI 协作", 2);
+  assert.match(tagsIndex, new RegExp(`<a href="#${encodeURI(anchor)}">AI 协作<span>2</span></a>`));
+  assert.match(tagsIndex, new RegExp(`<h2 id="${anchor}">AI 协作 \\(2\\)</h2>`));
+  assert.doesNotMatch(tagsIndex, /href="#ai%20/);
 });
