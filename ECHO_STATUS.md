@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-26 (标签页锚点修复 — 标签云使用显式 section anchor，避免影响搜索落点)
+最后更新：2026-05-26 (标签页筛选 — 点击标签只显示对应文章，选中/未选中颜色区分)
 
 ## 已完成
 
@@ -94,6 +94,8 @@
 - [x] **顶部导航高亮修复** (2026-05-26) — VitePress nav 为 `文章` / `标签` 增加 `activeMatch`，确保从首页按钮、顶部导航或文章卡片进入 `/articles/` 与 `/articles/generated/...` 后仍保持正确高亮。
 - [x] **侧边栏项目分组** (2026-05-26) — 文章 sidebar 从单一“最近文章”列表调整为“全部文章 / 最近文章 / 项目”结构；项目分组按 `project` 元数据展示，如 `mynote (16)`，最近文章保留为折叠快捷入口。新增 build-docs 回归测试；Browser 验证 `http://localhost:5174/articles/` 渲染正确；`npm test` 253 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [x] **标签页锚点修复** (2026-05-26) — `/tags/` 标签云不再猜测 VitePress 标题 slug，改为生成显式 `tag-...` section anchor；仅影响标签页本身，不改文章页搜索落点和 annotation anchor。新增中文标签回归测试；Browser 验证 `AI 协作` 点击后滚动到对应 section；`npm test` 254 全绿，`npm run docs:build` 和 `npm run all` 通过。
+- [x] **网页标签创建** (2026-05-26) — 文章列表和文章详情页将 `project` 作为第一枚虚拟标签展示，`/tags/` 同步纳入项目标签；文章详情页新增“创建标记”输入框，调用 `/api/tags` 复用 `addTags` 写回 frontmatter 并重建站点。新增 build-docs 与 serve API 回归测试；Browser 验证标签展示与按钮可用态；`npm test` 256 全绿，`npm run docs:build` 和 `npm run all` 通过。
+- [x] **标签页筛选** (2026-05-26) — `/tags/` 改为 Vue 组件 `EchoTagsPage`，点击标签后仅显示该标签对应文章，URL hash 保持可分享；选中标签使用品牌色高亮，未选中标签弱化为灰色。Browser 验证 `知识管理` 只显示 3 篇文章且样式状态正确；`npm test` 256 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑

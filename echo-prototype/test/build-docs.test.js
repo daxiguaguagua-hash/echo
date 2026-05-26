@@ -35,6 +35,12 @@ function writeArticle(dir, id, title, opts = {}) {
   ].join("\n"));
 }
 
+function readTagsPayload(tagsIndex) {
+  const match = tagsIndex.match(/<EchoTagsPage payload="([^"]+)" \/>/);
+  assert.ok(match, "tags page should render EchoTagsPage payload");
+  return JSON.parse(decodeURIComponent(match[1]));
+}
+
 test("docs generation includes global articles when run inside an empty registered project", (t) => {
   const oldEchoHome = process.env.ECHO_HOME;
   const oldCwd = process.cwd();
@@ -128,6 +134,45 @@ test("runBuildDocs groups sidebar articles by project while keeping recent short
   assert.ok(sidebar.indexOf("text: '项目'") < sidebar.indexOf('text: "mynote (1)"'));
 });
 
+test("runBuildDocs renders project as the first visible tag and includes it in tags page", (t) => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const docsRoot = tempDir();
+  const projectRoot = tempDir();
+
+  t.after(() => {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(docsRoot, { recursive: true, force: true });
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  process.env.ECHO_HOME = echoHome;
+  const registered = registerProject(projectRoot, { echoHome, projectId: "mynote" });
+  writeArticle(path.join(registered.dataRoot, "articles"), "project-tagged", "Project Tagged", {
+    project: "mynote",
+    tags: ["AI"],
+  });
+  process.chdir(projectRoot);
+
+  runBuildDocs({ docsRoot });
+
+  const articleIndex = fs.readFileSync(path.join(docsRoot, "articles", "index.md"), "utf-8");
+  assert.match(articleIndex, /<div class="echo-tags"><span>mynote<\/span><span>AI<\/span><\/div>/);
+
+  const articlePage = fs.readFileSync(path.join(docsRoot, "articles", "generated", "project-tagged.md"), "utf-8");
+  assert.match(articlePage, /<div class="echo-tags"><span>mynote<\/span><span>AI<\/span><\/div>/);
+
+  const tagsIndex = fs.readFileSync(path.join(docsRoot, "tags", "index.md"), "utf-8");
+  const payload = readTagsPayload(tagsIndex);
+  const mynote = payload.find((group) => group.tag === "mynote");
+  assert.equal(mynote.anchor, "tag-mynote-1");
+  assert.deepEqual(mynote.articles.map((article) => article.title), ["Project Tagged"]);
+});
+
 test("runBuildDocs writes tag cloud links to explicit tag section anchors", (t) => {
   const oldEchoHome = process.env.ECHO_HOME;
   const oldCwd = process.cwd();
@@ -151,7 +196,10 @@ test("runBuildDocs writes tag cloud links to explicit tag section anchors", (t) 
 
   const tagsIndex = fs.readFileSync(path.join(docsRoot, "tags", "index.md"), "utf-8");
   const anchor = tagAnchor("AI 协作", 2);
-  assert.match(tagsIndex, new RegExp(`<a href="#${encodeURI(anchor)}">AI 协作<span>2</span></a>`));
-  assert.match(tagsIndex, new RegExp(`<h2 id="${anchor}">AI 协作 \\(2\\)</h2>`));
+  const payload = readTagsPayload(tagsIndex);
+  const aiCoop = payload.find((group) => group.tag === "AI 协作");
+  assert.equal(aiCoop.anchor, anchor);
+  assert.equal(aiCoop.articles.length, 2);
+  assert.match(tagsIndex, /<EchoTagsPage payload="/);
   assert.doesNotMatch(tagsIndex, /href="#ai%20/);
 });

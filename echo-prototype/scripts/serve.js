@@ -67,6 +67,13 @@ function readBody(req) {
   });
 }
 
+function resolveDirsForProject(projectId, fallbackDirs) {
+  if (!projectId) return fallbackDirs || resolveDataDirs();
+  const { findProjectById } = require("./lib/usecases/project-registry");
+  const project = findProjectById(projectId);
+  return project ? resolveDataDirs({ cwd: project.projectRoot }) : (fallbackDirs || resolveDataDirs());
+}
+
 function createRouter(deps) {
   const docsPort = deps.docsPort || DEFAULT_DOCS_PORT;
   return async function router(req, res) {
@@ -112,13 +119,7 @@ function createRouter(deps) {
         if (!body || !body.articleId || !body.comment) {
           return jsonResponse(res, 400, { error: "articleId and comment required" }, docsPort);
         }
-        const dirs = body.projectId
-          ? (() => {
-              const { findProjectById } = require("./lib/usecases/project-registry");
-              const project = findProjectById(body.projectId);
-              return project ? resolveDataDirs({ cwd: project.projectRoot }) : (deps.dirs || resolveDataDirs());
-            })()
-          : (deps.dirs || resolveDataDirs());
+        const dirs = resolveDirsForProject(body.projectId, deps.dirs);
         try {
           const { writeComment } = require("./lib/usecases/write-comment");
           const result = writeComment({
@@ -140,6 +141,25 @@ function createRouter(deps) {
           return jsonResponse(res, 201, result, docsPort);
         } catch (err) {
           return jsonResponse(res, 422, { error: err.message }, docsPort);
+        }
+      }
+
+      if (p === "/api/tags" && req.method === "POST") {
+        const body = await readBody(req);
+        const tags = Array.isArray(body?.tags)
+          ? body.tags
+          : (body?.tag ? [body.tag] : []);
+        if (!body || !body.articleId || tags.length === 0) {
+          return jsonResponse(res, 400, { error: "articleId and tag(s) required" }, docsPort);
+        }
+        const dirs = resolveDirsForProject(body.projectId, deps.dirs);
+        try {
+          const { addTags } = require("./lib/usecases/query-articles");
+          const result = addTags({ id: body.articleId, tags }, { dirs, store });
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (_) {}
+          return jsonResponse(res, 201, result, docsPort);
+        } catch (err) {
+          return jsonResponse(res, err.name === "NotFoundError" ? 404 : 422, { error: err.message }, docsPort);
         }
       }
 

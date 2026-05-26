@@ -22,6 +22,26 @@
     </div>
   </div>
 
+  <div class="echo-tag-box">
+    <h3>创建标记</h3>
+    <div class="echo-tag-form">
+      <input
+        v-model="tagText"
+        placeholder="输入新标记"
+        :disabled="state !== 'ready'"
+        @keydown.enter.prevent="submitTag"
+      />
+      <button
+        class="echo-btn"
+        :disabled="state !== 'ready' || !tagText.trim() || tagging"
+        @click="submitTag"
+      >
+        {{ tagging ? '创建中...' : '创建标记' }}
+      </button>
+    </div>
+    <span v-if="tagError" class="echo-inline-error">{{ tagError }}</span>
+  </div>
+
   <Teleport to="body">
     <div v-if="mcpVisible" class="echo-modal" @click.self="mcpVisible = false">
       <div class="echo-modal-content">
@@ -59,7 +79,7 @@
 import { ref, computed } from 'vue'
 import { useData } from 'vitepress'
 import { useEchoStatus } from '../lib/useEchoStatus'
-import { setCapture, getMcpConfig, postComment } from '../lib/echo-api'
+import { setCapture, getMcpConfig, postComment, postTag } from '../lib/echo-api'
 
 const { frontmatter } = useData()
 const articleId = computed(() => (frontmatter.value as any)?.echo?.articleId as string | undefined)
@@ -72,6 +92,9 @@ const mcpConfigText = ref('')
 const commentText = ref('')
 const submitting = ref(false)
 const submitError = ref('')
+const tagText = ref('')
+const tagging = ref(false)
+const tagError = ref('')
 
 async function toggleCapture() {
   if (!status.value) return
@@ -115,6 +138,25 @@ async function submitComment() {
     submitError.value = err.message || '提交失败'
   } finally {
     submitting.value = false
+  }
+}
+
+async function submitTag() {
+  if (!articleId.value || !tagText.value.trim()) return
+  tagging.value = true
+  tagError.value = ''
+  try {
+    await postTag({
+      articleId: articleId.value,
+      tag: tagText.value.trim(),
+      projectId: projectId.value ?? null,
+    })
+    tagText.value = ''
+    location.reload()
+  } catch (err: any) {
+    tagError.value = err.message || '创建失败'
+  } finally {
+    tagging.value = false
   }
 }
 </script>

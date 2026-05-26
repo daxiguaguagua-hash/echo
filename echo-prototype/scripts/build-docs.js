@@ -83,6 +83,16 @@ function displayProjectName(projectId) {
   return projectId || "未归类";
 }
 
+function articleProject(article) {
+  return article.data.project || article._project || null;
+}
+
+function articleDisplayTags(article) {
+  const projectTag = displayProjectName(articleProject(article));
+  const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
+  return [projectTag, ...tags.filter((tag) => tag !== projectTag)];
+}
+
 function normalizeDate(value) {
   if (!value) return "";
   if (typeof value === "string") {
@@ -192,14 +202,14 @@ function highlightAnnotations(body, article, comments) {
 
 function renderArticlePage(article, comments) {
   const title = displayTitle(article);
-  const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
+  const tags = articleDisplayTags(article);
   const participants = Array.isArray(article.data.participants)
     ? article.data.participants.map((p) => p.id || p.role).filter(Boolean).join(", ")
     : "";
   const created = normalizeDate(article.data.created_at);
   const updated = normalizeDate(article.data.updated_at);
   const summary = article.data.summary || "";
-  const project = article.data.project || article._project || "";
+  const project = articleProject(article) || "";
   const tagHtml = tags.length
     ? tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")
     : "<span>未标记</span>";
@@ -293,7 +303,7 @@ function renderArticleIndex(articles) {
     const title = displayTitle(article);
     const summary = article.data.summary || "无摘要";
     const updated = normalizeDate(article.data.updated_at || article.data.created_at);
-    const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
+    const tags = articleDisplayTags(article);
     const tagHtml = tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("") || "<span>未标记</span>";
         return `<a class="echo-article-card" href="./generated/${articleSlug(article)}">
   <strong>${escapeHtml(title)}</strong>
@@ -320,7 +330,7 @@ ${filterScript}
 function collectTags(articles) {
   const map = new Map();
   for (const article of articles) {
-    const tags = Array.isArray(article.data.tags) ? article.data.tags : [];
+    const tags = articleDisplayTags(article);
     for (const tag of tags) {
       if (!map.has(tag)) map.set(tag, []);
       map.get(tag).push(article);
@@ -331,28 +341,25 @@ function collectTags(articles) {
 
 function renderTagsIndex(articles) {
   const groups = collectTags(articles);
-  const sections = groups.map(([tag, taggedArticles]) => {
+  const tagPayload = groups.map(([tag, taggedArticles]) => {
     const anchor = tagAnchor(tag, taggedArticles.length);
-    const links = taggedArticles
-      .map((article) => `- [${displayTitle(article)}](/articles/generated/${articleSlug(article)})`)
-      .join("\n");
-    return `<h2 id="${escapeHtml(anchor)}">${escapeHtml(tag)} (${taggedArticles.length})</h2>\n\n${links}`;
+    return {
+      anchor,
+      tag,
+      articles: taggedArticles.map((article) => ({
+        title: displayTitle(article),
+        summary: article.data.summary || "",
+        href: `/articles/generated/${articleSlug(article)}`,
+      })),
+    };
   });
+  const payload = encodeURIComponent(JSON.stringify(tagPayload));
 
   return `# 标签
 
 共 ${groups.length} 个标签，来自 ${articles.length} 篇文章。
 
-<div class="echo-tag-cloud">
-
-${groups.map(([tag, taggedArticles]) => {
-  const anchor = tagAnchor(tag, taggedArticles.length);
-  return `<a href="#${encodeURI(anchor)}">${escapeHtml(tag)}<span>${taggedArticles.length}</span></a>`;
-}).join("\n")}
-
-</div>
-
-${sections.join("\n\n")}
+<EchoTagsPage payload="${payload}" />
 `;
 }
 
@@ -553,6 +560,7 @@ module.exports = {
   displayTitle,
   loadAllArticlesAndComments,
   ensureSiteScaffold,
+  articleDisplayTags,
   tagAnchor,
   PACKAGE_DOCS_ROOT,
 };

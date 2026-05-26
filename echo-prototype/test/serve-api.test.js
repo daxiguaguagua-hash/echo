@@ -35,6 +35,12 @@ function jsonRequest(router, method, pathname, body, headers = {}) {
   });
 }
 
+function readTagsPayload(tagsIndex) {
+  const match = tagsIndex.match(/<EchoTagsPage payload="([^"]+)" \/>/);
+  assert.ok(match, "tags page should render EchoTagsPage payload");
+  return JSON.parse(decodeURIComponent(match[1]));
+}
+
 test("GET /api/mcp-config returns canonical, legacy, and serverInfo", async () => {
   const echoHome = tempDir();
   fs.mkdirSync(echoHome, { recursive: true });
@@ -195,6 +201,53 @@ test("POST /api/comments falls back when projectId not found", async () => {
   delete process.env.ECHO_HOME;
   fs.rmSync(echoHome, { recursive: true, force: true });
   fs.rmSync(projectPath, { recursive: true, force: true });
+});
+
+test("POST /api/tags adds a tag to article frontmatter and rebuilds docs", async () => {
+  const echoHome = tempDir();
+  const projectPath = tempDir();
+  const docsRoot = tempDir();
+  fs.mkdirSync(projectPath, { recursive: true });
+  process.env.ECHO_HOME = echoHome;
+
+  const { projectId } = registerProject(projectPath, { echoHome });
+  const dirs = resolveDataDirs({ cwd: projectPath });
+
+  fs.mkdirSync(dirs.articlesDir, { recursive: true });
+  const articlePath = path.join(dirs.articlesDir, "tag-target.md");
+  fs.writeFileSync(articlePath, [
+    "---",
+    "id: tag-target",
+    "title: Tag Target",
+    "created_at: 2026-05-25T00:00:00.000Z",
+    "tags: []",
+    "project: " + projectId,
+    "---",
+    "",
+    "# Tag Target",
+    "",
+    "Body text.",
+    "",
+  ].join("\n"));
+
+  const router = createRouter({ docsPort: 5173, docsRoot, dirs });
+
+  const res = await jsonRequest(router, "POST", "/api/tags", {
+    articleId: "tag-target",
+    tag: "新标记",
+    projectId,
+  });
+
+  assert.equal(res.statusCode, 201);
+  assert.deepEqual(res.body.tags, ["新标记"]);
+  assert.match(fs.readFileSync(articlePath, "utf-8"), /新标记/);
+  const tagPayload = readTagsPayload(fs.readFileSync(path.join(docsRoot, "tags", "index.md"), "utf-8"));
+  assert.ok(tagPayload.some((group) => group.tag === "新标记"));
+
+  delete process.env.ECHO_HOME;
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(projectPath, { recursive: true, force: true });
+  fs.rmSync(docsRoot, { recursive: true, force: true });
 });
 
 test("GET /api/status returns capture state and version", async () => {

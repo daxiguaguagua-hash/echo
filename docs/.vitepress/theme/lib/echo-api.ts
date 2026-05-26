@@ -21,6 +21,12 @@ interface CommentPayload {
   projectId?: string | null
 }
 
+interface TagPayload {
+  articleId: string
+  tag: string
+  projectId?: string | null
+}
+
 class EchoApiError extends Error {
   status: number
   constructor(message: string, status: number) {
@@ -98,5 +104,12 @@ export function postComment(payload: CommentPayload): Promise<any> {
   })
 }
 
+export function postTag(payload: TagPayload): Promise<any> {
+  return request('/api/tags', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export { EchoApiError, CONFIGURED_API_BASE, DEFAULT_API_BASE }
-export type { EchoStatus, CommentPayload }
+export type { EchoStatus, CommentPayload, TagPayload }
