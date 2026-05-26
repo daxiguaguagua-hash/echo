@@ -22,8 +22,7 @@ export const articleSidebar = [
             { text: "发一条测试消息，看看 hook 有没有触发", link: '/articles/generated/session-2026-05-19' },
             { text: "从零设计 Echo 知识论坛——多 AI 协作实录", link: '/articles/generated/echo-design-session-v2' },
             { text: "从零设计 Echo 知识论坛——一次真正的 AI 协作实录", link: '/articles/generated/echo-design-session' },
-            { text: "为什么你应该把 AI 对话存下来", link: '/articles/generated/article-ai-dialogue' },
-            { text: "对话标题", link: '/articles/generated/template-id' }
+            { text: "为什么你应该把 AI 对话存下来", link: '/articles/generated/article-ai-dialogue' }
         ],
       },
     ],

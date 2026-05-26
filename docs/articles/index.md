@@ -1,6 +1,6 @@
 # 文章
 
-共 17 篇 Echo 文章。
+共 16 篇 Echo 文章。
 
 
 <div class="echo-article-grid">
@@ -115,13 +115,6 @@
   <small>2026-05-18</small>
   <p>讨论 AI 对话记录的价值，以及为什么现有的摘要/embedding 方案在丢失最重要的东西</p>
   <div class="echo-tags"><span>AI</span><span>知识管理</span><span>工具</span></div>
-</a>
-
-<a class="echo-article-card" href="./generated/template-id">
-  <strong>对话标题</strong>
-  <small>YYYY-MM-DD</small>
-  <p>一句话描述这次对话</p>
-  <div class="echo-tags"><span>未标记</span></div>
 </a>
 
 </div>
