@@ -38,6 +38,8 @@ P4: 增强/优化              ← 锦上添花
    - ECHO_STATUS.md: - [ ] → - [x]，刷新日期
    - 过验证门: npm test && npm run all
    - git commit
+6. 实际运行中，如果要变更已经确定好的测试用例（测试用例都是codex写的），要和codex沟通，双方商量好怎么做
+   - 如果codex不在线，使用当前skills中的和测试相关的skills，分开子agents独立交叉验证方案。
 ```
 
 ## 实际案例
