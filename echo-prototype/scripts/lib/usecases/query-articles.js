@@ -5,6 +5,14 @@ const path = require("path");
 const { ensureDir } = require("../infra/workspace");
 const { NotFoundError } = require("../domain/errors");
 
+let _projectRegistry;
+function getProjectRegistry() {
+  if (!_projectRegistry) {
+    try { _projectRegistry = require("./project-registry"); } catch (_) { _projectRegistry = null; }
+  }
+  return _projectRegistry;
+}
+
 function searchArticles(args, deps) {
   const { dirs, store } = deps;
   ensureDir(dirs.articlesDir);
@@ -19,7 +27,8 @@ function searchArticles(args, deps) {
   if (projectFilter && projectFilter !== "all" && projectFilter !== currentProjectId) {
     // Search only the specified external project
     try {
-      const { listProjects } = require("./project-registry");
+      const reg = getProjectRegistry();
+      const { listProjects } = reg || {};
       const projects = listProjects();
       const target = projects.find((p) => p.projectId === projectFilter);
       if (target) {
@@ -31,7 +40,8 @@ function searchArticles(args, deps) {
     // Search current project + all registered projects
     projectDirs.push({ articlesDir: dirs.articlesDir, projectId: currentProjectId });
     try {
-      const { listProjects } = require("./project-registry");
+      const reg = getProjectRegistry();
+      const { listProjects } = reg || {};
       const projects = listProjects();
       for (const p of projects) {
         if (p.projectId === currentProjectId) continue;
@@ -269,6 +279,31 @@ function listRecent(args, deps) {
   }));
 }
 
+function listProjects(_args, _deps) {
+  const reg = getProjectRegistry();
+  const listAll = reg ? reg.listProjects : null;
+  if (!listAll) return [];
+  return listAll().map((p) => ({
+    projectId: p.projectId,
+    root: p.root,
+    dataRoot: p.dataRoot,
+    registeredAt: p.registeredAt,
+  }));
+}
+
+function getProject(args, _deps) {
+  const reg = getProjectRegistry();
+  const findProjectById = reg ? reg.findProjectById : null;
+  if (!findProjectById) throw new NotFoundError(`Project "${args.id}" not found`);
+  const project = findProjectById(args.id);
+  if (!project) throw new NotFoundError(`Project "${args.id}" not found`);
+  return {
+    projectId: project.projectId,
+    root: project.projectRoot,
+    dataRoot: project.dataRoot,
+  };
+}
+
 module.exports = {
   searchArticles,
   getArticle,
@@ -277,4 +312,6 @@ module.exports = {
   listRecent,
   addTags,
   removeTags,
+  listProjects,
+  getProject,
 };

@@ -6,22 +6,13 @@ const {
 } = require("../infra/workspace");
 const { isCaptureEnabled, getSpeakers } = require("../infra/config");
 const { findProjectForPath } = require("../usecases/project-registry");
-
-function readStdin() {
-  return new Promise((resolve) => {
-    let data = "";
-    process.stdin.setEncoding("utf-8");
-    process.stdin.on("data", (chunk) => { data += chunk; });
-    process.stdin.on("end", () => { resolve(data); });
-    process.stdin.resume();
-  });
-}
+const { readStdin } = require("../infra/read-stdin");
 
 function getLocalDate() {
-  const d = new Date();
-  const offset = 8 * 60;
-  const local = new Date(d.getTime() + offset * 60000);
-  return local.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: process.env.TZ || "Asia/Shanghai",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date()).replace(/\//g, "-");
 }
 
 function resolveBufferRoot(data) {
@@ -160,7 +151,7 @@ async function handleStop(data, bufferRoot) {
 
   const entry = `
 <!-- turn: t${String(turnNum).padStart(3, "0")} speaker=${speakers.user} -->
-我：${pending.prompt}
+${speakers.user}：${pending.prompt}
 
 <!-- turn: t${String(turnNum + 1).padStart(3, "0")} speaker=${speakers.ai} reply_to=t${String(turnNum).padStart(3, "0")} -->
 ## ${speakers.ai} 的回复

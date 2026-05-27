@@ -138,13 +138,13 @@ test("notifications/initialized returns null", () => {
   assert.equal(res, null);
 });
 
-test("tools/list returns 7 tools with name, description, and inputSchema", () => {
+test("tools/list returns 9 tools with name, description, and inputSchema", () => {
   const res = handleRequest({ id: 2, method: "tools/list" });
   assertJsonRpcResult(res, 2);
-  assert.equal(res.result.tools.length, 7);
+  assert.equal(res.result.tools.length, 9);
   const names = res.result.tools.map((t) => t.name).sort();
   assert.deepEqual(names, [
-    "add_tags", "get_article", "get_article_context", "list_recent", "list_tags", "remove_tags", "search_articles",
+    "add_tags", "get_article", "get_article_context", "get_project", "list_projects", "list_recent", "list_tags", "remove_tags", "search_articles",
   ]);
   for (const tool of res.result.tools) {
     assert.equal(typeof tool.name, "string");
@@ -383,4 +383,82 @@ test("tools/call get_article_context shows forward evolution even for root artic
   assert.ok(Array.isArray(data.evolution_chain));
   // Root article is always in the chain
   assert.equal(data.evolution_chain[0].id, "test-art-002");
+});
+
+// --- list_projects / get_project handler tests ---
+
+test("listProjects handler returns empty array when no projects registered", () => {
+  const echoHome = fs.mkdtempSync(path.join(os.tmpdir(), "echo-list-test-"));
+  fs.mkdirSync(echoHome, { recursive: true });
+  fs.writeFileSync(path.join(echoHome, "registry.json"), JSON.stringify({ projects: {} }));
+  const prev = process.env.ECHO_HOME;
+  process.env.ECHO_HOME = echoHome;
+  try {
+    const { listProjects } = require("../scripts/lib/usecases/query-articles");
+    const result = listProjects({}, { dirs, store });
+    assert.deepEqual(result, []);
+  } finally {
+    process.env.ECHO_HOME = prev;
+    fs.rmSync(echoHome, { recursive: true, force: true });
+  }
+});
+
+test("listProjects handler returns projects from registry", () => {
+  const echoHome = fs.mkdtempSync(path.join(os.tmpdir(), "echo-list-test-"));
+  fs.mkdirSync(echoHome, { recursive: true });
+  fs.writeFileSync(path.join(echoHome, "registry.json"), JSON.stringify({
+    projects: { "proj-a": { root: "/tmp/proj-a", registeredAt: "2026-01-01T00:00:00.000Z" } },
+  }));
+  const prev = process.env.ECHO_HOME;
+  process.env.ECHO_HOME = echoHome;
+  try {
+    const { listProjects } = require("../scripts/lib/usecases/query-articles");
+    const result = listProjects({}, { dirs, store });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].projectId, "proj-a");
+    assert.equal(result[0].root, "/tmp/proj-a");
+    assert.ok(result[0].dataRoot);
+    assert.equal(result[0].registeredAt, "2026-01-01T00:00:00.000Z");
+  } finally {
+    process.env.ECHO_HOME = prev;
+    fs.rmSync(echoHome, { recursive: true, force: true });
+  }
+});
+
+test("getProject handler returns project details for known id", () => {
+  const echoHome = fs.mkdtempSync(path.join(os.tmpdir(), "echo-get-test-"));
+  fs.mkdirSync(echoHome, { recursive: true });
+  fs.writeFileSync(path.join(echoHome, "registry.json"), JSON.stringify({
+    projects: { "proj-b": { root: "/tmp/proj-b", registeredAt: "2026-02-01T00:00:00.000Z" } },
+  }));
+  const prev = process.env.ECHO_HOME;
+  process.env.ECHO_HOME = echoHome;
+  try {
+    const { getProject } = require("../scripts/lib/usecases/query-articles");
+    const result = getProject({ id: "proj-b" }, { dirs, store });
+    assert.equal(result.projectId, "proj-b");
+    assert.equal(result.root, "/tmp/proj-b");
+    assert.ok(result.dataRoot);
+  } finally {
+    process.env.ECHO_HOME = prev;
+    fs.rmSync(echoHome, { recursive: true, force: true });
+  }
+});
+
+test("getProject handler throws NotFoundError for unknown id", () => {
+  const echoHome = fs.mkdtempSync(path.join(os.tmpdir(), "echo-get-test-"));
+  fs.mkdirSync(echoHome, { recursive: true });
+  fs.writeFileSync(path.join(echoHome, "registry.json"), JSON.stringify({ projects: {} }));
+  const prev = process.env.ECHO_HOME;
+  process.env.ECHO_HOME = echoHome;
+  try {
+    const { getProject } = require("../scripts/lib/usecases/query-articles");
+    assert.throws(
+      () => getProject({ id: "nonexistent" }, { dirs, store }),
+      /not found/
+    );
+  } finally {
+    process.env.ECHO_HOME = prev;
+    fs.rmSync(echoHome, { recursive: true, force: true });
+  }
 });

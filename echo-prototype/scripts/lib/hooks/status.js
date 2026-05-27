@@ -4,16 +4,7 @@ const { resolveEchoHomePath } = require("../infra/workspace");
 const { isCaptureEnabled } = require("../infra/config");
 const { findProjectForPath } = require("../usecases/project-registry");
 const { commandFor } = require("../cli/names");
-
-function readStdin() {
-  return new Promise((resolve) => {
-    let data = "";
-    process.stdin.setEncoding("utf-8");
-    process.stdin.on("data", (chunk) => { data += chunk; });
-    process.stdin.on("end", () => { resolve(data); });
-    process.stdin.resume();
-  });
-}
+const { readStdin } = require("../infra/read-stdin");
 
 function parseStatusFile(content) {
   const done = (content.match(/^- \[x\]/gim) || []).length;

@@ -313,3 +313,39 @@ test("stripCommentSections removes legacy ECHO:COMMENT_LIST marker", () => {
 
   assert.equal(stripCommentSections(text), "# Article\n\nBody.\n");
 });
+
+test("writeComment produces valid gray-matter frontmatter (article-level)", () => {
+  const matter = require("gray-matter");
+  const { writeComment } = require("../scripts/lib/usecases/write-comment");
+  const td = tempDir();
+  const dirs = { articlesDir: td + "/articles", commentsDir: td + "/comments" };
+  fs.mkdirSync(dirs.articlesDir, { recursive: true });
+  fs.mkdirSync(dirs.commentsDir, { recursive: true });
+  fs.writeFileSync(path.join(dirs.articlesDir, "test-art-003.md"), [
+    "---",
+    "id: test-art-003",
+    "title: Test Article Three",
+    "type: article",
+    "created_at: 2026-05-01",
+    "tags: []",
+    "---",
+    "# Article Three",
+    "Some content.",
+  ].join("\n"));
+
+  const storeObj = { loadArticleById, loadArticles, nextAnnotationId };
+  const result = writeComment({
+    articleId: "test-art-003", comment: "Article-level note.", scope: "article",
+    dirs, store: storeObj,
+  });
+
+  const raw = fs.readFileSync(path.join(dirs.commentsDir, `${result.id}.md`), "utf-8");
+  const parsed = matter(raw);
+  assert.equal(parsed.data.id, result.id);
+  assert.equal(parsed.data.type, "annotation");
+  assert.equal(parsed.data.author, "vincent");
+  assert.equal(parsed.data.target.article_id, "test-art-003");
+  assert.equal(parsed.data.anchor.kind, "article");
+  assert.equal(parsed.content.trim(), "Article-level note.");
+  fs.rmSync(td, { recursive: true, force: true });
+});

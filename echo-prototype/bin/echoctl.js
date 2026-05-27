@@ -20,6 +20,8 @@ Usage:
   ${commandFor(["search"])}                Full-text search
   ${commandFor(["mcp"])}                   Start MCP server (stdio transport)
   ${commandFor(["capture", "on|off|status"])}  Enable, disable, or check capture status
+  ${commandFor(["project", "list"])}    List all registered projects
+  ${commandFor(["project", "find", "<projectId>"])}  Show project details
   ${commandFor(["tag", "list"])}    List all tags with usage counts
   ${commandFor(["tag", "add", "<article-id>", "<tag1>", "[tag2...]"])}  Add one or more tags to an article
   ${commandFor(["tag", "remove", "<article-id>", "<tag1>", "[tag2...]"])}  Remove one or more tags from an article
@@ -148,6 +150,38 @@ switch (cmd) {
     }
     break;
   }
+  case "project": {
+    const sub = args[1];
+    if (sub === "list") {
+      const { listProjects } = require("../scripts/lib/usecases/project-registry");
+      const projects = listProjects();
+      if (projects.length === 0) {
+        console.log("No registered projects.");
+      } else {
+        for (const p of projects) {
+          console.log(`  ${p.projectId.padEnd(20)} ${p.root.padEnd(45)} ${(p.registeredAt || "").slice(0, 10)}`);
+        }
+      }
+    } else if (sub === "find") {
+      const targetId = args[2];
+      if (!targetId || targetId.startsWith("-")) {
+        console.error("Error: project ID required. Usage: echoctl project find <projectId>");
+        process.exit(1);
+      }
+      const { findProjectById } = require("../scripts/lib/usecases/project-registry");
+      const project = findProjectById(targetId);
+      if (!project) {
+        console.error(`Project "${targetId}" not found.`);
+        process.exit(1);
+      }
+      console.log(`Project:  ${project.projectId}`);
+      console.log(`Root:     ${project.projectRoot}`);
+      console.log(`Data:     ${project.dataRoot}`);
+    } else {
+      console.log(USAGE);
+    }
+    break;
+  }
   case "doctor": {
     const { runDoctor } = require("../scripts/lib/usecases/run-doctor");
     const results = runDoctor();
@@ -160,7 +194,7 @@ switch (cmd) {
     break;
   case "all": {
     const { runPipeline } = require("../scripts/lib/usecases/run-pipeline");
-    const result = runPipeline();
+    const result = runPipeline({ allProjects: true });
     const hasError = Object.values(result).some((r) => r && (r.success === false || r.broken > 0));
     if (hasError) process.exit(1);
     break;

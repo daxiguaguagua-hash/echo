@@ -273,3 +273,69 @@ test("findProjectById returns null for unknown id", () => {
   assert.equal(found, null);
   fs.rmSync(echoHome, { recursive: true, force: true });
 });
+
+test("listProjects returns empty array when registry is empty", () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(echoHome, { recursive: true });
+  const { listProjects } = require("../scripts/lib/usecases/project-registry");
+
+  const projects = listProjects(echoHome);
+
+  assert.deepEqual(projects, []);
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("listProjects returns all registered projects with dataRoot", () => {
+  const echoHome = tempDir();
+  const dirA = tempDir();
+  const dirB = tempDir();
+  fs.mkdirSync(dirA, { recursive: true });
+  fs.mkdirSync(dirB, { recursive: true });
+  registerProject(dirA, { echoHome });
+  registerProject(dirB, { echoHome });
+  const { listProjects } = require("../scripts/lib/usecases/project-registry");
+
+  const projects = listProjects(echoHome);
+
+  assert.equal(projects.length, 2);
+  for (const p of projects) {
+    assert.ok(p.projectId);
+    assert.ok(p.root);
+    assert.ok(p.dataRoot);
+    assert.ok(p.registeredAt);
+  }
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(dirA, { recursive: true, force: true });
+  fs.rmSync(dirB, { recursive: true, force: true });
+});
+
+test("aggregateAllProjects returns data dirs for all registered projects", () => {
+  const echoHome = tempDir();
+  const dirA = tempDir();
+  fs.mkdirSync(dirA, { recursive: true });
+  registerProject(dirA, { echoHome });
+  const { aggregateAllProjects } = require("../scripts/lib/usecases/aggregate-all-projects");
+
+  const sources = aggregateAllProjects({ echoHome });
+
+  assert.equal(sources.length, 1);
+  const s = sources[0];
+  assert.ok(s.projectId);
+  assert.ok(s.articlesDir.endsWith("articles"));
+  assert.ok(s.commentsDir.endsWith("comments"));
+  assert.ok(s.bufferDir.endsWith("session-buffer"));
+  assert.ok(s.indexDir.endsWith("index"));
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(dirA, { recursive: true, force: true });
+});
+
+test("aggregateAllProjects returns empty array when no projects registered", () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(echoHome, { recursive: true });
+  const { aggregateAllProjects } = require("../scripts/lib/usecases/aggregate-all-projects");
+
+  const sources = aggregateAllProjects({ echoHome });
+
+  assert.deepEqual(sources, []);
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});

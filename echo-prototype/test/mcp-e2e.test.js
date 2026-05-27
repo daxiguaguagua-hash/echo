@@ -126,7 +126,7 @@ test("MCP spawn E2E: initialize returns serverInfo", async () => {
   fs.rmSync(echoHome, { recursive: true, force: true });
 });
 
-test("MCP spawn E2E: tools/list returns 7 tools", async () => {
+test("MCP spawn E2E: tools/list returns 9 tools", async () => {
   const echoHome = tempDir();
   fs.mkdirSync(path.join(echoHome, "articles"), { recursive: true });
   fs.mkdirSync(path.join(echoHome, "comments"), { recursive: true });
@@ -137,11 +137,11 @@ test("MCP spawn E2E: tools/list returns 7 tools", async () => {
 
   const res = await client.call("tools/list");
   assert.equal(res.jsonrpc, "2.0");
-  assert.equal(res.result.tools.length, 7);
+  assert.equal(res.result.tools.length, 9);
 
   const names = res.result.tools.map((t) => t.name).sort();
   assert.deepEqual(names, [
-    "add_tags", "get_article", "get_article_context", "list_recent", "list_tags", "remove_tags", "search_articles",
+    "add_tags", "get_article", "get_article_context", "get_project", "list_projects", "list_recent", "list_tags", "remove_tags", "search_articles",
   ]);
 
   proc.kill("SIGTERM");

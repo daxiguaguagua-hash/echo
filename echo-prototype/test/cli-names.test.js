@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const path = require("path");
 const test = require("node:test");
 const { commandFor, allCliNames, isKnownCliCommand, cliNames, mcpServerInfo } = require("../scripts/lib/cli/names");
 
@@ -36,4 +37,23 @@ test("mcpServerInfo is stable", () => {
 
 test("cliNames canonicalName is echoctl", () => {
   assert.equal(cliNames.canonicalName, "echoctl");
+});
+
+test("echoctl project list outputs registered projects", () => {
+  const { execSync } = require("child_process");
+  const out = execSync("node bin/echoctl.js project list", {
+    cwd: path.resolve(__dirname, ".."), encoding: "utf-8",
+  });
+  assert.ok(out.includes("mynote"));
+  assert.ok(out.includes("echo-notes"));
+});
+
+test("echoctl project find mynote outputs project details", () => {
+  const { execSync } = require("child_process");
+  const out = execSync("node bin/echoctl.js project find mynote", {
+    cwd: path.resolve(__dirname, ".."), encoding: "utf-8",
+  });
+  assert.ok(out.includes("Project:"));
+  assert.ok(out.includes("mynote"));
+  assert.ok(out.includes("Root:"));
 });

@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const matter = require("gray-matter");
 
 const { stripCommentSections } = require("./strip-comments");
 const anchor = require("../domain/anchor");
@@ -22,30 +23,33 @@ function writeComment(opts) {
   }
 
   const body = stripCommentSections(loaded.content);
-  const now = new Date().toISOString().replace(/\.\d{3}Z$/, "+08:00");
+  const d = new Date();
+  const off = -d.getTimezoneOffset();
+  const sign = off >= 0 ? "+" : "-";
+  const pad = (n) => String(Math.abs(n)).padStart(2, "0");
+  const now = d.getFullYear() + "-" +
+    pad(d.getMonth() + 1) + "-" +
+    pad(d.getDate()) + "T" +
+    pad(d.getHours()) + ":" +
+    pad(d.getMinutes()) + ":" +
+    pad(d.getSeconds()) +
+    sign + pad(Math.floor(Math.abs(off) / 60)) + ":" + pad(Math.abs(off) % 60);
   const newId = store.nextAnnotationId(commentsDir);
 
   if (scope === "article") {
-    // Article-level comment: no quote/anchor resolution needed
-    const yaml = [
-      `id: ${newId}`,
-      `type: annotation`,
-      `target:`,
-      `  article_id: ${articleId}`,
-      `  path: ${loaded.relPath}`,
-      `anchor:`,
-      `  kind: article`,
-      `author: ${authorName}`,
-      `created_at: ${now}`,
-      `updated_at: ${now}`,
-      `status: ${finalStatus}`,
-      `tags: []`,
-      `evolution:`,
-      `  of: [${evOf.map((id) => JSON.stringify(id)).join(", ")}]`,
-      `  kind: ${evKind}`,
-    ].join("\n");
-
-    const fileContent = `---\n${yaml}\n---\n\n${comment.trim()}\n`;
+    const frontmatter = {
+      id: newId,
+      type: "annotation",
+      target: { article_id: articleId, path: loaded.relPath },
+      anchor: { kind: "article" },
+      author: authorName,
+      created_at: now,
+      updated_at: now,
+      status: finalStatus,
+      tags: [],
+      evolution: { of: evOf, kind: evKind },
+    };
+    const fileContent = matter.stringify(comment.trim(), frontmatter);
 
     if (!fs.existsSync(commentsDir)) fs.mkdirSync(commentsDir, { recursive: true });
     const outPath = path.join(commentsDir, `${newId}.md`);
@@ -90,29 +94,19 @@ function writeComment(opts) {
   const prefixRaw = searchBody.slice(Math.max(0, chosen.index - 100), chosen.index).trim();
   const suffixRaw = searchBody.slice(chosen.index + searchQuote.length, chosen.index + searchQuote.length + 100).trim();
 
-  const yaml = [
-    `id: ${newId}`,
-    `type: annotation`,
-    `target:`,
-    `  article_id: ${articleId}`,
-    `  path: ${loaded.relPath}`,
-    `anchor:`,
-    `  quote: ${JSON.stringify(quote)}`,
-    `  prefix: ${JSON.stringify(prefixRaw)}`,
-    `  suffix: ${JSON.stringify(suffixRaw)}`,
-    `  occurrence: ${occurrenceIdx + 1}`,
-    `  line_hint: ${chosen.line}`,
-    `author: ${authorName}`,
-    `created_at: ${now}`,
-    `updated_at: ${now}`,
-    `status: ${finalStatus}`,
-    `tags: []`,
-    `evolution:`,
-    `  of: [${evOf.map((id) => JSON.stringify(id)).join(", ")}]`,
-    `  kind: ${evKind}`,
-  ].join("\n");
-
-  const fileContent = `---\n${yaml}\n---\n\n${comment.trim()}\n`;
+  const frontmatter = {
+    id: newId,
+    type: "annotation",
+    target: { article_id: articleId, path: loaded.relPath },
+    anchor: { quote, prefix: prefixRaw, suffix: suffixRaw, occurrence: occurrenceIdx + 1, line_hint: chosen.line },
+    author: authorName,
+    created_at: now,
+    updated_at: now,
+    status: finalStatus,
+    tags: [],
+    evolution: { of: evOf, kind: evKind },
+  };
+  const fileContent = matter.stringify(comment.trim(), frontmatter);
 
   if (!fs.existsSync(commentsDir)) fs.mkdirSync(commentsDir, { recursive: true });
   const outPath = path.join(commentsDir, `${newId}.md`);

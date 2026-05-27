@@ -8,6 +8,8 @@ const {
   listRecent,
   addTags,
   removeTags,
+  listProjects,
+  getProject,
 } = require("../../usecases/query-articles");
 
 const TOOLS = [
@@ -64,6 +66,25 @@ const TOOLS = [
     },
   },
   {
+    name: "list_projects",
+    description: "List all registered Echo projects with their root paths and registration dates.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "get_project",
+    description: "Get details of a single registered Echo project by its ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Project ID (e.g., mynote, echo-notes)" },
+      },
+      required: ["id"],
+    },
+  },
+  {
     name: "add_tags",
     description: "Add one or more tags to an article. Tags are written back to the markdown file's YAML frontmatter. Duplicate tags are ignored.",
     inputSchema: {
@@ -95,6 +116,8 @@ const TOOL_HANDLERS = {
   get_article_context: getArticleContext,
   list_tags: listTags,
   list_recent: listRecent,
+  list_projects: listProjects,
+  get_project: getProject,
   add_tags: addTags,
   remove_tags: removeTags,
 };

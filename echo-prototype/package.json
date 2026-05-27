@@ -34,7 +34,7 @@
     "import": "node scripts/import-sessions.js",
     "search": "node scripts/search.js",
     "mcp": "node bin/echoctl.js mcp",
-    "all": "npm run convert && npm run validate && npm run index && npm run resolve",
+    "all": "node bin/echoctl.js all",
     "docs:generate": "node scripts/build-docs.js",
     "docs:dev": "npm run docs:generate && vitepress dev ~/.echo-workspace/.site",
     "docs:build": "npm run docs:generate && vitepress build ~/.echo-workspace/.site",

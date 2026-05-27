@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-26 (聊天气泡完成，评论作者/进化链 UI/项目筛选 回退)
+最后更新：2026-05-27 (多项目 pipeline 聚合、echoctl project 命令、MCP 项目工具、代码质量修复)
 
 ## 已完成
 
@@ -105,7 +105,10 @@
 - [x] **聊天气泡运行时修复** (2026-05-26) — 修复 VitePress 将隐藏 turn marker 包进空 `<p>` 后，`EchoChatBubbles` 从 `span.nextSibling` 找不到正文节点的问题；现在以 marker 所在空段落作为边界，并刷新 runtime site。Browser 验证 `session-2026-05-25` 生成 10 个气泡 turn。
 - [x] **聊天气泡宽度自适应** (2026-05-26) — 气泡改为 `width: fit-content` + `max-width` 兜底，短用户消息按内容收缩，长回复仍限制在正文宽度内。
 - [x] **VitePress 生成物落点修正** (2026-05-26) — `scripts/build-docs.js` 默认生成到 Echo runtime site `~/.echo-workspace/.site`，`docs:*` 脚本改为构建 runtime site；当前工程 `docs/` 仅保留主题模板和占位 Markdown，不再写入真实文章列表/标签页。
-- [ ] **创建标记表单样式重设计** — 功能保留，但当前文章底部“创建标记”区域像临时表单且视觉重复；需要重新设计为更轻量的文章级标记入口，和评论区/底部导航形成清晰层级。
+- [x] **echoctl 项目查找命令** (2026-05-27) — CLI 新增 `echoctl project list` / `echoctl project find <id>`，MCP 新增 `list_projects` / `get_project` 工具，详见 [issues/011-echoctl-list-projects-mcp-sync.md](issues/011-echoctl-list-projects-mcp-sync.md)
+- [x] **多项目 pipeline 聚合** (2026-05-27) — `echoctl all` 改为对所有已注册项目运行完整管线 (convert → validate → index → resolve)；新增 `aggregate-all-projects.js` usecase；`loadAllArticlesAndComments()` 已支撑多项目网页聚合，详见 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)
+- [x] **代码质量修复 5 项** (2026-05-27) — readStdin 去重到 `lib/infra/read-stdin.js`、UTC+8 改用 `Intl.DateTimeFormat`、VitePress stdout pipe、write-comment YAML 手写改为 `gray-matter`、serve.js 静默 catch 改为 console.error。详见 [issues/009-code-review-findings.md](issues/009-code-review-findings.md)
+- [ ] **创建标记表单样式重设计** — 功能保留，但当前文章底部”创建标记”区域像临时表单且视觉重复；需要重新设计为更轻量的文章级标记入口，和评论区/底部导航形成清晰层级。
 - [ ] **标签/摘要编辑** — 网页端改 frontmatter 字段，写回 MD
 - [ ] **剪贴板导入脚本** — `paste-to-md.sh`（macOS 优先）
 
@@ -136,8 +139,8 @@
 - [ ] **Karpathy wiki 模式改造** — **已搁置**（2026-05-23 决定不上）。原计划：wikilink 替代 frontmatter 引用、index.md 内容目录、log.md 操作日志。
   - **替代想法**：不做内置 wiki，改为可选的 `sync-to-wiki` 桥接脚本。检测 `~/Documents/SilentBrain/` 等已有 wiki vault，Echo 的 convert/import 输出自动同步到 wiki 的 `raw/articles/` 目录。用户自己决定是否将 Echo 文章提升为 wiki 的 concept/entity 页。这样 Echo 管线不受影响，wiki 作为独立的知识精炼层存在。架构影响评估已存档于 session-2026-05-23。
 - [ ] **Code Review 改进项** — 11 项代码质量问题，详见 [issues/009-code-review-findings.md](issues/009-code-review-findings.md)（2026-05-26，CodeGraph 全项目扫描）
-- [ ] **echoctl 查找已注册项目 + MCP 同步** — CLI 新增 `echoctl project list` / `echoctl project find <id>`，MCP 新增 `list_projects` / `get_project` 工具，详见 [issues/011-echoctl-list-projects-mcp-sync.md](issues/011-echoctl-list-projects-mcp-sync.md)（2026-05-26）
-- [ ] **多项目网页端不可见** — `resolveDataDirs()` 只解析当前 cwd 匹配的单个项目，缺少跨项目文章聚合层。`build-docs.js` 需改为扫描所有已注册项目。详见 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)（2026-05-26）
+- [x] **echoctl 查找已注册项目 + MCP 同步** — CLI 新增 `echoctl project list` / `echoctl project find <id>`，MCP 新增 `list_projects` / `get_project` 工具，详见 [issues/011-echoctl-list-projects-mcp-sync.md](issues/011-echoctl-list-projects-mcp-sync.md)（2026-05-27）
+- [x] **多项目网页端不可见** — `echoctl all` 改为对所有已注册项目运行完整管线；新增 `aggregate-all-projects.js` usecase；`loadAllArticlesAndComments()` 已支撑多项目网页聚合。详见 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)（2026-05-27）
 
 ## 数据来源
 

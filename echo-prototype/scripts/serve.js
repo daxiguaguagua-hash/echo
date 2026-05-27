@@ -187,7 +187,9 @@ function createRouter(deps) {
             dirs,
             store,
           });
-          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (_) {}
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
+            console.error("[echo] Rebuilding docs after comment failed:", e.message);
+          }
           return jsonResponse(res, 201, result, docsPort);
         } catch (err) {
           return jsonResponse(res, 422, { error: err.message }, docsPort);
@@ -206,7 +208,9 @@ function createRouter(deps) {
         try {
           const { addTags } = require("./lib/usecases/query-articles");
           const result = addTags({ id: body.articleId, tags }, { dirs, store });
-          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (_) {}
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
+            console.error("[echo] Rebuilding docs after tag change failed:", e.message);
+          }
           return jsonResponse(res, 201, result, docsPort);
         } catch (err) {
           return jsonResponse(res, err.name === "NotFoundError" ? 404 : 422, { error: err.message }, docsPort);
@@ -299,6 +303,7 @@ async function start() {
     },
   });
 
+  vitepress.stdout.on("data", (d) => process.stdout.write(d));
   vitepress.stderr.on("data", (d) => process.stderr.write(d));
   vitepress.on("error", (err) => {
     console.error("[echoctl] VitePress failed:", err.message);
