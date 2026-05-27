@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-27 (多项目 pipeline 聚合、echoctl project 命令、MCP 项目工具、代码质量修复)
+最后更新：2026-05-27 (echoctl serve 后台模式、未注册目录 legacy fallback 复盘文档、myEchoTestV1 项目注册兜底)
 
 ## 已完成
 
@@ -114,6 +114,10 @@
 - [x] **echoctl 项目查找命令** (2026-05-27) — CLI 新增 `echoctl project list` / `echoctl project find <id>`，MCP 新增 `list_projects` / `get_project` 工具，详见 [issues/011-echoctl-list-projects-mcp-sync.md](issues/011-echoctl-list-projects-mcp-sync.md)
 - [x] **多项目 pipeline 聚合** (2026-05-27) — `echoctl all` 改为对所有已注册项目运行完整管线 (convert → validate → index → resolve)；新增 `aggregate-all-projects.js` usecase；`loadAllArticlesAndComments()` 已支撑多项目网页聚合，详见 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)
 - [x] **代码质量修复 5 项** (2026-05-27) — readStdin 去重到 `lib/infra/read-stdin.js`、UTC+8 改用 `Intl.DateTimeFormat`、VitePress stdout pipe、write-comment YAML 手写改为 `gray-matter`、serve.js 静默 catch 改为 console.error。详见 [issues/009-code-review-findings.md](issues/009-code-review-findings.md)
+- [x] **空文件夹 AUQ 端到端验证** (2026-05-27) — 在隔离空项目 `/private/tmp/echo-auq-empty-experiment/empty-project` 注册项目，模拟 `AskUserQuestion` 对话，验证 buffer → article → VitePress 页面均显示“AI 提供了以下选项”、全部选项 label/description 和“你的选择”。同时发现 `npm run docs:dev` 在自定义 `ECHO_HOME` 下仍指向 `~/.echo-workspace/.site`，需后续修复脚本路径。
+- [x] **myEchoTestV1 项目注册兜底** (2026-05-27) — 异常原因：`~/myEchoTestV1` 未注册，hook 将会话写入 legacy `~/.echo-workspace/session-buffer/session-2026-05-27-v13.md`，网页项目列表只聚合已注册项目。处理：注册为 `myechotestv1`，复制已捕获 buffer 到项目数据目录，补 `session-map.txt` 与 `auq-counter.txt`，`echoctl all` 后生成 1 篇文章；浏览器验证 `/articles/` 已显示 `myechotestv1 (1)`，总数 27。
+- [x] **未注册目录 legacy fallback 复盘文档** (2026-05-27) — 已更新 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)、[USAGE_GUIDE_V3.md](USAGE_GUIDE_V3.md)、[ENGINEERING_BOUNDARIES.md](ENGINEERING_BOUNDARIES.md)，说明“未注册目录 → 顶层 legacy buffer → 页面项目聚合不可见”的原因、调用链、现场处理记录和后续产品决策。
+- [x] **echoctl serve 后台模式** (2026-05-27) — `echoctl serve` 默认后台启动 API + VitePress，输出中英文对齐提示：Docs/API/State/Log、`echoctl stop` 停止命令、`echoctl serve --foreground` 前台调试、`echoctl capture on/off` 收集开关，并显示“正在收集/已关闭 AI 聊天记录”与对应命令。保留 `--foreground` 使用原前台流程；新增格式化输出测试。
 - [ ] **创建标记表单样式重设计** — 功能保留，但当前文章底部”创建标记”区域像临时表单且视觉重复；需要重新设计为更轻量的文章级标记入口，和评论区/底部导航形成清晰层级。
 - [ ] **标签/摘要编辑** — 网页端改 frontmatter 字段，写回 MD
 - [ ] **剪贴板导入脚本** — `paste-to-md.sh`（macOS 优先）

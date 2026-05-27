@@ -23,6 +23,10 @@ function serveInfoFile() {
   return path.join(resolveEchoHomePath(), ".serve.json");
 }
 
+function serveLogFile() {
+  return path.join(resolveEchoHomePath(), ".serve.log");
+}
+
 function writeServeInfo(apiPort, docsPort, vitepressPid) {
   fs.writeFileSync(servePidFile(), String(process.pid));
   fs.writeFileSync(serveInfoFile(), JSON.stringify({
@@ -54,6 +58,59 @@ function readServeInfo() {
   } catch (_) {
     throw new Error(`Corrupted serve state file: ${serveInfoFile()}. Delete it manually or re-run serve.`);
   }
+}
+
+function isPidRunning(pid) {
+  if (!isValidPositivePid(pid)) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    if (err.code === "ESRCH") return false;
+    if (err.code === "EPERM") return true;
+    throw err;
+  }
+}
+
+function formatServeSummary(info, opts = {}) {
+  const captureEnabled = opts.captureEnabled !== false;
+  const command = cliNames.canonicalName;
+  const title = opts.background
+    ? "Echo服务在后台运行 / Echo serve started in background"
+    : "Echo服务正在前台运行 / Echo serve running in foreground";
+  const rows = [
+    ["Docs / 访问地址", `http://${HOST}:${info.docsPort}/`],
+    ["API / 接口地址", `http://${HOST}:${info.apiPort}/`],
+    ["State / 状态文件", serveInfoFile()],
+  ];
+  if (opts.logFile) rows.push(["Log / 日志文件", opts.logFile]);
+
+  const labelWidth = Math.max(...rows.map(([label]) => label.length), 22);
+  const formatRow = ([label, value]) => `${label.padEnd(labelWidth)}  ${value}`;
+  const captureStatus = captureEnabled
+    ? "正在收集 AI 聊天记录 / Collecting AI chat logs"
+    : "已关闭 AI 聊天记录 / AI chat logging is off";
+  const captureCommand = captureEnabled
+    ? `${command} capture off`
+    : `${command} capture on`;
+  const captureHint = captureEnabled
+    ? "关闭收集 / Turn off"
+    : "开启收集 / Turn on";
+
+  return [
+    title,
+    "",
+    ...rows.map(formatRow),
+    "",
+    `${command} serve              # 后台启动 / Start in background`,
+    `${command} serve --foreground # 前台调试 / Run in foreground for debugging`,
+    `${command} stop               # 停止服务 / Stop Echo serve`,
+    `${command} capture on/off     # 控制 AI 聊天记录收集 / Toggle AI chat logging`,
+    "",
+    "AI chat capture / AI 聊天记录:",
+    `  Status / 当前状态       ${captureStatus}`,
+    `  Command / 对应命令      ${captureHint}: ${captureCommand}`,
+  ].join("\n");
 }
 
 function isValidPositivePid(pid) {
@@ -365,6 +422,11 @@ async function start() {
     console.log(`  Docs:      http://${HOST}:${docsPort}`);
     console.log(`  Site dir:  ${docsDir}`);
     console.log(`  MCP name:  ${mcpServerInfo.name} v${mcpServerInfo.version}\n`);
+    console.log(formatServeSummary({
+      apiPort,
+      docsPort,
+    }, { captureEnabled: isCaptureEnabled(), background: false }));
+    console.log("");
   });
 
   function shutdown() {
@@ -392,6 +454,10 @@ module.exports = {
   readServeInfo,
   clearServeInfo,
   servePidFile,
+  serveInfoFile,
+  serveLogFile,
+  formatServeSummary,
+  isPidRunning,
   isValidPositivePid,
   verifyProcessIdentity,
   findServeProcessCandidates,

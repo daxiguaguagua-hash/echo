@@ -428,8 +428,19 @@ function writeSidebar(articles, sidebarFile) {
     return `${indent}{ text: ${JSON.stringify(title)}, link: '/articles/generated/${articleSlug(article)}' }`;
   };
 
-  const recentItems = articles.slice(0, 10).map((article) => renderItem(article)).join(",\n");
-  const projectGroups = groupArticlesByProject(articles).map((group) => {
+  const projectGroupsData = groupArticlesByProject(articles);
+  const groupedSlugs = new Set();
+  for (const g of projectGroupsData) {
+    for (const a of g.articles) {
+      groupedSlugs.add(articleSlug(a));
+    }
+  }
+  const recentItems = articles
+    .filter((a) => !groupedSlugs.has(articleSlug(a)))
+    .slice(0, 10)
+    .map((article) => renderItem(article))
+    .join(",\n");
+  const projectGroups = projectGroupsData.map((group) => {
     const items = group.articles.slice(0, 30).map((article) => renderItem(article, "                ")).join(",\n");
     return `          {
             text: ${JSON.stringify(`${group.text} (${group.articles.length})`)},

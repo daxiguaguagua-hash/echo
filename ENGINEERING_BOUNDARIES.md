@@ -237,6 +237,16 @@ flowchart TD
   D -->|否| F[提示运行 echoctl init project]
 ```
 
+当前实现与目标有一处重要差异：hook capture 为了兼容旧数据模型，未注册目录不会中断，也不会自动注册项目，而是静默 fallback 到 Echo home 顶层：
+
+```text
+~/.echo-workspace/session-buffer/
+```
+
+这能保证“不丢捕获”，但会带来网页可见性问题：当 `registry.json` 中已有项目时，`build-docs.js` 聚合的是 `~/.echo-workspace/projects/<project-id>/articles/`，不会自动扫描顶层 legacy buffer。2026-05-27 的 `~/myEchoTestV1` 现场问题即由此触发：会话已捕获，但目录未注册，所以项目栏看不到。
+
+后续若要消除歧义，优先选择“显式提示未注册 cwd 需要 `echoctl init project`”，而不是自动注册所有未知目录。
+
 测试边界：
 
 | 模块 | 必须覆盖 |

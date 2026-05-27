@@ -32,6 +32,10 @@ node bin/echoctl.js hook status      # SessionStart 状态输出
 node bin/echoctl.js convert          # buffer → 文章
 node bin/echoctl.js validate         # 校验
 node bin/echoctl.js resolve          # 锚点解析
+node bin/echoctl.js serve            # 后台启动网页 + API
+node bin/echoctl.js serve --foreground # 前台调试
+node bin/echoctl.js stop             # 停止后台服务
+node bin/echoctl.js capture on/off   # 控制 AI 聊天记录收集
 ```
 
 ## 命令

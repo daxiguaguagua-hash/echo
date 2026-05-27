@@ -6,7 +6,7 @@
       :href="`#${encodeURIComponent(tab.anchor)}`"
       class="echo-project-tab"
       :class="{ 'echo-project-tab-active': tab.key === selectedKey }"
-      @click="select(tab.key)"
+      @click.prevent="select(tab.key)"
     >
       {{ tab.label }}<span>{{ tab.articles.length }}</span>
     </a>

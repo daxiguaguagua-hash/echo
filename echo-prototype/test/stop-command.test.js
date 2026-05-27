@@ -183,6 +183,33 @@ test("isEchoServeCommand recognizes only Echo serve commands", () => {
   fs.rmSync(echoHome, { recursive: true, force: true });
 });
 
+test("formatServeSummary renders bilingual aligned background instructions", () => {
+  const { formatServeSummary } = require("../scripts/serve");
+  const oldEchoHome = process.env.ECHO_HOME;
+  const echoHome = tempDir();
+  process.env.ECHO_HOME = echoHome;
+
+  const text = formatServeSummary({
+    apiPort: 8787,
+    docsPort: 5173,
+  }, {
+    background: true,
+    captureEnabled: true,
+    logFile: path.join(echoHome, ".serve.log"),
+  });
+
+  assert.match(text, /Echo服务在后台运行 \/ Echo serve started in background/);
+  assert.match(text, /Docs \/ 访问地址\s+http:\/\/127\.0\.0\.1:5173\//);
+  assert.match(text, /API \/ 接口地址\s+http:\/\/127\.0\.0\.1:8787\//);
+  assert.match(text, /echoctl serve --foreground # 前台调试 \/ Run in foreground for debugging/);
+  assert.match(text, /Status \/ 当前状态\s+正在收集 AI 聊天记录/);
+  assert.match(text, /Command \/ 对应命令\s+关闭收集 \/ Turn off: echoctl capture off/);
+
+  if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+  else process.env.ECHO_HOME = oldEchoHome;
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
 // --- Corrupted serve info ---
 
 test("echoctl stop cleans up corrupted serve info and exits 1", async () => {

@@ -302,6 +302,22 @@ ls /tmp/echo-test/session-buffer/
 # session-...-v1.md  session-map.txt  pending/
 ```
 
+注意：这是 legacy fallback，不是项目数据目录。只要 registry 中已经有项目，网页 `/articles/` 默认聚合的是：
+
+```text
+ECHO_HOME/projects/<project-id>/articles/
+```
+
+因此未注册目录里的对话即使被 hook 捕获，也不会自动出现在“项目”分组里。要让它出现在页面中，先在该目录执行：
+
+```bash
+echoctl init project
+echoctl all
+echoctl serve           # 或开发期运行 npm --prefix /Users/vincenthuang/myNote/echo-prototype run docs:generate
+```
+
+2026-05-27 的 `~/myEchoTestV1` 现场问题就是这个模式：未注册目录被捕获到 `~/.echo-workspace/session-buffer/`，但网页只显示已注册项目，导致项目栏看不到它。详见 `issues/012-multi-project-web-visibility.md` 的追加复盘。
+
 ### 5.5 StopFailure
 
 ```bash
@@ -460,7 +476,7 @@ ECHO_CAPTURE=off? → 静默退出
 findProjectForPath(cwd) — 最长前缀匹配
   ↓
   匹配成功 → bufferRoot = {echoHome}/projects/{id}/
-  匹配失败 → bufferRoot = {echoHome}/ (legacy fallback)
+  匹配失败 → bufferRoot = {echoHome}/ (legacy fallback；不会进入网页项目分组)
   ↓
 session-buffer/ 子路径写入 bufferRoot 下
 ```
@@ -492,12 +508,39 @@ echoctl doctor
 
 做完后，你每次跟 Claude Code 对话都会被自动捕获到 `~/.echo-workspace/projects/echo-notes/session-buffer/`。
 
-定期跑管线把 buffer 转成文章：
+启动本地网页服务：
 
 ```bash
-cd /Users/vincenthuang/myNote/echo-prototype
-npm run all        # convert → validate → index → resolve
-npm run search -- --keyword "你的关键词"
+echoctl serve              # 后台启动，打印访问地址、停止命令、收集状态
+echoctl serve --foreground # 前台启动，给开发调试用
+echoctl stop               # 停止服务
+echoctl capture on/off     # 控制 AI 聊天记录收集
+```
+
+`echoctl serve` 会先自动运行管线，把 buffer 转成页面可见文章；日常不需要再手动跑 `npm run all`。如果只想在命令行搜索：
+
+```bash
+echoctl search -- --keyword "你的关键词"
 ```
 
 如果不想装 hook，也可以跳过第 5 步，先手动跑 `npm run import` 导入历史 JSONL 会话试试效果。
+
+### serve 启动提示格式
+
+```text
+Echo服务在后台运行 / Echo serve started in background
+
+Docs / 访问地址        http://127.0.0.1:5173/
+API / 接口地址         http://127.0.0.1:8787/
+State / 状态文件       ~/.echo-workspace/.serve.json
+Log / 日志文件         ~/.echo-workspace/.serve.log
+
+echoctl serve              # 后台启动 / Start in background
+echoctl serve --foreground # 前台调试 / Run in foreground for debugging
+echoctl stop               # 停止服务 / Stop Echo serve
+echoctl capture on/off     # 控制 AI 聊天记录收集 / Toggle AI chat logging
+
+AI chat capture / AI 聊天记录:
+  Status / 当前状态       正在收集 AI 聊天记录 / Collecting AI chat logs
+  Command / 对应命令      关闭收集 / Turn off: echoctl capture off
+```
