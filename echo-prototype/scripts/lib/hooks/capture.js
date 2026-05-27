@@ -5,8 +5,31 @@ const {
   ensureDir,
 } = require("../infra/workspace");
 const { isCaptureEnabled, getSpeakers } = require("../infra/config");
-const { findProjectForPath } = require("../usecases/project-registry");
+const { findProjectForPath, listProjects } = require("../usecases/project-registry");
 const { readStdin } = require("../infra/read-stdin");
+
+function claudeProjectDirName(projectPath) {
+  return "-" + path.resolve(projectPath).slice(1).split(path.sep).join("-");
+}
+
+function projectPathFromTranscriptPath(transcriptPath) {
+  if (!transcriptPath) return null;
+  const dirName = path.basename(path.dirname(transcriptPath));
+  if (!dirName.startsWith("-")) return null;
+  return "/" + dirName.slice(1).replace(/-/g, "/");
+}
+
+function projectFromTranscriptPath(transcriptPath, echoHome) {
+  if (!transcriptPath) return null;
+  const dirName = path.basename(path.dirname(transcriptPath));
+  for (const project of listProjects(echoHome)) {
+    if (claudeProjectDirName(project.root) === dirName) {
+      return project;
+    }
+  }
+  const decoded = projectPathFromTranscriptPath(transcriptPath);
+  return decoded ? findProjectForPath(decoded, { echoHome }) : null;
+}
 
 function getLocalDate() {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -17,11 +40,18 @@ function getLocalDate() {
 
 function resolveBufferRoot(data) {
   const echoHome = resolveEchoHomePath();
-  const cwd = data.cwd || process.cwd();
+  const transcriptProject = projectFromTranscriptPath(data.transcript_path, echoHome);
+  if (transcriptProject) {
+    return { bufferRoot: transcriptProject.dataRoot, project: transcriptProject };
+  }
 
-  const project = findProjectForPath(cwd, { echoHome });
-  if (project) {
-    return { bufferRoot: project.dataRoot, project };
+  const candidates = [data.cwd, process.cwd()].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const project = findProjectForPath(candidate, { echoHome });
+    if (project) {
+      return { bufferRoot: project.dataRoot, project };
+    }
   }
   return { bufferRoot: echoHome, project: null };
 }
@@ -322,6 +352,9 @@ if (require.main === module) {
 
 module.exports = {
   getLocalDate,
+  claudeProjectDirName,
+  projectPathFromTranscriptPath,
+  projectFromTranscriptPath,
   resolveBufferRoot,
   getSessionFile,
   extractAuqBlock,

@@ -472,6 +472,7 @@ function loadAllArticlesAndComments() {
   const allComments = [];
   const sources = [];
   const seenRoots = new Set();
+  let registeredProjects = [];
 
   function addSource(source) {
     const root = path.resolve(source.root);
@@ -480,28 +481,13 @@ function loadAllArticlesAndComments() {
     sources.push({ ...source, root });
   }
 
-  addSource({
-    projectId: dirs.projectId || null,
-    root: dirs.projectRoot,
-    articlesDir: dirs.articlesDir,
-    commentsDir: dirs.commentsDir,
-  });
-
-  if (dirs.projectId) {
-    const { resolveEchoHomePath } = require("./lib/infra/workspace");
-    const echoHome = resolveEchoHomePath();
-    addSource({
-      projectId: null,
-      root: echoHome,
-      articlesDir: path.join(echoHome, "articles"),
-      commentsDir: path.join(echoHome, "comments"),
-    });
-  }
-
   try {
     const { listProjects } = require("./lib/usecases/project-registry");
-    const projects = listProjects();
-    for (const p of projects) {
+    registeredProjects = listProjects();
+  } catch (_) {}
+
+  if (registeredProjects.length > 0) {
+    for (const p of registeredProjects) {
       addSource({
         projectId: p.projectId,
         root: p.dataRoot,
@@ -509,7 +495,14 @@ function loadAllArticlesAndComments() {
         commentsDir: path.join(p.dataRoot, "comments"),
       });
     }
-  } catch (_) {}
+  } else {
+    addSource({
+      projectId: dirs.projectId || null,
+      root: dirs.projectRoot,
+      articlesDir: dirs.articlesDir,
+      commentsDir: dirs.commentsDir,
+    });
+  }
 
   for (const source of sources) {
     const articles = store.loadArticles(source.articlesDir);

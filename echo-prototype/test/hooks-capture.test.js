@@ -6,10 +6,14 @@ const test = require("node:test");
 
 const {
   extractAuqBlock,
+  claudeProjectDirName,
+  projectPathFromTranscriptPath,
+  resolveBufferRoot,
   handleUserPromptSubmit,
   handleStop,
   handleStopFailure,
 } = require("../scripts/lib/hooks/capture");
+const { registerProject } = require("../scripts/lib/usecases/project-registry");
 
 // --- helpers ---
 
@@ -27,6 +31,77 @@ function writeFixture(dir, relPath, text) {
 function jsonl(entries) {
   return entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
 }
+
+test("projectPathFromTranscriptPath decodes Claude project transcript paths", () => {
+  const decoded = projectPathFromTranscriptPath(
+    "/Users/vincenthuang/.claude/projects/-Users-vincenthuang-myHomeworkHelper/session.jsonl"
+  );
+  assert.equal(decoded, "/Users/vincenthuang/myHomeworkHelper");
+});
+
+test("claudeProjectDirName encodes project roots for exact registry matching", () => {
+  assert.equal(
+    claudeProjectDirName("/Users/vincenthuang/my-homework-helper"),
+    "-Users-vincenthuang-my-homework-helper"
+  );
+});
+
+test("resolveBufferRoot routes by transcript path when cwd is missing or stale", () => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const projectRoot = path.join(os.tmpdir(), `echoCaptureProject${Date.now()}`, "myHomeworkHelper");
+
+  try {
+    process.env.ECHO_HOME = echoHome;
+    fs.mkdirSync(projectRoot, { recursive: true });
+    const registered = registerProject(projectRoot, { echoHome, projectId: "myhomeworkhelper" });
+    process.chdir(echoHome);
+
+    const result = resolveBufferRoot({
+      transcript_path: path.join(
+        os.homedir(),
+        ".claude/projects/-" + projectRoot.slice(1).replace(/\//g, "-") + "/abc.jsonl"
+      ),
+    });
+
+    assert.equal(result.project.projectId, "myhomeworkhelper");
+    assert.equal(result.bufferRoot, registered.dataRoot);
+  } finally {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(path.dirname(projectRoot), { recursive: true, force: true });
+  }
+});
+
+test("resolveBufferRoot handles registered project paths containing hyphens", () => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const projectRoot = path.join(os.tmpdir(), `echoCaptureProject${Date.now()}`, "my-homework-helper");
+
+  try {
+    process.env.ECHO_HOME = echoHome;
+    fs.mkdirSync(projectRoot, { recursive: true });
+    const registered = registerProject(projectRoot, { echoHome, projectId: "my-homework-helper" });
+    process.chdir(echoHome);
+
+    const result = resolveBufferRoot({
+      transcript_path: path.join(os.homedir(), ".claude/projects", claudeProjectDirName(projectRoot), "abc.jsonl"),
+    });
+
+    assert.equal(result.project.projectId, "my-homework-helper");
+    assert.equal(result.bufferRoot, registered.dataRoot);
+  } finally {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(path.dirname(projectRoot), { recursive: true, force: true });
+  }
+});
 
 // --- transcript fixtures ---
 

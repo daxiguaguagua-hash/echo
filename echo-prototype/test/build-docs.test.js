@@ -47,7 +47,7 @@ function readProjectTabsPayload(articleIndex) {
   return JSON.parse(decodeURIComponent(match[1]));
 }
 
-test("docs generation includes global articles when run inside an empty registered project", (t) => {
+test("docs generation ignores legacy global articles when registry projects exist", (t) => {
   const oldEchoHome = process.env.ECHO_HOME;
   const oldCwd = process.cwd();
   const echoHome = tempDir();
@@ -68,8 +68,7 @@ test("docs generation includes global articles when run inside an empty register
 
   const { articles } = loadAllArticlesAndComments();
 
-  assert.deepEqual(articles.map((a) => a.id), ["global-article"]);
-  assert.equal(articles[0]._project, null);
+  assert.deepEqual(articles.map((a) => a.id), []);
 });
 
 test("runBuildDocs can generate a runtime VitePress site outside the package docs dir", (t) => {
@@ -133,9 +132,8 @@ test("runBuildDocs groups sidebar articles by project while keeping recent short
   assert.match(sidebar, /text: '最近文章'/);
   assert.match(sidebar, /text: '项目'/);
   assert.match(sidebar, /text: "mynote \(1\)"/);
-  assert.match(sidebar, /text: "未归类 \(1\)"/);
   assert.match(sidebar, /Project Article/);
-  assert.match(sidebar, /Global Article/);
+  assert.doesNotMatch(sidebar, /Global Article/);
   assert.ok(sidebar.indexOf("text: '项目'") < sidebar.indexOf('text: "mynote (1)"'));
 });
 

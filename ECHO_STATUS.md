@@ -102,6 +102,7 @@
 - [x] **文章列表项目选项卡** (2026-05-27) — `/articles/` 新增 `EchoProjectTabs`，按文章所在项目/文件夹生成 `全部`、`mynote`、`myhomeworkhelper` 等选项卡；选项卡名就是项目名，点击后仅显示该项目文章。新增 build-docs 回归测试；`npm test -- test/build-docs.test.js` 通过。
 - [x] **echoctl stop 孤立 docs 进程清理** (2026-05-27) — `serve` 状态文件新增 VitePress 子进程 PID；`echoctl stop` 在主进程已退出时会继续清理记录的子进程，并在状态文件缺失但 5173/8787 上仍有 Echo serve/VitePress 进程时识别并停止孤立进程，避免出现”docs 还在、API 已停”的半残页面。已清理本机遗留 PID 96905；`npm test -- test/serve-api.test.js test/stop-command.test.js test/build-docs.test.js` 和 `npm run all` 通过。
 - [x] **serve 启动时自动运行管线** (2026-05-27) — `echoctl serve` 启动时在 `runBuildDocs()` 之前自动执行 `runPipeline({ allProjects: true, silent: true })`，确保 capture 的 buffer 自动转换为可见文章，不再需要手动跑 `npm run all`。`npm run all` 通过，`npm run docs:generate` 生成 18 篇文章。
+- [x] **旧全局目录关联切断** (2026-05-27) — 网页生成在存在 registry 项目时只聚合 `projects/<project-id>/` 数据，不再把 Echo home 根目录的 legacy `articles/` 混入当前项目视图；capture 在 `cwd` 缺失或 stale 时可通过 Claude transcript 目录精确匹配 registry 项目，避免新会话继续写入 `~/.echo-workspace/session-buffer/`。新增 hook/build-docs 回归测试；旧全局目录保留为后续清理项。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑
@@ -126,13 +127,14 @@
 - [x] **capture.js 同步 + 测试覆盖** — Phase 1: 可测试性重构 (module.exports)；Phase 2: 同步 Bash 版 AUQ 修复 (ordered_blocks + tool_use_id + 答案展示)；Phase 3: 15 个 node:test 用例覆盖 extractAuqBlock/handleStop/handleUserPromptSubmit/handleStopFailure。详见 [issues/014-capture-js-sync-and-test.md](issues/014-capture-js-sync-and-test.md)
 - [x] **Project registry** — `registry.json` schema、登记/读取 usecase、重复登记幂等和路径缺失测试
 - [x] **init project 命令** — 新增 `echo-mcp init project [--path <dir>]`：全局 `~/.echo-workspace/registry.json` 登记项目，并创建 `projects/<project-id>/` 数据目录（session-buffer/、articles/、comments/、index/）
-- [x] **hook 项目路由** — capture.js：去掉模块级路径常量，按 cwd 匹配 registry 写入对应项目数据目录或降级到 Echo home
+- [x] **hook 项目路由** — capture.js：去掉模块级路径常量，按 cwd 匹配 registry 写入对应项目数据目录；cwd 缺失时从 Claude transcript 路径匹配 registry，避免误写全局旧 buffer。
 - [x] **doctor 双层检查** — `echo-mcp doctor` 同时检查 Echo home、registry.json、当前项目注册、项目数据目录，避免 `~/echo-notes/` “没有任何改变”这类困惑
 - [x] **npm CLI 化** — `echo-mcp init`、`hook capture/status/install/doctor` 已实现，`migrate legacy-buffer` 待实现
 
 ## 后期改进
 
 - [ ] **历史重复文章清理** — 修复同项目同日多会话 ID 冲突后，`myhomeworkhelper/session-2026-05-27.md` 这类旧无版本文章可能与 `-vN` 文章重复；需设计显式迁移/删除路径，不在常规 convert/validate 中自动改正文或删文章。
+- [ ] **旧全局 Echo home 目录清理** — `~/.echo-workspace/session-buffer/`、`~/.echo-workspace/articles/`、`~/.echo-workspace/comments/` 属于 project registry 之前的 legacy 数据区；当前网页和新 capture 已切到 `~/.echo-workspace/projects/<project-id>/`，后续跑两三轮确认无新写入后再显式归档或清理。
 - [ ] **持续同步** — 定期扫描新 session JSONL，自动导入 Echo
 - [ ] **v2: 上下文池** — 跨文章选取片段 → 共享池 → AI 讨论合成
 - [ ] **Codex 模型识别** — `extractParticipants` 从标题解析模型名，不全标为 Claude
