@@ -28,4 +28,9 @@ function getSpeakers(env = process.env) {
   };
 }
 
-module.exports = { isCaptureEnabled, setCaptureEnabled, getSpeakers };
+function getAuthor() {
+  const config = getConfig();
+  return config.author || "vincent";
+}
+
+module.exports = { isCaptureEnabled, setCaptureEnabled, getSpeakers, getAuthor };

@@ -15,6 +15,7 @@ const echoInteractive = computed(() => !!(frontmatter.value as any)?.echo?.inter
       <div v-if="echoInteractive" class="echo-doc-bottom">
         <div class="echo-doc-bottom-inner">
           <EchoArticleActions />
+          <EchoCommentReplies />
         </div>
       </div>
       <EchoSelectionComment v-if="echoInteractive" />

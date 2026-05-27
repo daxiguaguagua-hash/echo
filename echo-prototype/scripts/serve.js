@@ -3,7 +3,7 @@ const http = require("http");
 const { execFileSync, spawn } = require("child_process");
 const path = require("path");
 const { runBuildDocs } = require("./build-docs");
-const { isCaptureEnabled, setCaptureEnabled } = require("./lib/infra/config");
+const { isCaptureEnabled, setCaptureEnabled, getAuthor } = require("./lib/infra/config");
 const { resolveDataDirs } = require("./lib/infra/echo-paths");
 const { listProjects } = require("./lib/usecases/project-registry");
 const { resolveEchoHomePath } = require("./lib/infra/workspace");
@@ -183,6 +183,7 @@ function createRouter(deps) {
           captureEnabled: isCaptureEnabled(),
           projectId: dirs.projectId || null,
           version: mcpServerInfo.version,
+          author: getAuthor(),
         }, docsPort);
       }
 

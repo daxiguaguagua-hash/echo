@@ -13,11 +13,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useData } from 'vitepress'
+import { useEchoStatus } from '../lib/useEchoStatus'
 import { postComment } from '../lib/echo-api'
 
 const { frontmatter } = useData()
 const articleId = computed(() => (frontmatter.value as any)?.echo?.articleId as string | undefined)
 const projectId = computed(() => (frontmatter.value as any)?.echo?.projectId as string | null | undefined)
+const { status } = useEchoStatus(articleId)
 
 const visible = ref(false)
 const popupTop = ref(0)
@@ -97,9 +99,10 @@ function startComment() {
     prefix: currentPrefix,
     suffix: currentSuffix,
     occurrence: currentOccurrence,
+    author: status.value?.author,
     projectId: projectId.value ?? null,
   }).then(() => {
-    location.reload()
+    setTimeout(() => location.reload(), 800)
   }).catch((err) => {
     alert('评论失败: ' + (err.message || '未知错误'))
   })

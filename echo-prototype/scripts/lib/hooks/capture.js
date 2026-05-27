@@ -100,6 +100,7 @@ function extractAuqBlock(hookData, lastCount) {
 
     // Collect answers keyed by tool_use_id for reliable pairing
     const answersById = {};
+    let farthestAnswerIdx = i;
     for (let j = i + 1; j < Math.min(i + 5, entries.length); j++) {
       const nxt = entries[j];
       if (nxt.type !== "user") continue;
@@ -120,12 +121,42 @@ function extractAuqBlock(hookData, lastCount) {
           }
           if (tuid && raw) {
             answersById[tuid] = raw;
+            farthestAnswerIdx = Math.max(farthestAnswerIdx, j);
           }
         }
       }
     }
 
-    allAuqs.push({ prevText, orderedBlocks, answersById });
+    allAuqs.push({ prevText, orderedBlocks, answersById, answerEntryIdx: farthestAnswerIdx });
+  }
+
+  // Collect trailing text after the last AUQ's answer (text-only assistant
+  // messages that fall after the answer but before the next non-tool user entry)
+  if (allAuqs.length > 0) {
+    const lastItem = allAuqs[allAuqs.length - 1];
+    let trailingText = "";
+    for (let j = lastItem.answerEntryIdx + 1; j < entries.length; j++) {
+      const entry = entries[j];
+      if (entry.type === "assistant") {
+        const content = entry.message?.content || [];
+        const hasAuq = content.some(
+          (b) => typeof b === "object" && b !== null && b.type === "tool_use" && b.name === "AskUserQuestion"
+        );
+        if (hasAuq) break;
+        for (const block of content) {
+          if (typeof block === "object" && block !== null && block.type === "text") {
+            trailingText += block.text || "";
+          }
+        }
+      } else if (entry.type === "user") {
+        const content = entry.message?.content || [];
+        const hasToolResult = content.some(
+          (b) => typeof b === "object" && b !== null && b.type === "tool_result"
+        );
+        if (!hasToolResult) break;
+      }
+    }
+    lastItem.trailingText = trailingText;
   }
 
   const newCount = allAuqs.length;
@@ -174,6 +205,10 @@ function extractAuqBlock(hookData, lastCount) {
           block += "*（未收到回答）*\n\n";
         }
       }
+    }
+
+    if (item.trailingText) {
+      block += item.trailingText + "\n\n";
     }
   }
   return { block, newCount };

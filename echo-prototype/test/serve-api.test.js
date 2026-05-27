@@ -262,6 +262,8 @@ test("GET /api/status returns capture state and version", async () => {
   assert.equal(res.body.ok, true);
   assert.equal(typeof res.body.captureEnabled, "boolean");
   assert.ok(res.body.version);
+  assert.equal(typeof res.body.author, "string");
+  assert.ok(res.body.author.length > 0);
 
   delete process.env.ECHO_HOME;
   fs.rmSync(echoHome, { recursive: true, force: true });

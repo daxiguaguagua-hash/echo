@@ -7,6 +7,7 @@ interface EchoStatus {
   captureEnabled: boolean
   projectId: string | null
   version: string
+  author: string
 }
 
 interface CommentPayload {

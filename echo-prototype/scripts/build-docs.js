@@ -188,10 +188,11 @@ function renderComments(article, comments) {
     const quote = comment.anchor?.quote || comment.id;
     const author = comment.author || "unknown";
     const date = normalizeDate(comment.created_at);
-    const reply = comment.reply_to ? `<span>回复 ${escapeHtml(comment.reply_to)}</span>` : "";
+    const replyTo = (comment.evolution?.of || []).join(", ");
+    const reply = replyTo ? `<span>回复 ${escapeHtml(replyTo)}</span>` : "";
     const content = escapeHtmlTagsOutsideCode(String(comment.content || "")).trim();
     return [
-      `<section class="echo-comment">`,
+      `<section class="echo-comment" data-comment-id="${escapeHtml(comment.id)}">`,
       `<div class="echo-comment-head"><strong>${escapeHtml(author)}</strong><span>${escapeHtml(date)}</span>${reply}</div>`,
       `<blockquote>${escapeHtml(quote)}</blockquote>`,
       content || "_无正文_",

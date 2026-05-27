@@ -83,7 +83,7 @@
 - [x] **Import provider adapter + manifest** (Issue 008, 2026-05-25) — `import/providers/claude-code.js`：JSONL 解析、噪声过滤、会话分类、元数据提取、不可变文章生成；`import/manifest.js`：导入记录防重；`import/scanner.js`：多项目扫描、路径解码、`buildImportPlan`。Codex 106 测试 + TDD 实现，251 全绿。
 - [x] **`echoctl import` CLI** (Issue 008, 2026-05-25) — `echoctl import claude --all --dry-run/--apply`；`--project <dir> --as-project <id>`；`--exclude` 过滤系统目录。已接线 import 框架，dry-run 已验证。
 - [x] **npm 发布准备** (Issue 008) — `echoctl@0.1.0`：包名已确定、`"private": false`、`bin`/`files`/`keywords`/`engines` 已配置、npm pack 产物 38 文件 43KB 无污染。用户 onboarding 文档后续按需补充。
-- [ ] **底部评论输入框** — 支持文章级评论和后续回复链扩展。作者身份从 `echo.json` 读取。
+- [x] **底部评论输入框** — 支持文章级评论和后续回复链扩展。作者身份从 `echo.json` 读取。详见 [issues/015-bottom-comment-input.md](issues/015-bottom-comment-input.md)
 - [ ] **进化链 UI** — 文章底部评论区展示，回复链可视化
 - [ ] **项目筛选视图** — 统一归档下按 project 元数据显示 `全部` / 单项目文章。元数据在 convert 时根据 registry 补齐。
 - [x] **MCP 配置按钮** (2026-05-24) — `EchoArticleActions.vue` 已实现 MCP 配置弹窗和复制功能。

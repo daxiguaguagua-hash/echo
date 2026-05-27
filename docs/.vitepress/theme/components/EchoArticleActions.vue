@@ -130,10 +130,12 @@ async function submitComment() {
       articleId: articleId.value,
       comment: commentText.value.trim(),
       scope: 'article',
+      author: status.value?.author,
       projectId: projectId.value ?? null,
     })
     commentText.value = ''
-    location.reload()
+    submitError.value = '评论已提交，即将刷新...'
+    setTimeout(() => location.reload(), 1200)
   } catch (err: any) {
     submitError.value = err.message || '提交失败'
   } finally {

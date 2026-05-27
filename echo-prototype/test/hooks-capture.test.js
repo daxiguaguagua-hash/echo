@@ -159,6 +159,17 @@ const noTextTranscript = jsonl([
   },
 ]);
 
+// Real-world transcript: Claude Code sends each text/AUQ/answer as SEPARATE entries
+const separateEntryTranscript = jsonl([
+  { type: "assistant", message: { content: [{ type: "text", text: "开场叙述。\n" }] } },
+  { type: "assistant", message: { content: [{ type: "tool_use", id: "auq_sep_1", name: "AskUserQuestion", input: { questions: [{ header: "Q1", question: "第一问？", options: [{ label: "A1", description: "..." }] }] } }] } },
+  { type: "user", message: { content: [{ type: "tool_result", tool_use_id: "auq_sep_1", content: '"第一问？"="A1"' }] } },
+  { type: "assistant", message: { content: [{ type: "text", text: "过渡叙述。\n" }] } },
+  { type: "assistant", message: { content: [{ type: "tool_use", id: "auq_sep_2", name: "AskUserQuestion", input: { questions: [{ header: "Q2", question: "第二问？", options: [{ label: "A2", description: "..." }] }] } }] } },
+  { type: "user", message: { content: [{ type: "tool_result", tool_use_id: "auq_sep_2", content: '"第二问？"="A2"' }] } },
+  { type: "assistant", message: { content: [{ type: "text", text: "最后一个AUQ答案之后的叙述。不应丢失。\n" }] } },
+]);
+
 // ============================================================
 // extractAuqBlock tests (8)
 // ============================================================
@@ -303,6 +314,26 @@ test("extractAuqBlock only returns new AUQs after lastCount", () => {
     assert.equal(newCount, 2, "newCount reflects total AUQs");
     assert.ok(!block.includes("First Q?"), "does not include first AUQ");
     assert.ok(block.includes("Second Q?"), "includes second AUQ only");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("extractAuqBlock preserves trailing text after last AUQ answer", () => {
+  const dir = tempDir();
+  try {
+    const tpath = writeFixture(dir, "transcript.jsonl", separateEntryTranscript);
+    const { block } = extractAuqBlock({ transcript_path: tpath }, 0);
+
+    assert.ok(block.includes("最后一个AUQ答案之后的叙述"), "preserves text after last AUQ answer");
+    assert.ok(block.includes("过渡叙述"), "preserves text between AUQs");
+    assert.ok(block.includes("开场叙述"), "preserves text before first AUQ");
+
+    // Verify ordering: answer appears before trailing text
+    const answerIdx = block.indexOf("*你的选择：A2*");
+    const trailingIdx = block.indexOf("最后一个AUQ答案之后的叙述");
+    assert.ok(answerIdx >= 0, "contains answer for last AUQ");
+    assert.ok(answerIdx < trailingIdx, "answer appears before trailing text");
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

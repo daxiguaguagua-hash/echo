@@ -6,6 +6,7 @@ import EchoSearchLanding from './components/EchoSearchLanding.vue'
 import EchoTagsPage from './components/EchoTagsPage.vue'
 import EchoChatBubbles from './components/EchoChatBubbles.vue'
 import EchoProjectTabs from './components/EchoProjectTabs.vue'
+import EchoCommentReplies from './components/EchoCommentReplies.vue'
 import './custom.css'
 
 export default {
@@ -18,5 +19,6 @@ export default {
     app.component('EchoTagsPage', EchoTagsPage)
     app.component('EchoChatBubbles', EchoChatBubbles)
     app.component('EchoProjectTabs', EchoProjectTabs)
+    app.component('EchoCommentReplies', EchoCommentReplies)
   },
 }
