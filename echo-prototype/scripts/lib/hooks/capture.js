@@ -59,41 +59,122 @@ function extractAuqBlock(hookData, lastCount) {
     const entry = entries[i];
     if (entry.type !== "assistant") continue;
     const content = entry.message?.content || [];
+
+    // Collect ordered blocks preserving interleaved text and AUQ sequence
+    const orderedBlocks = [];
     for (const block of content) {
-      if (block?.type !== "tool_use" || block?.name !== "AskUserQuestion") continue;
-      const inp = block.input || {};
-      let answer = "";
-      for (let j = i + 1; j < Math.min(i + 5, entries.length); j++) {
-        const nxt = entries[j];
-        if (nxt.type !== "user") continue;
-        for (const cb of (nxt.message?.content || [])) {
-          if (cb?.type === "tool_result") {
-            const rc = cb.content;
-            if (typeof rc === "string") answer = rc;
-            else if (Array.isArray(rc)) answer = rc.map((r) => (typeof r === "object" ? r.text || "" : String(r))).join("");
+      if (typeof block === "object" && block !== null) {
+        if (block.type === "text") {
+          orderedBlocks.push({ type: "text", text: block.text || "" });
+        } else if (block.type === "tool_use" && block.name === "AskUserQuestion") {
+          orderedBlocks.push({
+            type: "auq",
+            id: block.id || "",
+            input: block.input || {},
+          });
+        }
+      }
+    }
+
+    const hasAuq = orderedBlocks.some((b) => b.type === "auq");
+    if (!hasAuq) continue;
+
+    // Check previous entry for orphaned narrative text (Problem 1 fix)
+    let prevText = "";
+    if (i > 0) {
+      const prevEntry = entries[i - 1];
+      if (prevEntry.type === "assistant") {
+        const prevContent = prevEntry.message?.content || [];
+        const hasPrevAuq = prevContent.some(
+          (b) => typeof b === "object" && b !== null && b.type === "tool_use" && b.name === "AskUserQuestion"
+        );
+        if (!hasPrevAuq) {
+          for (const b of prevContent) {
+            if (typeof b === "object" && b !== null && b.type === "text") {
+              prevText += b.text || "";
+            }
           }
         }
-        if (answer) break;
       }
-      allAuqs.push({ input: inp, answer });
     }
+
+    // Collect answers keyed by tool_use_id for reliable pairing
+    const answersById = {};
+    for (let j = i + 1; j < Math.min(i + 5, entries.length); j++) {
+      const nxt = entries[j];
+      if (nxt.type !== "user") continue;
+      const nxtContent = nxt.message?.content || [];
+      for (const cb of nxtContent) {
+        if (typeof cb === "object" && cb !== null && cb.type === "tool_result") {
+          const tuid = cb.tool_use_id || "";
+          const rc = cb.content;
+          let raw = "";
+          if (Array.isArray(rc)) {
+            for (const rci of rc) {
+              if (typeof rci === "object" && rci !== null) {
+                raw += rci.text || "";
+              }
+            }
+          } else if (typeof rc === "string") {
+            raw = rc;
+          }
+          if (tuid && raw) {
+            answersById[tuid] = raw;
+          }
+        }
+      }
+    }
+
+    allAuqs.push({ prevText, orderedBlocks, answersById });
   }
 
   const newCount = allAuqs.length;
   if (newCount <= lastCount) return { block: "", newCount: lastCount };
 
   let block = "";
-  for (const { input, answer } of allAuqs.slice(lastCount)) {
-    block += "\n*[AI 提供了以下选项：]*\n\n";
-    for (const q of (input.questions || [])) {
-      block += `> **${q.header || ""}**\n`;
-      block += `> ${q.question || ""}\n>\n`;
-      for (const opt of (q.options || [])) {
-        block += `> - **${opt.label || ""}** — ${opt.description || ""}\n`;
-      }
-      block += "\n";
+  for (const item of allAuqs.slice(lastCount)) {
+    // Preserve interleaved text/AUQ order (Problem 1 fix)
+    if (item.prevText) {
+      block += item.prevText + "\n\n";
     }
-    if (answer) block += `*你的选择：${answer}*\n\n`;
+
+    for (const b of item.orderedBlocks) {
+      if (b.type === "text") {
+        block += b.text + "\n\n";
+      } else if (b.type === "auq") {
+        const questions = b.input.questions || [];
+        block += "\n*[AI 提供了以下选项：]*\n\n";
+        for (const q of questions) {
+          const header = q.header || "";
+          const questionText = q.question || "";
+          block += `> **${header}**\n`;
+          block += `> ${questionText}\n>\n`;
+          for (const opt of q.options || []) {
+            block += `> - **${opt.label || ""}** — ${opt.description || ""}\n`;
+          }
+          block += "\n";
+        }
+
+        // Answer by tool_use_id, per-question display (Problem 2 fix)
+        const raw = item.answersById[b.id] || "";
+        if (raw) {
+          const parsed = [...raw.matchAll(/"([^"]*)"="([^"]*)"/g)];
+          if (parsed.length === 1) {
+            block += `*你的选择：${parsed[0][2]}*\n\n`;
+          } else if (parsed.length > 1) {
+            block += "*你的选择：*\n";
+            for (const [, qText, ans] of parsed) {
+              block += `- ${qText}：**${ans}**\n`;
+            }
+            block += "\n";
+          } else {
+            block += `*你的选择：${raw}*\n\n`;
+          }
+        } else {
+          block += "*（未收到回答）*\n\n";
+        }
+      }
+    }
   }
   return { block, newCount };
 }
@@ -200,4 +281,17 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(() => process.exit(0));
+if (require.main === module) {
+  main().catch(() => process.exit(0));
+}
+
+module.exports = {
+  getLocalDate,
+  resolveBufferRoot,
+  getSessionFile,
+  extractAuqBlock,
+  handleUserPromptSubmit,
+  handleStop,
+  handleStopFailure,
+  main,
+};
