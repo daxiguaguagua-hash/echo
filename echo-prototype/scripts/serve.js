@@ -311,6 +311,16 @@ function createRouter(deps) {
 
 async function start() {
   const docsDir = resolveRuntimeSiteDir();
+
+  // Auto-run pipeline so captured buffers become visible without manual steps
+  console.log("[echoctl] Running pipeline...");
+  try {
+    const { runPipeline } = require("./lib/usecases/run-pipeline");
+    runPipeline({ allProjects: true, silent: true });
+  } catch (e) {
+    console.error("[echoctl] pipeline warning:", e.message);
+  }
+
   console.log("[echoctl] Building docs...");
   try {
     runBuildDocs({ docsRoot: docsDir });

@@ -27,7 +27,7 @@ function parseBuffer(raw) {
 function buildArticle(bufferFile, turns, opts = {}) {
   const sessionName = path.basename(bufferFile, ".md");
   const dateStr = ef.extractSessionDate(sessionName);
-  const id = `session-${dateStr}`;
+  const id = sessionName.startsWith("session-") ? sessionName : `session-${sessionName}`;
 
   const article = ef.createArticle({
     id,

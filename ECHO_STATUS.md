@@ -98,8 +98,10 @@
 - [x] **标签页筛选** (2026-05-26) — `/tags/` 改为 Vue 组件 `EchoTagsPage`，点击标签后仅显示该标签对应文章，URL hash 保持可分享；选中标签使用品牌色高亮，未选中标签弱化为灰色。Browser 验证 `知识管理` 只显示 3 篇文章且样式状态正确；`npm test` 256 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [x] **Turn marker 隐藏展示** (2026-05-26) — 文章页不再显示 `claude t004 · reply t003` 这类 turn marker；`build-docs.js` 改为输出隐藏 metadata 节点，保留 `data-turn-id`、`data-speaker`、`data-reply-to`，CSS 兜底隐藏旧节点。新增 build-docs 回归测试，`node --test test/build-docs.test.js` 和 `npm run docs:build` 通过。
 - [x] **跨项目同 ID 文章 URL 冲突修复** (2026-05-27) — VitePress 生成文章页时改用 project-qualified slug（如 `mynote--session-2026-05-27`），避免不同项目同一 `id` 互相覆盖；侧边栏、首页、文章列表、标签页链接同步使用新 slug；评论渲染按项目过滤，避免同 ID 文章串评论。新增 build-docs 回归测试；`npm test -- test/build-docs.test.js`、`npm run all`、`npm run docs:build` 通过。
+- [x] **同项目多会话文章 ID 冲突修复** (2026-05-27) — `convert-buffer` 保留 `session-YYYY-MM-DD-vN` 文件名作为文章 ID，只用日期部分写 `created_at`，避免同一项目同一天多轮会话互相覆盖。已将 `myhomeworkhelper` 的 `v1-v4` buffer 转成正式文章；Browser 验证侧边栏显示 `myhomeworkhelper (5)`。新增 convert-buffer 回归测试；`npm test -- test/convert-buffer.test.js test/build-docs.test.js`、`npm run all`、`npm run docs:generate` 通过。
 - [x] **文章列表项目选项卡** (2026-05-27) — `/articles/` 新增 `EchoProjectTabs`，按文章所在项目/文件夹生成 `全部`、`mynote`、`myhomeworkhelper` 等选项卡；选项卡名就是项目名，点击后仅显示该项目文章。新增 build-docs 回归测试；`npm test -- test/build-docs.test.js` 通过。
-- [x] **echoctl stop 孤立 docs 进程清理** (2026-05-27) — `serve` 状态文件新增 VitePress 子进程 PID；`echoctl stop` 在主进程已退出时会继续清理记录的子进程，并在状态文件缺失但 5173/8787 上仍有 Echo serve/VitePress 进程时识别并停止孤立进程，避免出现“docs 还在、API 已停”的半残页面。已清理本机遗留 PID 96905；`npm test -- test/serve-api.test.js test/stop-command.test.js test/build-docs.test.js` 和 `npm run all` 通过。
+- [x] **echoctl stop 孤立 docs 进程清理** (2026-05-27) — `serve` 状态文件新增 VitePress 子进程 PID；`echoctl stop` 在主进程已退出时会继续清理记录的子进程，并在状态文件缺失但 5173/8787 上仍有 Echo serve/VitePress 进程时识别并停止孤立进程，避免出现”docs 还在、API 已停”的半残页面。已清理本机遗留 PID 96905；`npm test -- test/serve-api.test.js test/stop-command.test.js test/build-docs.test.js` 和 `npm run all` 通过。
+- [x] **serve 启动时自动运行管线** (2026-05-27) — `echoctl serve` 启动时在 `runBuildDocs()` 之前自动执行 `runPipeline({ allProjects: true, silent: true })`，确保 capture 的 buffer 自动转换为可见文章，不再需要手动跑 `npm run all`。`npm run all` 通过，`npm run docs:generate` 生成 18 篇文章。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑
@@ -130,6 +132,7 @@
 
 ## 后期改进
 
+- [ ] **历史重复文章清理** — 修复同项目同日多会话 ID 冲突后，`myhomeworkhelper/session-2026-05-27.md` 这类旧无版本文章可能与 `-vN` 文章重复；需设计显式迁移/删除路径，不在常规 convert/validate 中自动改正文或删文章。
 - [ ] **持续同步** — 定期扫描新 session JSONL，自动导入 Echo
 - [ ] **v2: 上下文池** — 跨文章选取片段 → 共享池 → AI 讨论合成
 - [ ] **Codex 模型识别** — `extractParticipants` 从标题解析模型名，不全标为 Claude
