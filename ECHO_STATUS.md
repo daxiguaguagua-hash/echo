@@ -120,7 +120,8 @@
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
 - [x] **项目本地管线 CLI** (2026-05-24) — 新增 `echo-mcp all` 从任意注册项目目录运行完整管线 (convert → validate → index → resolve)；所有管线脚本 (convert/validate/index/resolve/search/annotate/import-sessions) 统一走 `resolveDataDirs()` 按 cwd 匹配 project registry；新增 `run-pipeline.js` usecase；doctor 识别 Echo 内部数据目录并提示修复命令。113 测试全绿，`npm run all` 通过。设计文档：[issues/004-project-local-pipeline-cli.md](issues/004-project-local-pipeline-cli.md)
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
-- [ ] **AUQ 捕获质量修复** — 问题 1：AUQ 之间的叙述文本丢失；问题 2：答案格式为原始系统返回值。详见 [issues/013-auq-capture-quality.md](issues/013-auq-capture-quality.md)
+- [x] **AUQ 捕获质量修复** — 问题 1：AUQ 之间的叙述文本丢失（已修复：ordered_blocks 保留原始交错顺序）；问题 2：答案格式为原始系统返回值（已修复：正则解析并 join 所有答案）。详见 [issues/013-auq-capture-quality.md](issues/013-auq-capture-quality.md)
+- [ ] **capture.js 同步 + 测试覆盖** — Phase 1: 可测试性重构 (module.exports)；Phase 2: 同步 Bash 版 AUQ 修复 (ordered_blocks + tool_use_id + 答案展示)；Phase 3: 15 个 node:test 用例覆盖 extractAuqBlock/handleStop/handleUserPromptSubmit/handleStopFailure。详见 [issues/014-capture-js-sync-and-test.md](issues/014-capture-js-sync-and-test.md)
 - [x] **Project registry** — `registry.json` schema、登记/读取 usecase、重复登记幂等和路径缺失测试
 - [x] **init project 命令** — 新增 `echo-mcp init project [--path <dir>]`：全局 `~/.echo-workspace/registry.json` 登记项目，并创建 `projects/<project-id>/` 数据目录（session-buffer/、articles/、comments/、index/）
 - [x] **hook 项目路由** — capture.js：去掉模块级路径常量，按 cwd 匹配 registry 写入对应项目数据目录或降级到 Echo home
