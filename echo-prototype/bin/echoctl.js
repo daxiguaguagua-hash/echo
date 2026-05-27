@@ -439,7 +439,39 @@ switch (cmd) {
     break;
   case "stop": {
     (async () => {
-      const { readServeInfo, clearServeInfo, isValidPositivePid, verifyProcessIdentity } = require("../scripts/serve");
+      const {
+        readServeInfo,
+        clearServeInfo,
+        findServeProcessCandidates,
+        isValidPositivePid,
+        verifyProcessIdentity,
+      } = require("../scripts/serve");
+
+      function childPidsFrom(info) {
+        return [
+          ...(Array.isArray(info.childPids) ? info.childPids : []),
+          info.vitepressPid,
+        ].filter((pid, index, arr) => isValidPositivePid(pid) && pid !== info.pid && arr.indexOf(pid) === index);
+      }
+
+      function signalPid(pid, signal = "SIGTERM") {
+        try {
+          process.kill(pid, signal);
+          return true;
+        } catch (err) {
+          if (err.code === "ESRCH") return false;
+          throw err;
+        }
+      }
+
+      function stopExtraPids(pids) {
+        const stopped = [];
+        for (const pid of pids) {
+          if (signalPid(pid)) stopped.push(pid);
+        }
+        return stopped;
+      }
+
       let info;
       try {
         info = readServeInfo();
@@ -449,7 +481,18 @@ switch (cmd) {
         process.exit(1);
       }
       if (!info) {
-        console.log("No running serve instance found.");
+        const candidates = findServeProcessCandidates();
+        if (candidates.length === 0) {
+          console.log("No running serve instance found.");
+          process.exit(0);
+        }
+        const stopped = stopExtraPids(candidates.map((p) => p.pid));
+        if (stopped.length > 0) {
+          console.log(`No serve state found, but stopped orphaned Echo process(es): ${stopped.join(", ")}.`);
+        } else {
+          console.log("No running serve instance found.");
+        }
+        clearServeInfo();
         process.exit(0);
       }
 
@@ -466,6 +509,8 @@ switch (cmd) {
       } catch (err) {
         if (err.code === "ESRCH") {
           console.log(`Process ${pid} is no longer running.`);
+          const stopped = stopExtraPids(childPidsFrom(info));
+          if (stopped.length > 0) console.log(`Stopped child process(es): ${stopped.join(", ")}.`);
           clearServeInfo();
           process.exit(0);
         }
@@ -513,6 +558,8 @@ switch (cmd) {
       }
 
       if (exited) {
+        const stopped = stopExtraPids(childPidsFrom(info));
+        if (stopped.length > 0) console.log(`Stopped child process(es): ${stopped.join(", ")}.`);
         console.log(`Serve stopped (pid ${pid}).`);
         clearServeInfo();
       } else {

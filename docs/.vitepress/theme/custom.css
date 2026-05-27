@@ -124,6 +124,47 @@
   border-color: var(--vp-c-brand-1);
 }
 
+.echo-project-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 22px;
+}
+
+.echo-project-tab {
+  align-items: center;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  color: var(--vp-c-text-2);
+  display: inline-flex;
+  font-size: 13px;
+  gap: 6px;
+  line-height: 1;
+  padding: 8px 11px;
+  text-decoration: none;
+}
+
+.echo-project-tab span {
+  color: var(--vp-c-text-3);
+}
+
+.echo-project-tab:hover,
+.echo-project-tab:focus {
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
+  text-decoration: none;
+}
+
+.echo-project-tab-active {
+  background: var(--vp-c-brand-soft);
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
+}
+
+.echo-project-tab-active span {
+  color: var(--vp-c-brand-1);
+}
+
 .echo-tag-cloud {
   display: flex;
   flex-wrap: wrap;

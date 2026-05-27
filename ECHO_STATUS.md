@@ -97,6 +97,9 @@
 - [x] **网页标签创建** (2026-05-26) — 文章列表和文章详情页将 `project` 作为第一枚虚拟标签展示，`/tags/` 同步纳入项目标签；文章详情页新增“创建标记”输入框，调用 `/api/tags` 复用 `addTags` 写回 frontmatter 并重建站点。新增 build-docs 与 serve API 回归测试；Browser 验证标签展示与按钮可用态；`npm test` 256 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [x] **标签页筛选** (2026-05-26) — `/tags/` 改为 Vue 组件 `EchoTagsPage`，点击标签后仅显示该标签对应文章，URL hash 保持可分享；选中标签使用品牌色高亮，未选中标签弱化为灰色。Browser 验证 `知识管理` 只显示 3 篇文章且样式状态正确；`npm test` 256 全绿，`npm run docs:build` 和 `npm run all` 通过。
 - [x] **Turn marker 隐藏展示** (2026-05-26) — 文章页不再显示 `claude t004 · reply t003` 这类 turn marker；`build-docs.js` 改为输出隐藏 metadata 节点，保留 `data-turn-id`、`data-speaker`、`data-reply-to`，CSS 兜底隐藏旧节点。新增 build-docs 回归测试，`node --test test/build-docs.test.js` 和 `npm run docs:build` 通过。
+- [x] **跨项目同 ID 文章 URL 冲突修复** (2026-05-27) — VitePress 生成文章页时改用 project-qualified slug（如 `mynote--session-2026-05-27`），避免不同项目同一 `id` 互相覆盖；侧边栏、首页、文章列表、标签页链接同步使用新 slug；评论渲染按项目过滤，避免同 ID 文章串评论。新增 build-docs 回归测试；`npm test -- test/build-docs.test.js`、`npm run all`、`npm run docs:build` 通过。
+- [x] **文章列表项目选项卡** (2026-05-27) — `/articles/` 新增 `EchoProjectTabs`，按文章所在项目/文件夹生成 `全部`、`mynote`、`myhomeworkhelper` 等选项卡；选项卡名就是项目名，点击后仅显示该项目文章。新增 build-docs 回归测试；`npm test -- test/build-docs.test.js` 通过。
+- [x] **echoctl stop 孤立 docs 进程清理** (2026-05-27) — `serve` 状态文件新增 VitePress 子进程 PID；`echoctl stop` 在主进程已退出时会继续清理记录的子进程，并在状态文件缺失但 5173/8787 上仍有 Echo serve/VitePress 进程时识别并停止孤立进程，避免出现“docs 还在、API 已停”的半残页面。已清理本机遗留 PID 96905；`npm test -- test/serve-api.test.js test/stop-command.test.js test/build-docs.test.js` 和 `npm run all` 通过。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 
 ### 编辑
@@ -117,6 +120,7 @@
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
 - [x] **项目本地管线 CLI** (2026-05-24) — 新增 `echo-mcp all` 从任意注册项目目录运行完整管线 (convert → validate → index → resolve)；所有管线脚本 (convert/validate/index/resolve/search/annotate/import-sessions) 统一走 `resolveDataDirs()` 按 cwd 匹配 project registry；新增 `run-pipeline.js` usecase；doctor 识别 Echo 内部数据目录并提示修复命令。113 测试全绿，`npm run all` 通过。设计文档：[issues/004-project-local-pipeline-cli.md](issues/004-project-local-pipeline-cli.md)
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
+- [ ] **AUQ 捕获质量修复** — 问题 1：AUQ 之间的叙述文本丢失；问题 2：答案格式为原始系统返回值。详见 [issues/013-auq-capture-quality.md](issues/013-auq-capture-quality.md)
 - [x] **Project registry** — `registry.json` schema、登记/读取 usecase、重复登记幂等和路径缺失测试
 - [x] **init project 命令** — 新增 `echo-mcp init project [--path <dir>]`：全局 `~/.echo-workspace/registry.json` 登记项目，并创建 `projects/<project-id>/` 数据目录（session-buffer/、articles/、comments/、index/）
 - [x] **hook 项目路由** — capture.js：去掉模块级路径常量，按 cwd 匹配 registry 写入对应项目数据目录或降级到 Echo home

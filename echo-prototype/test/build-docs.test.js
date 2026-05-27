@@ -41,6 +41,12 @@ function readTagsPayload(tagsIndex) {
   return JSON.parse(decodeURIComponent(match[1]));
 }
 
+function readProjectTabsPayload(articleIndex) {
+  const match = articleIndex.match(/<EchoProjectTabs payload="([^"]+)" \/>/);
+  assert.ok(match, "article index should render EchoProjectTabs payload");
+  return JSON.parse(decodeURIComponent(match[1]));
+}
+
 test("docs generation includes global articles when run inside an empty registered project", (t) => {
   const oldEchoHome = process.env.ECHO_HOME;
   const oldCwd = process.cwd();
@@ -91,10 +97,9 @@ test("runBuildDocs can generate a runtime VitePress site outside the package doc
   assert.ok(fs.existsSync(path.join(docsRoot, ".vitepress", "config.mts")));
   assert.ok(fs.existsSync(path.join(docsRoot, ".vitepress", "theme", "index.ts")));
   assert.ok(fs.existsSync(path.join(docsRoot, "articles", "generated", "runtime-article.md")));
-  assert.match(
-    fs.readFileSync(path.join(docsRoot, "articles", "index.md"), "utf-8"),
-    /Runtime Article/
-  );
+  const articleIndex = fs.readFileSync(path.join(docsRoot, "articles", "index.md"), "utf-8");
+  const payload = readProjectTabsPayload(articleIndex);
+  assert.deepEqual(payload[0].articles.map((article) => article.title), ["Runtime Article"]);
 });
 
 test("runBuildDocs groups sidebar articles by project while keeping recent shortcut", (t) => {
@@ -134,6 +139,46 @@ test("runBuildDocs groups sidebar articles by project while keeping recent short
   assert.ok(sidebar.indexOf("text: '项目'") < sidebar.indexOf('text: "mynote (1)"'));
 });
 
+test("runBuildDocs renders article index project tabs named by project", (t) => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const docsRoot = tempDir();
+  const mynoteRoot = tempDir();
+  const homeworkRoot = tempDir();
+
+  t.after(() => {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(docsRoot, { recursive: true, force: true });
+    fs.rmSync(mynoteRoot, { recursive: true, force: true });
+    fs.rmSync(homeworkRoot, { recursive: true, force: true });
+  });
+
+  process.env.ECHO_HOME = echoHome;
+  const mynote = registerProject(mynoteRoot, { echoHome, projectId: "mynote" });
+  const homework = registerProject(homeworkRoot, { echoHome, projectId: "myhomeworkhelper" });
+  writeArticle(path.join(mynote.dataRoot, "articles"), "mynote-article", "Mynote Article", {
+    project: "mynote",
+  });
+  writeArticle(path.join(homework.dataRoot, "articles"), "homework-article", "Homework Article", {
+    project: "myhomeworkhelper",
+  });
+  process.chdir(mynoteRoot);
+
+  runBuildDocs({ docsRoot });
+
+  const articleIndex = fs.readFileSync(path.join(docsRoot, "articles", "index.md"), "utf-8");
+  const payload = readProjectTabsPayload(articleIndex);
+
+  assert.deepEqual(payload.map((group) => group.label), ["myhomeworkhelper", "mynote"]);
+  assert.deepEqual(payload.find((group) => group.label === "mynote").articles.map((article) => article.title), ["Mynote Article"]);
+  assert.deepEqual(payload.find((group) => group.label === "myhomeworkhelper").articles.map((article) => article.title), ["Homework Article"]);
+  assert.equal(payload.find((group) => group.label === "mynote").articles[0].href, "./generated/mynote--mynote-article");
+});
+
 test("runBuildDocs renders project as the first visible tag and includes it in tags page", (t) => {
   const oldEchoHome = process.env.ECHO_HOME;
   const oldCwd = process.cwd();
@@ -161,9 +206,10 @@ test("runBuildDocs renders project as the first visible tag and includes it in t
   runBuildDocs({ docsRoot });
 
   const articleIndex = fs.readFileSync(path.join(docsRoot, "articles", "index.md"), "utf-8");
-  assert.match(articleIndex, /<div class="echo-tags"><span>mynote<\/span><span>AI<\/span><\/div>/);
+  const articleIndexPayload = readProjectTabsPayload(articleIndex);
+  assert.deepEqual(articleIndexPayload[0].articles[0].tags, ["mynote", "AI"]);
 
-  const articlePage = fs.readFileSync(path.join(docsRoot, "articles", "generated", "project-tagged.md"), "utf-8");
+  const articlePage = fs.readFileSync(path.join(docsRoot, "articles", "generated", "mynote--project-tagged.md"), "utf-8");
   assert.match(articlePage, /<div class="echo-tags"><span>mynote<\/span><span>AI<\/span><\/div>/);
 
   const tagsIndex = fs.readFileSync(path.join(docsRoot, "tags", "index.md"), "utf-8");
@@ -171,6 +217,52 @@ test("runBuildDocs renders project as the first visible tag and includes it in t
   const mynote = payload.find((group) => group.tag === "mynote");
   assert.equal(mynote.anchor, "tag-mynote-1");
   assert.deepEqual(mynote.articles.map((article) => article.title), ["Project Tagged"]);
+});
+
+test("runBuildDocs uses project-qualified slugs for duplicate article ids", (t) => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const docsRoot = tempDir();
+  const mynoteRoot = tempDir();
+  const homeworkRoot = tempDir();
+
+  t.after(() => {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(docsRoot, { recursive: true, force: true });
+    fs.rmSync(mynoteRoot, { recursive: true, force: true });
+    fs.rmSync(homeworkRoot, { recursive: true, force: true });
+  });
+
+  process.env.ECHO_HOME = echoHome;
+  const mynote = registerProject(mynoteRoot, { echoHome, projectId: "mynote" });
+  const homework = registerProject(homeworkRoot, { echoHome, projectId: "myhomeworkhelper" });
+  writeArticle(path.join(mynote.dataRoot, "articles"), "session-2026-05-27", "新增 echoctl 查找项目", {
+    project: "mynote",
+  });
+  writeArticle(path.join(homework.dataRoot, "articles"), "session-2026-05-27", "你怎么知道注册表里面有三个项目？", {
+    project: "myhomeworkhelper",
+  });
+  process.chdir(mynoteRoot);
+
+  runBuildDocs({ docsRoot });
+
+  const generatedDir = path.join(docsRoot, "articles", "generated");
+  assert.ok(fs.existsSync(path.join(generatedDir, "mynote--session-2026-05-27.md")));
+  assert.ok(fs.existsSync(path.join(generatedDir, "myhomeworkhelper--session-2026-05-27.md")));
+
+  const mynotePage = fs.readFileSync(path.join(generatedDir, "mynote--session-2026-05-27.md"), "utf-8");
+  const homeworkPage = fs.readFileSync(path.join(generatedDir, "myhomeworkhelper--session-2026-05-27.md"), "utf-8");
+  assert.match(mynotePage, /新增 echoctl 查找项目/);
+  assert.match(homeworkPage, /你怎么知道注册表里面有三个项目？/);
+
+  const sidebar = fs.readFileSync(path.join(docsRoot, ".vitepress", "echo-sidebar.mts"), "utf-8");
+  assert.match(sidebar, /\/articles\/generated\/mynote--session-2026-05-27/);
+  assert.match(sidebar, /\/articles\/generated\/myhomeworkhelper--session-2026-05-27/);
+  assert.doesNotMatch(sidebar, /\/articles\/generated\/session-2026-05-27'/);
 });
 
 test("runBuildDocs writes tag cloud links to explicit tag section anchors", (t) => {

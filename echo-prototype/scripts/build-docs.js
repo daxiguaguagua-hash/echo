@@ -82,7 +82,10 @@ function articleSlug(article) {
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return slug || encodeURIComponent(base).replace(/%/g, "").toLowerCase();
+  const articleIdSlug = slug || encodeURIComponent(base).replace(/%/g, "").toLowerCase();
+  const project = articleProject(article);
+  if (!project) return articleIdSlug;
+  return `${slugText(project)}--${articleIdSlug}`;
 }
 
 function slugText(value) {
@@ -169,8 +172,9 @@ function renderBody(article) {
 }
 
 function commentsForArticle(article, comments) {
+  const project = articleProject(article) || null;
   return comments
-    .filter((comment) => comment.target?.article_id === article.id)
+    .filter((comment) => comment.target?.article_id === article.id && (comment._project || null) === project)
     .sort((a, b) => String(a.id).localeCompare(String(b.id)));
 }
 
@@ -313,41 +317,25 @@ function groupArticlesByProject(articles) {
 }
 
 function renderArticleIndex(articles) {
-  const projects = collectProjects(articles);
-  const hasProjects = projects.length > 1;
-
-  const filterNav = hasProjects ? `<nav class="echo-project-filter">
-  <span>项目: ${projects.map((p) => `${escapeHtml(p.projectId || "默认")} (${p.count})`).join(", ")}</span>
-</nav>
-` : "";
-
-  const filterScript = "";
-
-  const rows = articles.map((article) => {
-    const title = displayTitle(article);
-    const summary = article.data.summary || "无摘要";
-    const updated = normalizeDate(article.data.updated_at || article.data.created_at);
-    const tags = articleDisplayTags(article);
-    const tagHtml = tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("") || "<span>未标记</span>";
-        return `<a class="echo-article-card" href="./generated/${articleSlug(article)}">
-  <strong>${escapeHtml(title)}</strong>
-  <small>${escapeHtml(updated || "-")}</small>
-  <p>${escapeHtml(summary)}</p>
-  <div class="echo-tags">${tagHtml}</div>
-</a>`;
-  });
+  const projectPayload = groupArticlesByProject(articles).map((group) => ({
+    anchor: `project-${slugText(group.text)}`,
+    key: group.projectId || "__unassigned__",
+    label: group.text,
+    articles: group.articles.map((article) => ({
+      href: `./generated/${articleSlug(article)}`,
+      summary: article.data.summary || "无摘要",
+      tags: articleDisplayTags(article),
+      title: displayTitle(article),
+      updated: normalizeDate(article.data.updated_at || article.data.created_at),
+    })),
+  }));
+  const payload = encodeURIComponent(JSON.stringify(projectPayload));
 
   return `# 文章
 
 共 ${articles.length} 篇 Echo 文章。
 
-${filterNav}
-<div class="echo-article-grid">
-
-${rows.join("\n\n")}
-
-</div>
-${filterScript}
+<EchoProjectTabs payload="${payload}" />
 `;
 }
 

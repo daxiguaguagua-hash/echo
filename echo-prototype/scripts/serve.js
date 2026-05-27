@@ -1,6 +1,6 @@
 const fs = require("fs");
 const http = require("http");
-const { spawn } = require("child_process");
+const { execFileSync, spawn } = require("child_process");
 const path = require("path");
 const { runBuildDocs } = require("./build-docs");
 const { isCaptureEnabled, setCaptureEnabled } = require("./lib/infra/config");
@@ -23,10 +23,12 @@ function serveInfoFile() {
   return path.join(resolveEchoHomePath(), ".serve.json");
 }
 
-function writeServeInfo(apiPort, docsPort) {
+function writeServeInfo(apiPort, docsPort, vitepressPid) {
   fs.writeFileSync(servePidFile(), String(process.pid));
   fs.writeFileSync(serveInfoFile(), JSON.stringify({
     pid: process.pid,
+    vitepressPid: vitepressPid || null,
+    childPids: vitepressPid ? [vitepressPid] : [],
     apiPort,
     docsPort,
     startedAt: new Date().toISOString(),
@@ -63,6 +65,39 @@ function verifyProcessIdentity(info) {
   // PID reuse is extremely unlikely because serve's SIGTERM handler calls
   // clearServeInfo() on graceful shutdown, and EPERM prevents cross-user kills.
   return info.identity === "echo-serve";
+}
+
+function isEchoServeCommand(command) {
+  const runtimeSite = resolveRuntimeSiteDir();
+  return (
+    (command.includes("echoctl") && command.includes("serve")) ||
+    (command.includes("scripts/serve") && command.includes("node")) ||
+    (command.includes("vitepress") && command.includes(runtimeSite))
+  );
+}
+
+function findServeProcessCandidates(ports = [DEFAULT_API_PORT, DEFAULT_DOCS_PORT]) {
+  const pids = new Set();
+  for (const port of ports) {
+    try {
+      const out = execFileSync("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"], { encoding: "utf-8" });
+      for (const line of out.split(/\r?\n/)) {
+        const pid = Number(line.trim());
+        if (isValidPositivePid(pid)) pids.add(pid);
+      }
+    } catch (_) {}
+  }
+
+  const candidates = [];
+  for (const pid of pids) {
+    try {
+      const command = execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf-8" }).trim();
+      if (command && isEchoServeCommand(command)) {
+        candidates.push({ pid, command });
+      }
+    } catch (_) {}
+  }
+  return candidates;
 }
 
 function resolveRuntimeSiteDir() {
@@ -313,7 +348,7 @@ async function start() {
   const router = createRouter({ docsPort, docsRoot: docsDir });
   const server = http.createServer(router);
   server.listen(apiPort, HOST, () => {
-    writeServeInfo(apiPort, docsPort);
+    writeServeInfo(apiPort, docsPort, vitepress.pid);
     console.log(`\n  Echo serve started:`);
     console.log(`  API:       http://${HOST}:${apiPort}`);
     console.log(`  Docs:      http://${HOST}:${docsPort}`);
@@ -339,4 +374,15 @@ if (require.main === module) {
   });
 }
 
-module.exports = { start, createRouter, resolveRuntimeSiteDir, readServeInfo, clearServeInfo, servePidFile, isValidPositivePid, verifyProcessIdentity };
+module.exports = {
+  start,
+  createRouter,
+  resolveRuntimeSiteDir,
+  readServeInfo,
+  clearServeInfo,
+  servePidFile,
+  isValidPositivePid,
+  verifyProcessIdentity,
+  findServeProcessCandidates,
+  isEchoServeCommand,
+};

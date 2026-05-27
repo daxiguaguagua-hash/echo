@@ -132,6 +132,57 @@ test("echoctl stop clears stale serve info when pid does not exist", async () =>
   fs.rmSync(echoHome, { recursive: true, force: true });
 });
 
+test("echoctl stop clears stale serve info and stops recorded child process", async () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(echoHome, { recursive: true });
+
+  const child = spawn(process.execPath, [
+    "-e",
+    `
+      process.stdout.write("ready\\n");
+      setInterval(() => {}, 1000);
+    `,
+  ], { stdio: "pipe" });
+  await waitForReady(child);
+
+  writeServeInfo(echoHome, {
+    pid: 99999999,
+    vitepressPid: child.pid,
+    childPids: [child.pid],
+    apiPort: 8787,
+    docsPort: 5173,
+    startedAt: new Date().toISOString(),
+    identity: "echo-serve",
+  });
+
+  const result = await runStop(echoHome);
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /Process 99999999 is no longer running/);
+  assert.match(result.stdout, new RegExp(`Stopped child process\\(es\\): ${child.pid}`));
+  assert.equal(fs.existsSync(path.join(echoHome, ".serve.json")), false);
+  assert.equal(fs.existsSync(path.join(echoHome, ".serve.pid")), false);
+
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("isEchoServeCommand recognizes only Echo serve commands", () => {
+  const { isEchoServeCommand, resolveRuntimeSiteDir } = require("../scripts/serve");
+  const oldEchoHome = process.env.ECHO_HOME;
+  const echoHome = tempDir();
+  process.env.ECHO_HOME = echoHome;
+
+  const site = resolveRuntimeSiteDir();
+  assert.equal(isEchoServeCommand(`node /repo/bin/echoctl.js serve`), true);
+  assert.equal(isEchoServeCommand(`node /repo/scripts/serve.js`), true);
+  assert.equal(isEchoServeCommand(`node /repo/node_modules/.bin/vitepress dev ${site} --host 127.0.0.1`), true);
+  assert.equal(isEchoServeCommand("node /other/app.js"), false);
+
+  if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+  else process.env.ECHO_HOME = oldEchoHome;
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
 // --- Corrupted serve info ---
 
 test("echoctl stop cleans up corrupted serve info and exits 1", async () => {
