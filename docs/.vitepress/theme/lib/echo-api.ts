@@ -30,6 +30,44 @@ interface TagPayload {
   projectId?: string | null
 }
 
+interface PublishPayload {
+  sessionId: string
+  projectId?: string | null
+}
+
+interface PublishResponse {
+  ok: boolean
+  id: string
+  slug: string
+  turnCount: number
+  version: number
+  latest: boolean
+}
+
+interface LegacyCandidate {
+  sessionId: string
+  fileName: string
+  sourcePath: string
+  turnCount: number
+  mtime: string
+  confidence: string
+  evidence: { kind: string; projectRoot: string } | null
+}
+
+interface LegacyCandidatesResponse {
+  projectId: string
+  sourceDir: string
+  candidates: LegacyCandidate[]
+}
+
+interface LegacyMigrateResponse {
+  ok: boolean
+  migrated: number
+  skipped: number
+  targetDir: string
+  refreshScheduled: boolean
+}
+
 class EchoApiError extends Error {
   status: number
   constructor(message: string, status: number) {
@@ -114,5 +152,23 @@ export function postTag(payload: TagPayload): Promise<any> {
   })
 }
 
+export function postPublish(payload: PublishPayload): Promise<PublishResponse> {
+  return request<PublishResponse>('/api/publish', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getLegacyCandidates(projectId: string): Promise<LegacyCandidatesResponse> {
+  return request<LegacyCandidatesResponse>(`/api/legacy-candidates?projectId=${encodeURIComponent(projectId)}`)
+}
+
+export function migrateLegacyCandidates(projectId: string, candidateIds?: string[]): Promise<LegacyMigrateResponse> {
+  return request<LegacyMigrateResponse>('/api/legacy-candidates/migrate', {
+    method: 'POST',
+    body: JSON.stringify({ projectId, candidateIds }),
+  })
+}
+
 export { EchoApiError, CONFIGURED_API_BASE, DEFAULT_API_BASE }
-export type { EchoStatus, CommentPayload, TagPayload }
+export type { EchoStatus, CommentPayload, TagPayload, PublishPayload, PublishResponse, LegacyCandidate, LegacyCandidatesResponse, LegacyMigrateResponse }

@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-28 (echoctl serve 启动摘要显示已注册项目和新项目注册提醒)
+最后更新：2026-05-28 (三轮 Codex 审计修复完成，管线全绿)
 
 ## 已完成
 
@@ -39,6 +39,13 @@
 - [x] **MCP server 第一阶段** — `scripts/lib/mcp-server.js`：JSON-RPC 2.0 over stdio，实现 5 个工具（`search_articles`、`get_article`、`get_article_context`、`list_tags`、`list_recent`）。零外部 MCP 依赖，纯 Node stdlib。CLI：`echo-mcp mcp` / `npm run mcp`。`markdown-store.loadComments` 新增 `content` 字段。79 测试全绿，管线通过。
 - [x] **Codex Desktop MCP 实机安装验证** (2026-05-25) — VitePress `/api/mcp-config` 返回 canonical 配置 `{ command: "echoctl", args: ["mcp"] }`；已通过 `codex mcp add echo -- echoctl mcp` 写入 `/Users/vincenthuang/.codex/config.toml`。`codex mcp get/list` 显示 `echo` enabled；stdio JSON-RPC 验证 `initialize`、`tools/list`、`search_articles` 均成功。当前会话工具发现层未热加载 Echo，需新线程/重载后作为 Codex MCP 工具出现。
 - [x] **Hook installer/doctor P2 修复** — nested hook 命令改为全量扫描；旧格式 `{ command }` 才迁移，nested entry 原样保留，避免覆盖同 entry 里的其他命令。新增 3 个回归测试，`npm test` 106 全绿，`npm run all` 通过。
+- [x] **下一阶段产品架构文档** (2026-05-28) — 新增 4 份 issues 设计文档：capture 生命周期与 legacy 恢复、`echoctl status`/help/i18n、publish snapshot 版本模型、下一阶段实现交接清单。详见 [issues/017](issues/017-capture-lifecycle-and-legacy-recovery.md)、[issues/018](issues/018-echoctl-status-help-i18n.md)、[issues/019](issues/019-publish-snapshot-version-model.md)、[issues/020](issues/020-next-implementation-handoff.md)。
+- [x] **Legacy 候选扫描与页面恢复** (Issue 017, 2026-05-28) — 新增 `lib/usecases/legacy-candidates.js`：按 transcript_path 和 cwd 匹配 legacy buffer 归属项目；`GET /api/legacy-candidates` 和 `POST /api/legacy-candidates/migrate` API；`EchoLegacyRecovery.vue` 弹框组件，提示用户确认迁移；前端 `echo-api.ts` 已同步。
+- [x] **`echoctl status` 与 i18n 框架** (Issue 018, 2026-05-28) — 新增 `lib/usecases/status-collector.js`：汇集 serve/capture/hook/project/data/legacy/MCP 状态；`lib/i18n/` 消息层（en/zh-CN/bilingual）；`echoctl status [--json] [--lang en|zh-CN]` 命令；`echoctl mcp --help`；`echoctl --help` 中英双语。
+- [x] **Publish 快照版本模型** (Issue 019, 2026-05-28) — 新增 `lib/usecases/snapshot-manifest.js`（`snapshots.json` 外部版本索引）；`POST /api/publish` 支持重复发布同一 session（新增 turn 时创建版本化 article）；不覆盖旧文章正文。
+- [x] **发布入口可见性修复** (Issue 019 follow-up, 2026-05-28) — 文章页底部新增 `发布最新快照`，session 文章可直接从文章页发布当前 live buffer；`EchoLiveSession` 改用统一 `echo-api` 调用，避免从 VitePress 5173 错打 `/api/publish`。Browser 验证按钮可见，已发布文章点击后提示“已经是最新快照”。
+- [x] **三轮 Codex 审计修复** (2026-05-28) — Issue 017 4 项（migrate candidateIds 过滤、completed session 回退匹配、transcript_path 编码、多项目 projectId）；Issue 018 5 项（nested hook 检测+SessionStart、i18n key 映射、MCP 计数双语、ECHO_LANG env、stale URL 隐藏）；Issue 019 4 项（serve 跳过 convert、版本号剥离 buffer 查找、manifest 原子写、loadManifest fail-closed）。管线全绿。
+- [x] **发布提示跨文章状态泄漏修复** (Issue 019 follow-up, 2026-05-28) — `EchoArticleActions` 在 VitePress 客户端切换文章时清空 tag/comment/publish 临时状态，避免 `已经是最新快照` 这类提示从上一篇文章带到下一篇。Browser 复现后验证：v2 点击提示，切到 v3 后提示消失。
 
 ## 进行中
 
@@ -107,7 +114,7 @@
 - [x] **Live session 与不可变文章分层** (2026-05-28) — 正在进行的 AI 会话从 `session-buffer` 渲染 live page，30 秒自动刷新；显式 publish 后生成不可变 article（不可覆盖）。Live 页面位于 `/live/generated/<project>--<session>.md`，含 LIVE 脉冲标记、turn 计数、发布按钮和已发布文章链接。POST `/api/publish` 端点将 buffer 转为正式文章。设计记录：[issues/016-live-session-vs-immutable-article.md](issues/016-live-session-vs-immutable-article.md)
 
 ### 编辑
-- [ ] **全局控制入口迁移** — `收集: 开/关` 和 `MCP 配置` 是全局控制，不应出现在每篇文章末尾；迁移到顶部导航（“首页 / 文章 / 标签”附近）或独立设置入口，文章页底部只保留与当前文章相关的评论/标记操作。
+- [x] **全局控制入口迁移** (2026-05-28) — 新增 `EchoGlobalControls`，将 `收集 开/关` 和 `MCP` 配置入口迁移到 VitePress 顶部导航；文章页底部只保留与当前文章相关的评论/标记操作。Browser 已验证文章列表、文章详情与 MCP 弹窗。
 - [x] **文章正文聊天气泡化** — 用户发言靠右、AI 回复靠左，基于隐藏 `echo-turn-marker` 在 VitePress 渲染后分组，不修改原文且不影响 search landing / annotation anchor。设计记录：[issues/010-article-chat-bubbles.md](issues/010-article-chat-bubbles.md)
 - [x] **聊天气泡运行时修复** (2026-05-26) — 修复 VitePress 将隐藏 turn marker 包进空 `<p>` 后，`EchoChatBubbles` 从 `span.nextSibling` 找不到正文节点的问题；现在以 marker 所在空段落作为边界，并刷新 runtime site。Browser 验证 `session-2026-05-25` 生成 10 个气泡 turn。
 - [x] **聊天气泡宽度自适应** (2026-05-26) — 气泡改为 `width: fit-content` + `max-width` 兜底，短用户消息按内容收缩，长回复仍限制在正文宽度内。
@@ -124,7 +131,7 @@
 - [x] **echoctl serve 后台模式** (2026-05-27) — `echoctl serve` 默认后台启动 API + VitePress，输出中英文对齐提示：Docs/API/State/Log、`echoctl stop` 停止命令、`echoctl serve --foreground` 前台调试、`echoctl capture on/off` 收集开关，并显示“正在收集/已关闭 AI 聊天记录”与对应命令。保留 `--foreground` 使用原前台流程；新增格式化输出测试。
 - [x] **echoctl serve 注册项目提示** (2026-05-28) — 启动摘要新增“已注册项目”列表，并明确提示新项目必须先运行 `echoctl init project --path <project-dir>` 注册，否则网页不会显示该项目的 AI 聊天记录。
 - [x] **README 当前使用方式重写** (2026-05-27) — README 改为当前真实用户路径：安装方法前用醒目的 TIP 提示“AI 时代的安装方法：可以将当前页面交给 AI，让它帮你安装和配置 Echo”；`npm link` 安装开发版 CLI、`echoctl init project` 注册项目、`echoctl hook install claude --write` 安装 hook、`echoctl serve` 后台启动网页；删除过时的 npm 主流程和旧测试数量，补充未注册目录 legacy fallback 与 serve 暂无实时 watcher 的边界说明。
-- [ ] **创建标记表单样式重设计** — 功能保留，但当前文章底部”创建标记”区域像临时表单且视觉重复；需要重新设计为更轻量的文章级标记入口，和评论区/底部导航形成清晰层级。
+- [x] **创建标记表单样式重设计** (2026-05-28) — 保留原有 `postTag` 行为，将底部“创建标记”卡片改为轻量 `标记` 工具条，减少与评论区的视觉重复；Browser 移动宽度检查无横向溢出。
 - [ ] **标签/摘要编辑** — 网页端改 frontmatter 字段，写回 MD
 - [ ] **剪贴板导入脚本** — `paste-to-md.sh`（macOS 优先）
 
@@ -158,6 +165,8 @@
 - [ ] **迁移清理** — 删除旧 `echo-prototype/.echo-buffer/`（已被 `~/.echo-workspace/session-buffer/` 取代）；清理 `echo-prototype/` 中已被复制到 workspace 的旧文章
 - [ ] **Karpathy wiki 模式改造** — **已搁置**（2026-05-23 决定不上）。原计划：wikilink 替代 frontmatter 引用、index.md 内容目录、log.md 操作日志。
   - **替代想法**：不做内置 wiki，改为可选的 `sync-to-wiki` 桥接脚本。检测 `~/Documents/SilentBrain/` 等已有 wiki vault，Echo 的 convert/import 输出自动同步到 wiki 的 `raw/articles/` 目录。用户自己决定是否将 Echo 文章提升为 wiki 的 concept/entity 页。这样 Echo 管线不受影响，wiki 作为独立的知识精炼层存在。架构影响评估已存档于 session-2026-05-23。
+- [ ] **build-docs 读 snapshots.json** (Issue 019 P2 延后) — 文章列表默认只显示 latest snapshot，需接入 `snapshots.json` 版本索引；当前 build-docs 加载全部 article 不做版本过滤。
+- [ ] **help 文案进 i18n 层** (Issue 018 P2 延后) — `echoctl --help`/`mcp --help` 文案仍硬编码在 bin/echoctl.js，未进入 `lib/i18n/messages/`；`echo-mcp --help` 缺少 legacy 命令提醒。
 - [ ] **Code Review 改进项** — 11 项代码质量问题，详见 [issues/009-code-review-findings.md](issues/009-code-review-findings.md)（2026-05-26，CodeGraph 全项目扫描）
 - [x] **echoctl 查找已注册项目 + MCP 同步** — CLI 新增 `echoctl project list` / `echoctl project find <id>`，MCP 新增 `list_projects` / `get_project` 工具，详见 [issues/011-echoctl-list-projects-mcp-sync.md](issues/011-echoctl-list-projects-mcp-sync.md)（2026-05-27）
 - [x] **多项目网页端不可见** — `echoctl all` 改为对所有已注册项目运行完整管线；新增 `aggregate-all-projects.js` usecase；`loadAllArticlesAndComments()` 已支撑多项目网页聚合。详见 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)（2026-05-27）

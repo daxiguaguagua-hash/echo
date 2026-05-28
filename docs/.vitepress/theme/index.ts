@@ -9,6 +9,8 @@ import EchoProjectTabs from './components/EchoProjectTabs.vue'
 import EchoCommentChain from './components/EchoCommentChain.vue'
 import EchoCommentNode from './components/EchoCommentNode.vue'
 import EchoLiveSession from './components/EchoLiveSession.vue'
+import EchoLegacyRecovery from './components/EchoLegacyRecovery.vue'
+import EchoGlobalControls from './components/EchoGlobalControls.vue'
 import './custom.css'
 
 export default {
@@ -24,5 +26,7 @@ export default {
     app.component('EchoCommentChain', EchoCommentChain)
     app.component('EchoCommentNode', EchoCommentNode)
     app.component('EchoLiveSession', EchoLiveSession)
+    app.component('EchoLegacyRecovery', EchoLegacyRecovery)
+    app.component('EchoGlobalControls', EchoGlobalControls)
   },
 }

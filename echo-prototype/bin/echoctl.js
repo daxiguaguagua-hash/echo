@@ -34,6 +34,40 @@ Usage:
   ${commandFor(["serve", "--foreground"])}  Start API + VitePress dev server in foreground
   ${commandFor(["refresh"])}            Refresh pipeline + docs without restarting serve
   ${commandFor(["stop"])}               Stop a running serve instance
+  ${commandFor(["status", "[--json]", "[--lang <en|zh-CN>]"])}  Show Echo status overview
+  ${commandFor(["mcp", "--help"])}           Show MCP setup instructions
+`;
+
+const MCP_HELP = `Echo MCP / Echo AI 访问接口
+
+MCP is the bridge that lets AI assistants read and search your Echo archive.
+MCP 是让 AI 助手读取、搜索 Echo 本地归档的桥。
+
+What it provides / 它提供：
+  search_articles    Search Echo articles / 搜索文章
+  get_article        Read one article / 读取文章
+  get_article_context  Read article with comments / 读取文章和评论
+  list_recent        List recent articles / 最近文章
+  list_tags          List tags / 标签列表
+  add_tags           Add tags / 添加标签
+  remove_tags        Remove tags / 移除标签
+  list_projects      List registered projects / 项目列表
+  get_project        Read one project / 读取项目信息
+
+Config / 配置：
+
+{
+  "mcpServers": {
+    "echo": {
+      "command": "${cliNames.canonicalName}",
+      "args": ["mcp"]
+    }
+  }
+}
+
+Verify / 验证：
+  ${cliNames.canonicalName} status        Check Echo status / 查看 Echo 状态
+  ${cliNames.canonicalName} doctor        Diagnose setup / 诊断配置
 `;
 
 function scheduleRefreshIfServeRunning() {
@@ -69,7 +103,22 @@ if (cmd === "--version" || cmd === "-v" || cmd === "-V") {
   process.exit(0);
 }
 
+if (!cmd || cmd === "--help" || cmd === "-h" || cmd === "help") {
+  console.log(USAGE);
+  process.exit(0);
+}
+
 switch (cmd) {
+  case "status": {
+    const json = args.includes("--json");
+    const langIdx = args.indexOf("--lang");
+    const lang = langIdx !== -1 ? args[langIdx + 1] : (process.env.ECHO_LANG || null);
+    const { collectStatus } = require("../scripts/lib/usecases/status-collector");
+    const { formatStatus } = require("../scripts/lib/i18n/format");
+    const model = collectStatus();
+    console.log(formatStatus(model, { json, lang }));
+    break;
+  }
   case "hook": {
     const sub = args[1];
     if (sub === "capture") require("../scripts/lib/hooks/capture");
@@ -349,7 +398,11 @@ switch (cmd) {
     break;
   }
   case "mcp":
-    require("../scripts/lib/interfaces/mcp/server").start();
+    if (args[1] === "--help" || args[1] === "-h") {
+      console.log(MCP_HELP);
+    } else {
+      require("../scripts/lib/interfaces/mcp/server").start();
+    }
     break;
   case "import": {
     const sub = args[1];

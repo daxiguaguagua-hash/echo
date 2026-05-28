@@ -375,28 +375,106 @@ function createRouter(deps) {
         }
         try {
           const dirs = resolveDirsForProject(body.projectId, deps.dirs);
-          const bufferPath = path.join(dirs.bufferDir, `${body.sessionId}.md`);
+          const baseSessionId = body.sessionId.replace(/-v\d+$/, "");
+          const bufferPath = path.join(dirs.bufferDir, `${baseSessionId}.md`);
           if (!fs.existsSync(bufferPath)) {
             return jsonResponse(res, 404, { error: `session buffer not found: ${body.sessionId}` }, docsPort);
           }
           const { parseBuffer, buildArticle } = require("./lib/usecases/convert-buffer");
+          const { recordSnapshot, getSnapshotInfo } = require("./lib/usecases/snapshot-manifest");
           const raw = fs.readFileSync(bufferPath, "utf-8");
           const { turns } = parseBuffer(raw);
           if (turns.length === 0) {
             return jsonResponse(res, 422, { error: "buffer has no turns" }, docsPort);
           }
-          const articlePath = path.join(dirs.articlesDir, `${body.sessionId}.md`);
-          if (fs.existsSync(articlePath)) {
-            return jsonResponse(res, 409, { error: "article already published" }, docsPort);
+
+          const snapInfo = getSnapshotInfo(dirs.dataRoot || dirs.articlesDir, baseSessionId);
+          if (snapInfo && snapInfo.versions.length > 0) {
+            const last = snapInfo.versions[snapInfo.versions.length - 1];
+            if (last.turnCount >= turns.length) {
+              return jsonResponse(res, 409, {
+                error: "already published with same or more turns",
+                existingVersion: last.version,
+              }, docsPort);
+            }
           }
-          const { id, article, turnCount } = buildArticle(body.sessionId, turns, { project: dirs.projectId });
+
+          const version = snapInfo ? snapInfo.versions.length + 1 : 1;
+          const articleId = version > 1
+            ? `${baseSessionId}-v${version}`
+            : baseSessionId;
+          const articlePath = path.join(dirs.articlesDir, `${articleId}.md`);
+          if (fs.existsSync(articlePath)) {
+            return jsonResponse(res, 409, { error: `article ${articleId} already exists` }, docsPort);
+          }
+          const { id, article, turnCount } = buildArticle(articleId, turns, { project: dirs.projectId });
+          const snap = recordSnapshot(dirs.dataRoot || dirs.articlesDir, baseSessionId, id, turnCount);
           fs.mkdirSync(dirs.articlesDir, { recursive: true });
           fs.writeFileSync(articlePath, article);
           try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
             console.error("[echo] Rebuilding docs after publish failed:", e.message);
           }
-          const slug = id;
-          return jsonResponse(res, 201, { ok: true, id, slug, turnCount }, docsPort);
+          return jsonResponse(res, 201, {
+            ok: true, id, slug: id, turnCount, version: snap.version, latest: true,
+          }, docsPort);
+        } catch (err) {
+          return jsonResponse(res, 500, { error: err.message }, docsPort);
+        }
+      }
+
+      if (p === "/api/legacy-candidates" && req.method === "GET") {
+        const projectId = url.searchParams.get("projectId");
+        if (!projectId) {
+          return jsonResponse(res, 400, { error: "projectId query parameter required" }, docsPort);
+        }
+        try {
+          const { scanLegacyCandidates } = require("./lib/usecases/legacy-candidates");
+          const result = scanLegacyCandidates(projectId);
+          return jsonResponse(res, 200, result, docsPort);
+        } catch (err) {
+          return jsonResponse(res, err.message.includes("not found") ? 404 : 500, { error: err.message }, docsPort);
+        }
+      }
+
+      if (p === "/api/legacy-candidates/migrate" && req.method === "POST") {
+        const body = await readBody(req);
+        if (!body || !body.projectId) {
+          return jsonResponse(res, 400, { error: "projectId required" }, docsPort);
+        }
+        try {
+          const { migrateLegacyBuffer } = require("./lib/usecases/migrate-legacy-buffer");
+          let filterFileNames = null;
+          const candidateIds = body.candidateIds;
+          if (candidateIds && candidateIds.length > 0) {
+            const { scanLegacyCandidates } = require("./lib/usecases/legacy-candidates");
+            const scan = scanLegacyCandidates(body.projectId);
+            const idSet = new Set(candidateIds);
+            filterFileNames = scan.candidates
+              .filter((c) => idSet.has(c.sessionId))
+              .map((c) => c.fileName);
+            if (filterFileNames.length === 0) {
+              return jsonResponse(res, 200, {
+                ok: true, migrated: 0, skipped: 0,
+                targetDir: null, refreshScheduled: false,
+              }, docsPort);
+            }
+          }
+          const result = migrateLegacyBuffer({
+            projectId: body.projectId,
+            apply: true,
+            overwrite: false,
+            filterFileNames,
+          });
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
+            console.error("[echo] Rebuilding docs after legacy migration failed:", e.message);
+          }
+          return jsonResponse(res, 200, {
+            ok: true,
+            migrated: result.summary.copy + result.summary.overwrite,
+            skipped: result.summary.skippedExisting,
+            targetDir: result.targetDir,
+            refreshScheduled: true,
+          }, docsPort);
         } catch (err) {
           return jsonResponse(res, 500, { error: err.message }, docsPort);
         }
@@ -405,7 +483,7 @@ function createRouter(deps) {
       if (p === "/api/rebuild-docs" && req.method === "POST") {
         try {
           const { runPipeline } = require("./lib/usecases/run-pipeline");
-          runPipeline({ allProjects: true, silent: true });
+          runPipeline({ allProjects: true, silent: true, steps: ["validate", "index", "resolve"] });
           runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() });
           return jsonResponse(res, 200, { ok: true }, docsPort);
         } catch (err) {
@@ -427,7 +505,7 @@ async function start() {
   console.log("[echoctl] Running pipeline...");
   try {
     const { runPipeline } = require("./lib/usecases/run-pipeline");
-    runPipeline({ allProjects: true, silent: true });
+    runPipeline({ allProjects: true, silent: true, steps: ["validate", "index", "resolve"] });
   } catch (e) {
     console.error("[echoctl] pipeline warning:", e.message);
   }

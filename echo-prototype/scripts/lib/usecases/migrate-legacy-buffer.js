@@ -104,10 +104,14 @@ function migrateLegacyBuffer(opts = {}) {
   }
 
   const markdownNames = listMarkdownFiles(sourceDir);
+  const filterNames = opts.filterFileNames || null;
+  const filteredNames = filterNames
+    ? markdownNames.filter((n) => filterNames.includes(n))
+    : markdownNames;
   const files = [];
   const copiedNames = new Set();
 
-  for (const name of markdownNames) {
+  for (const name of filteredNames) {
     const source = path.join(sourceDir, name);
     const dest = path.join(targetDir, name);
     const exists = fs.existsSync(dest);

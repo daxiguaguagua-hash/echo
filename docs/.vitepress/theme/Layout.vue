@@ -10,7 +10,11 @@ const echoInteractive = computed(() => !!(frontmatter.value as any)?.echo?.inter
 <template>
   <EchoSearchLanding />
   <EchoChatBubbles />
+  <EchoLegacyRecovery />
   <DefaultTheme.Layout>
+    <template #nav-bar-content-after>
+      <EchoGlobalControls />
+    </template>
     <template #doc-bottom>
       <div v-if="echoInteractive" class="echo-doc-bottom">
         <div class="echo-doc-bottom-inner">
