@@ -5,7 +5,8 @@ const os = require("node:os");
 const http = require("node:http");
 const test = require("node:test");
 
-const { createRouter } = require("../scripts/serve");
+const net = require("node:net");
+const { createRouter, findFreePort } = require("../scripts/serve");
 const { registerProject } = require("../scripts/lib/usecases/project-registry");
 const { resolveDataDirs } = require("../scripts/lib/infra/echo-paths");
 function tempDir() {
@@ -300,4 +301,23 @@ test("OPTIONS returns CORS headers", async () => {
 
   delete process.env.ECHO_HOME;
   fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("findFreePort returns a free port", async () => {
+  const port = await findFreePort(19800);
+  assert.ok(port >= 19800);
+  assert.ok(port <= 65535);
+  assert.equal(typeof port, "number");
+});
+
+test("findFreePort skips occupied ports", async () => {
+  const blocker = net.createServer();
+  await new Promise((resolve) => blocker.listen(19801, "127.0.0.1", resolve));
+
+  try {
+    const port = await findFreePort(19801);
+    assert.ok(port > 19801, `expected port > 19801, got ${port}`);
+  } finally {
+    await new Promise((resolve) => blocker.close(resolve));
+  }
 });

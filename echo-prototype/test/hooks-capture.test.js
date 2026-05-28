@@ -6,6 +6,7 @@ const test = require("node:test");
 
 const {
   extractAuqBlock,
+  getSessionFile,
   claudeProjectDirName,
   projectPathFromTranscriptPath,
   resolveBufferRoot,
@@ -641,6 +642,36 @@ test("handleStopFailure appends to failures.jsonl", async () => {
     assert.equal(parsed.ts, "2026-05-27T10:00:00Z");
     assert.equal(parsed.session_id, "sess-fail");
     assert.equal(parsed.error, "something went wrong");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("getSessionFile skips existing files using exclusive create", () => {
+  const dir = tempDir();
+  try {
+    const date = require("../scripts/lib/hooks/capture").getLocalDate();
+    const existing = path.join(dir, `session-${date}-v1.md`);
+    fs.writeFileSync(existing, "", "utf-8");
+
+    const f1 = getSessionFile("sid-001", dir);
+    assert.match(f1, /-v2\.md$/);
+
+    const mapPath = path.join(dir, "session-map.txt");
+    assert.ok(fs.existsSync(mapPath));
+    const map = fs.readFileSync(mapPath, "utf-8");
+    assert.match(map, /sid-001=/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("getSessionFile returns same file for same session ID", () => {
+  const dir = tempDir();
+  try {
+    const f1 = getSessionFile("sid-002", dir);
+    const f2 = getSessionFile("sid-002", dir);
+    assert.equal(f1, f2);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

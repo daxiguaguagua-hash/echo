@@ -19,6 +19,8 @@ interface CommentPayload {
   occurrence?: number
   author?: string
   scope?: string
+  evolutionOf?: string[]
+  evolutionKind?: string
   projectId?: string | null
 }
 

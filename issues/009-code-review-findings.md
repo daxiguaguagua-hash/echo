@@ -70,3 +70,25 @@ CLI 入口全部塞在一个 `switch(cmd)` 里。`import` case 从第 210 行写
 `echoctl.js:240-242` — 在 `case "import"` 块中间写了 `const os = require("os"); const path = require("path"); const fs = require("fs");`，此时文件顶部早已用过了。
 
 **建议**：移到文件顶部，或拆分子命令后自然消失。
+
+## 实施计划 (2026-05-27，与 Codex 共识)
+
+### 测试策略
+
+| # | 问题 | 测试策略 | 原因 |
+|---|------|---------|------|
+| 1 | echoctl.js 单体膨胀 | `[ADD_TEST]` | 高风险重构，33 个 process.exit() 分散；先做 CLI 行为 characterization tests |
+| 5 | loadArticleById 缓存 | `[ADD_TEST]` | 现有测试只验证行为，不会证明真的避免 O(n) 扫描 |
+| 7 | findFreePort 递归 | `[ADD_TEST]` | 递归改循环容易破坏端口探测/关闭 socket |
+| 9 | session-map 并发 | `[ADD_TEST]` | 并发写是数据损坏风险；现有同步单线程测试覆盖不到 |
+| 10 | frontmatter escaping | `[ADD_TEST]` | YAML 转义是输出格式风险；需含引号、冒号、换行等 fixture |
+| 11 | duplicate require | `[EXISTING_OK]` | 纯内部清理，无行为变化 |
+
+### 实施顺序
+
+1. Item 1 — echoctl 拆命令（风险最大，先 characterization test）
+2. Item 9 — session-map 并发（数据完整性）
+3. Item 5 — loadArticleById 缓存（P1 性能）
+4. Item 10 — frontmatter escaping（输出格式风险）
+5. Item 7 — findFreePort loop（小改动）
+6. Item 11 — duplicate require（顺手清理）

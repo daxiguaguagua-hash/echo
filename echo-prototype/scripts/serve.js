@@ -74,6 +74,7 @@ function isPidRunning(pid) {
 
 function formatServeSummary(info, opts = {}) {
   const captureEnabled = opts.captureEnabled !== false;
+  const projects = opts.projects || listProjects();
   const command = cliNames.canonicalName;
   const title = opts.background
     ? "Echo服务在后台运行 / Echo serve started in background"
@@ -96,6 +97,9 @@ function formatServeSummary(info, opts = {}) {
   const captureHint = captureEnabled
     ? "关闭收集 / Turn off"
     : "开启收集 / Turn on";
+  const projectLines = projects.length === 0
+    ? ["  (none) No registered projects yet."]
+    : projects.map((p) => `  ${p.projectId.padEnd(20)} ${p.root}`);
 
   return [
     title,
@@ -110,6 +114,12 @@ function formatServeSummary(info, opts = {}) {
     "AI chat capture / AI 聊天记录:",
     `  Status / 当前状态       ${captureStatus}`,
     `  Command / 对应命令      ${captureHint}: ${captureCommand}`,
+    "",
+    "Registered projects / 已注册项目:",
+    ...projectLines,
+    "",
+    "New projects must be registered before Echo can show their AI chat records.",
+    `新项目必须先注册，否则网页不会显示该项目的 AI 聊天记录：${command} init project --path <project-dir>`,
   ].join("\n");
 }
 
@@ -161,16 +171,24 @@ function resolveRuntimeSiteDir() {
   return path.join(resolveEchoHomePath(), ".site");
 }
 
-function findFreePort(start) {
+async function findFreePort(start) {
   const net = require("net");
-  return new Promise((resolve) => {
-    const s = net.createServer();
-    s.listen(start, HOST, () => {
-      const port = s.address().port;
-      s.close(() => resolve(port));
-    });
-    s.on("error", () => resolve(findFreePort(start + 1)));
-  });
+  let port = start;
+  while (port <= 65535) {
+    try {
+      return await new Promise((resolve, reject) => {
+        const s = net.createServer();
+        s.listen(port, HOST, () => {
+          const assignedPort = s.address().port;
+          s.close(() => resolve(assignedPort));
+        });
+        s.on("error", reject);
+      });
+    } catch (_) {
+      port++;
+    }
+  }
+  throw new Error(`No free port found from ${start} to 65535`);
 }
 
 function allowedOrigin(origin, docsPort) {
@@ -352,6 +370,8 @@ function createRouter(deps) {
 
       if (p === "/api/rebuild-docs" && req.method === "POST") {
         try {
+          const { runPipeline } = require("./lib/usecases/run-pipeline");
+          runPipeline({ allProjects: true, silent: true });
           runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() });
           return jsonResponse(res, 200, { ok: true }, docsPort);
         } catch (err) {
@@ -450,6 +470,7 @@ if (require.main === module) {
 module.exports = {
   start,
   createRouter,
+  findFreePort,
   resolveRuntimeSiteDir,
   readServeInfo,
   clearServeInfo,

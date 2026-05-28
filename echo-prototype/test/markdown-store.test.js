@@ -5,6 +5,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const {
+  clearArticleCache,
   listMarkdownFiles,
   readMarkdownFile,
   loadArticles,
@@ -347,5 +348,65 @@ test("writeComment produces valid gray-matter frontmatter (article-level)", () =
   assert.equal(parsed.data.target.article_id, "test-art-003");
   assert.equal(parsed.data.anchor.kind, "article");
   assert.equal(parsed.content.trim(), "Article-level note.");
+  fs.rmSync(td, { recursive: true, force: true });
+});
+
+test("loadArticleById caches results after loadArticles", () => {
+  const td = tempDir();
+  clearArticleCache();
+
+  writeFixture(td, "a.md", articleFixture("art-1", "Art 1", "Body 1."));
+  writeFixture(td, "b.md", articleFixture("art-2", "Art 2", "Body 2."));
+
+  loadArticles(td);
+  const a1 = loadArticleById(td, "art-1");
+  assert.equal(a1.id, "art-1");
+  // Verify second call hits cache: creating a new file after loadArticles
+  // should not affect loadArticleById when cache is populated
+  writeFixture(td, "c.md", articleFixture("art-3", "Art 3", "Body 3."));
+  const a3 = loadArticleById(td, "art-3");
+  assert.equal(a3, null);
+
+  clearArticleCache();
+  fs.rmSync(td, { recursive: true, force: true });
+});
+
+test("loadArticleById populates cache on first call when loadArticles not called", () => {
+  const td = tempDir();
+  clearArticleCache();
+
+  writeFixture(td, "a.md", articleFixture("art-1", "Art 1", "Body 1."));
+  writeFixture(td, "b.md", articleFixture("art-2", "Art 2", "Body 2."));
+
+  // First call scans and populates cache
+  const a1 = loadArticleById(td, "art-1");
+  assert.equal(a1.id, "art-1");
+  // Second call uses cache — adding new file shouldn't affect
+  writeFixture(td, "c.md", articleFixture("art-3", "Art 3", "Body 3."));
+  const a3 = loadArticleById(td, "art-3");
+  assert.equal(a3, null);
+
+  clearArticleCache();
+  fs.rmSync(td, { recursive: true, force: true });
+});
+
+test("writeArticleFile clears article cache", () => {
+  const td = tempDir();
+  clearArticleCache();
+
+  writeFixture(td, "a.md", articleFixture("art-1", "Art 1", "Body 1."));
+  loadArticles(td);
+  // Cache is populated
+  const a1 = loadArticleById(td, "art-1");
+  assert.equal(a1.id, "art-1");
+
+  // Write triggers cache clear
+  const store = require("../scripts/lib/infra/markdown-store");
+  store.writeArticleFile(path.join(td, "new.md"), { id: "new-art", title: "New" }, "New body.");
+  // After cache clear, loadArticleById should see new file
+  const na = loadArticleById(td, "new-art");
+  assert.equal(na.id, "new-art");
+
+  clearArticleCache();
   fs.rmSync(td, { recursive: true, force: true });
 });

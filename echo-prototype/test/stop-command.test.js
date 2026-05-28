@@ -196,6 +196,10 @@ test("formatServeSummary renders bilingual aligned background instructions", () 
     background: true,
     captureEnabled: true,
     logFile: path.join(echoHome, ".serve.log"),
+    projects: [
+      { projectId: "mynote", root: "/Users/vincenthuang/myNote" },
+      { projectId: "myhomeworkhelper", root: "/Users/vincenthuang/myHomeworkHelper" },
+    ],
   });
 
   assert.match(text, /Echo服务在后台运行 \/ Echo serve started in background/);
@@ -204,6 +208,11 @@ test("formatServeSummary renders bilingual aligned background instructions", () 
   assert.match(text, /echoctl serve --foreground # 前台调试 \/ Run in foreground for debugging/);
   assert.match(text, /Status \/ 当前状态\s+正在收集 AI 聊天记录/);
   assert.match(text, /Command \/ 对应命令\s+关闭收集 \/ Turn off: echoctl capture off/);
+  assert.match(text, /Registered projects \/ 已注册项目:/);
+  assert.match(text, /mynote\s+\/Users\/vincenthuang\/myNote/);
+  assert.match(text, /myhomeworkhelper\s+\/Users\/vincenthuang\/myHomeworkHelper/);
+  assert.match(text, /New projects must be registered before Echo can show their AI chat records\./);
+  assert.match(text, /新项目必须先注册，否则网页不会显示该项目的 AI 聊天记录：echoctl init project --path <project-dir>/);
 
   if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
   else process.env.ECHO_HOME = oldEchoHome;

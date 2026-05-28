@@ -2,6 +2,13 @@ const fs = require("fs");
 const path = require("path");
 const matter = require("gray-matter");
 
+const _articleCache = new Map();
+
+function clearArticleCache(dir) {
+  if (dir) _articleCache.delete(dir);
+  else _articleCache.clear();
+}
+
 function listMarkdownFiles(dir) {
   const files = [];
   function walk(d) {
@@ -31,7 +38,10 @@ function readMarkdownFile(file) {
 function loadArticles(dir, opts) {
   const records = [];
   const strict = opts?.strict === true;
-  if (!fs.existsSync(dir)) return records;
+  if (!fs.existsSync(dir)) {
+    _articleCache.set(dir, new Map());
+    return records;
+  }
   const files = listMarkdownFiles(dir);
   for (const file of files) {
     let result;
@@ -52,35 +62,44 @@ function loadArticles(dir, opts) {
       relPath: path.relative(dir, file),
     });
   }
+  const byId = new Map();
+  for (const r of records) byId.set(r.id, r);
+  _articleCache.set(dir, byId);
   return records;
 }
 
 function writeArticleFile(absPath, data, content) {
   const markdown = matter.stringify(content, data);
   fs.writeFileSync(absPath, markdown, "utf-8");
+  _articleCache.clear();
 }
 
 function loadArticleById(dir, id) {
   if (!fs.existsSync(dir)) return null;
-  for (const file of listMarkdownFiles(dir)) {
-    let result;
-    try {
-      result = readMarkdownFile(file);
-    } catch (_) {
-      continue;
+  let byId = _articleCache.get(dir);
+  if (!byId) {
+    byId = new Map();
+    for (const file of listMarkdownFiles(dir)) {
+      let result;
+      try {
+        result = readMarkdownFile(file);
+      } catch (_) {
+        continue;
+      }
+      if (result.data.id && result.data.type !== "annotation") {
+        byId.set(result.data.id, {
+          id: result.data.id,
+          data: result.data,
+          content: result.content,
+          raw: result.raw,
+          absPath: file,
+          relPath: path.relative(dir, file),
+        });
+      }
     }
-    if (result.data.id === id && result.data.type !== "annotation") {
-      return {
-        id: result.data.id,
-        data: result.data,
-        content: result.content,
-        raw: result.raw,
-        absPath: file,
-        relPath: path.relative(dir, file),
-      };
-    }
+    _articleCache.set(dir, byId);
   }
-  return null;
+  return byId.get(id) || null;
 }
 
 function loadComments(dir) {
@@ -130,6 +149,7 @@ function nextAnnotationId(dir) {
 }
 
 module.exports = {
+  clearArticleCache,
   listMarkdownFiles,
   readMarkdownFile,
   writeArticleFile,

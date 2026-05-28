@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+const os = require("os");
+const path = require("path");
+const fs = require("fs");
 const { commandFor, cliNames } = require("../scripts/lib/cli/names");
 
 const CLI = cliNames.canonicalName;
@@ -29,8 +32,22 @@ Usage:
   ${commandFor(["import", "claude", "--project", "<dir>", "--as-project", "<id>"])}  Import single project
   ${commandFor(["serve"])}              Start API + VitePress dev server in background
   ${commandFor(["serve", "--foreground"])}  Start API + VitePress dev server in foreground
+  ${commandFor(["refresh"])}            Refresh pipeline + docs without restarting serve
   ${commandFor(["stop"])}               Stop a running serve instance
 `;
+
+function scheduleRefreshIfServeRunning() {
+  const { getRunningServeInfo } = require("../scripts/lib/usecases/refresh-serve");
+  if (!getRunningServeInfo()) return false;
+  const { spawn } = require("child_process");
+  const child = spawn(process.execPath, [__filename, "refresh", "--quiet"], {
+    detached: true,
+    stdio: "ignore",
+    env: process.env,
+  });
+  child.unref();
+  return true;
+}
 
 function printDoctorResults(results) {
   let hasError = false;
@@ -137,6 +154,9 @@ switch (cmd) {
       } else {
         console.log(`Registered: no (already exists)`);
       }
+      if (scheduleRefreshIfServeRunning()) {
+        console.log(`Serve refresh: scheduled`);
+      }
     } else {
       const { initWorkspace } = require("../scripts/lib/usecases/init-workspace");
       const result = initWorkspace();
@@ -181,6 +201,31 @@ switch (cmd) {
     } else {
       console.log(USAGE);
     }
+    break;
+  }
+  case "refresh": {
+    const quiet = args.includes("--quiet");
+    (async () => {
+      const { requestRunningServeRefresh } = require("../scripts/lib/usecases/refresh-serve");
+      const remote = await requestRunningServeRefresh();
+      if (remote.attempted) {
+        if (!quiet) {
+          console.log(remote.ok ? "Serve refresh: ok" : `Serve refresh: failed — ${remote.message}`);
+        }
+        if (!remote.ok) process.exit(1);
+        return;
+      }
+
+      const { runPipeline } = require("../scripts/lib/usecases/run-pipeline");
+      const { runBuildDocs } = require("../scripts/build-docs");
+      const { resolveRuntimeSiteDir } = require("../scripts/serve");
+      runPipeline({ allProjects: true, silent: quiet });
+      runBuildDocs({ docsRoot: resolveRuntimeSiteDir() });
+      if (!quiet) console.log("Local refresh: ok");
+    })().catch((err) => {
+      if (!quiet) console.error(`Refresh failed: ${err.message}`);
+      process.exit(1);
+    });
     break;
   }
   case "doctor": {
@@ -278,9 +323,6 @@ switch (cmd) {
       process.exit(1);
     }
 
-    const os = require("os");
-    const path = require("path");
-    const fs = require("fs");
     const claudeProjectsDir = path.join(os.homedir(), ".claude", "projects");
 
     if (!fs.existsSync(claudeProjectsDir)) {

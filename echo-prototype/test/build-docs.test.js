@@ -4,7 +4,7 @@ const path = require("node:path");
 const os = require("node:os");
 const test = require("node:test");
 
-const { loadAllArticlesAndComments, runBuildDocs, tagAnchor } = require("../scripts/build-docs");
+const { loadAllArticlesAndComments, runBuildDocs, tagAnchor, renderCommentsJson } = require("../scripts/build-docs");
 const { registerProject } = require("../scripts/lib/usecases/project-registry");
 
 function tempDir() {
@@ -325,4 +325,86 @@ test("runBuildDocs keeps turn markers as hidden metadata", (t) => {
   assert.match(articlePage, /<span class="echo-turn-marker" hidden aria-hidden="true" data-turn-id="t001" data-speaker="vincent"><\/span>/);
   assert.match(articlePage, /data-turn-id="t002" data-speaker="claude" data-reply-to="t001"/);
   assert.doesNotMatch(articlePage, /reply t001/);
+});
+
+test("renderArticlePage escapes special characters in frontmatter", () => {
+  const echoHome = tempDir();
+  process.env.ECHO_HOME = echoHome;
+  const docsRoot = path.join(echoHome, ".site");
+
+  const projectRoot = path.join(echoHome, "projects", "escape-test");
+  const articlesDir = path.join(projectRoot, "articles");
+  fs.mkdirSync(articlesDir, { recursive: true });
+
+  registerProject(projectRoot, { echoHome, projectId: "escape-test" });
+  writeArticle(articlesDir, "test-esc", 'He said "hello" with a backslash \\ test', {
+    project: "escape-test",
+    createdAt: "2026-05-27T00:00:00.000Z",
+  });
+
+  process.chdir(echoHome);
+  runBuildDocs({ docsRoot });
+
+  const articlePage = fs.readFileSync(path.join(docsRoot, "articles", "generated", "escape-test--test-esc.md"), "utf-8");
+  assert.match(articlePage, /title:/);
+  assert.match(articlePage, /\\"/);
+  assert.match(articlePage, /projectId: "escape-test"/);
+
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("renderCommentsJson emits JSON script with comment tree data", (t) => {
+  const article = { id: "test-article", data: {}, _project: "mynote" };
+  const comments = [
+    {
+      id: "ann-root",
+      author: "alice",
+      created_at: "2026-05-27T10:00:00+08:00",
+      content: "root comment",
+      anchor: { quote: "root quote" },
+      target: { article_id: "test-article" },
+      evolution: { of: [], kind: "null" },
+      _project: "mynote",
+    },
+    {
+      id: "ann-child",
+      author: "bob",
+      created_at: "2026-05-27T11:00:00+08:00",
+      content: "child comment",
+      anchor: {},
+      target: { article_id: "test-article" },
+      evolution: { of: ["ann-root"], kind: "expands" },
+      _project: "mynote",
+    },
+    {
+      id: "ann-other-project",
+      author: "carol",
+      created_at: "2026-05-27T12:00:00+08:00",
+      content: "other project",
+      anchor: {},
+      target: { article_id: "test-article" },
+      evolution: { of: [], kind: "null" },
+      _project: "other",
+    },
+  ];
+
+  const html = renderCommentsJson(article, comments);
+  assert.ok(html.startsWith('<script id="echo-comments-data" type="application/json">'));
+  assert.ok(html.endsWith('</script>'));
+
+  const jsonStr = html.slice(html.indexOf('>') + 1, html.lastIndexOf('<'));
+  const items = JSON.parse(jsonStr);
+  assert.equal(items.length, 2, "should exclude comments from other projects");
+
+  const root = items.find((c) => c.id === "ann-root");
+  assert.ok(root);
+  assert.deepEqual(root.evolutionOf, []);
+  assert.equal(root.evolutionKind, "null");
+  assert.equal(root.author, "alice");
+
+  const child = items.find((c) => c.id === "ann-child");
+  assert.ok(child);
+  assert.deepEqual(child.evolutionOf, ["ann-root"]);
+  assert.equal(child.evolutionKind, "expands");
+  assert.equal(child.author, "bob");
 });

@@ -203,6 +203,20 @@ function renderComments(article, comments) {
   return `## 评论区\n\n<div class="echo-comment-list">\n\n${rows.join("\n\n")}\n\n</div>`;
 }
 
+function renderCommentsJson(article, comments) {
+  const related = commentsForArticle(article, comments);
+  const items = related.map((comment) => ({
+    id: comment.id,
+    author: comment.author || "unknown",
+    date: normalizeDate(comment.created_at),
+    content: (String(comment.content || "")).trim(),
+    quote: comment.anchor?.quote || null,
+    evolutionOf: comment.evolution?.of || [],
+    evolutionKind: comment.evolution?.kind || "null",
+  }));
+  return `<script id="echo-comments-data" type="application/json">${JSON.stringify(items)}</script>`;
+}
+
 function highlightAnnotations(body, article, comments) {
   const inlineAnnotations = comments.filter(
     (c) => c.target?.article_id === article.id && c.anchor?.quote && c.anchor?.kind !== "article"
@@ -251,7 +265,7 @@ function renderArticlePage(article, comments) {
 title: "${escapeFrontmatterString(title)}"
 echo:
   articleId: ${article.id}
-  projectId: ${project ? JSON.stringify(project) : 'null'}
+  projectId: ${project ? `"${escapeFrontmatterString(project)}"` : 'null'}
   interactive: ${project && project.startsWith('echo-') ? 'false' : 'true'}
 ---
 
@@ -275,6 +289,7 @@ ${bodyHtml}
 
 ${renderComments(article, comments)}
 
+${renderCommentsJson(article, comments)}
 
 `;
 }
@@ -579,6 +594,7 @@ module.exports = {
   ensureSiteScaffold,
   articleDisplayTags,
   tagAnchor,
+  renderCommentsJson,
   PACKAGE_DOCS_ROOT,
   defaultDocsRoot,
   ensureRuntimeDependencies,

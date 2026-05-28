@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-27 (echoctl serve 后台模式、未注册目录 legacy fallback 复盘文档、myEchoTestV1 项目注册兜底)
+最后更新：2026-05-28 (echoctl serve 启动摘要显示已注册项目和新项目注册提醒)
 
 ## 已完成
 
@@ -84,7 +84,7 @@
 - [x] **`echoctl import` CLI** (Issue 008, 2026-05-25) — `echoctl import claude --all --dry-run/--apply`；`--project <dir> --as-project <id>`；`--exclude` 过滤系统目录。已接线 import 框架，dry-run 已验证。
 - [x] **npm 发布准备** (Issue 008) — `echoctl@0.1.0`：包名已确定、`"private": false`、`bin`/`files`/`keywords`/`engines` 已配置、npm pack 产物 38 文件 43KB 无污染。用户 onboarding 文档后续按需补充。
 - [x] **底部评论输入框** — 支持文章级评论和后续回复链扩展。作者身份从 `echo.json` 读取。详见 [issues/015-bottom-comment-input.md](issues/015-bottom-comment-input.md)
-- [ ] **进化链 UI** — 文章底部评论区展示，回复链可视化
+- [x] **进化链 UI** — 文章底部评论区展示，回复链可视化 (2026-05-27)
 - [ ] **项目筛选视图** — 统一归档下按 project 元数据显示 `全部` / 单项目文章。元数据在 convert 时根据 registry 补齐。
 - [x] **MCP 配置按钮** (2026-05-24) — `EchoArticleActions.vue` 已实现 MCP 配置弹窗和复制功能。
 - [x] **MCP 安装与 AI 访问端到端验证** (2026-05-25) — 新增 `mcp-e2e.test.js`：spawn `echoctl mcp` 从临时 `ECHO_HOME`，测试真实 JSON-RPC 通信覆盖 initialize、tools/list、全部 7 个 tool（含 add_tags/remove_tags 回环和 alias 搜索）。设计文档：[issues/007-mcp-install-e2e.md](issues/007-mcp-install-e2e.md)
@@ -104,6 +104,7 @@
 - [x] **serve 启动时自动运行管线** (2026-05-27) — `echoctl serve` 启动时在 `runBuildDocs()` 之前自动执行 `runPipeline({ allProjects: true, silent: true })`，确保 capture 的 buffer 自动转换为可见文章，不再需要手动跑 `npm run all`。`npm run all` 通过，`npm run docs:generate` 生成 18 篇文章。
 - [x] **旧全局目录关联切断** (2026-05-27) — 网页生成在存在 registry 项目时只聚合 `projects/<project-id>/` 数据，不再把 Echo home 根目录的 legacy `articles/` 混入当前项目视图；capture 在 `cwd` 缺失或 stale 时可通过 Claude transcript 目录精确匹配 registry 项目，避免新会话继续写入 `~/.echo-workspace/session-buffer/`。新增 hook/build-docs 回归测试；旧全局目录保留为后续清理项。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
+- [ ] **Live session 与不可变文章分层** — 正在进行的 AI 会话应从 `session-buffer` 渲染 live page，可持续刷新；只有显式 publish/session end 后才生成不可变 article。设计记录：[issues/016-live-session-vs-immutable-article.md](issues/016-live-session-vs-immutable-article.md)
 
 ### 编辑
 - [ ] **全局控制入口迁移** — `收集: 开/关` 和 `MCP 配置` 是全局控制，不应出现在每篇文章末尾；迁移到顶部导航（“首页 / 文章 / 标签”附近）或独立设置入口，文章页底部只保留与当前文章相关的评论/标记操作。
@@ -113,11 +114,15 @@
 - [x] **VitePress 生成物落点修正** (2026-05-26) — `scripts/build-docs.js` 默认生成到 Echo runtime site `~/.echo-workspace/.site`，`docs:*` 脚本改为构建 runtime site；当前工程 `docs/` 仅保留主题模板和占位 Markdown，不再写入真实文章列表/标签页。
 - [x] **echoctl 项目查找命令** (2026-05-27) — CLI 新增 `echoctl project list` / `echoctl project find <id>`，MCP 新增 `list_projects` / `get_project` 工具，详见 [issues/011-echoctl-list-projects-mcp-sync.md](issues/011-echoctl-list-projects-mcp-sync.md)
 - [x] **多项目 pipeline 聚合** (2026-05-27) — `echoctl all` 改为对所有已注册项目运行完整管线 (convert → validate → index → resolve)；新增 `aggregate-all-projects.js` usecase；`loadAllArticlesAndComments()` 已支撑多项目网页聚合，详见 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)
-- [x] **代码质量修复 5 项** (2026-05-27) — readStdin 去重到 `lib/infra/read-stdin.js`、UTC+8 改用 `Intl.DateTimeFormat`、VitePress stdout pipe、write-comment YAML 手写改为 `gray-matter`、serve.js 静默 catch 改为 console.error。详见 [issues/009-code-review-findings.md](issues/009-code-review-findings.md)
+- [x] **代码质量修复 11 项** (2026-05-27) — Issue 009 全部关闭：readStdin 去重、UTC+8 Intl.DateTimeFormat、VitePress stdout pipe、write-comment gray-matter、静默 catch→console.error、loadArticleById Map 缓存、findFreePort 递归→while 循环、frontmatter escaping 统一（escapeFrontmatterString）、session-map `wx` 原子创建、echoctl.js 重复 require 清理。1 项暂缓：echoctl.js 拆分（565 行重构，建议单独 PR）。详见 [issues/009-code-review-findings.md](issues/009-code-review-findings.md)
 - [x] **空文件夹 AUQ 端到端验证** (2026-05-27) — 在隔离空项目 `/private/tmp/echo-auq-empty-experiment/empty-project` 注册项目，模拟 `AskUserQuestion` 对话，验证 buffer → article → VitePress 页面均显示“AI 提供了以下选项”、全部选项 label/description 和“你的选择”。同时发现 `npm run docs:dev` 在自定义 `ECHO_HOME` 下仍指向 `~/.echo-workspace/.site`，需后续修复脚本路径。
 - [x] **myEchoTestV1 项目注册兜底** (2026-05-27) — 异常原因：`~/myEchoTestV1` 未注册，hook 将会话写入 legacy `~/.echo-workspace/session-buffer/session-2026-05-27-v13.md`，网页项目列表只聚合已注册项目。处理：注册为 `myechotestv1`，复制已捕获 buffer 到项目数据目录，补 `session-map.txt` 与 `auq-counter.txt`，`echoctl all` 后生成 1 篇文章；浏览器验证 `/articles/` 已显示 `myechotestv1 (1)`，总数 27。
+- [x] **myEchoTestV2 项目显示修复** (2026-05-28) — `~/myechotestv2` 已注册但测试对话仍写入 legacy buffer。原因是 `~/.claude/settings.json` 同时保留旧 bash hook 和新版 CLI hook，旧 `echo-capture.sh` 固定写入 `~/.echo-workspace/session-buffer/`。处理：复制 legacy buffer 到 `projects/myechotestv2/session-buffer/`，补当前 session-map，跑 `echoctl all` 生成文章，并通过 `/api/rebuild-docs` 重建网页；同时移除旧 bash hook，仅保留 `echo-mcp hook capture/status`。
+- [x] **serve 自动刷新方案** (2026-05-28) — 新增 `echoctl refresh`，运行中的 serve 可通过 `/api/rebuild-docs` 执行 `runPipeline({ allProjects: true })` + `runBuildDocs()`，无需重启。`echoctl init project` 注册后会自动安排 refresh；hook 捕获 Stop 成功后也会后台触发 refresh，让新对话进入页面而不要求用户 `Ctrl+C` 重启。
 - [x] **未注册目录 legacy fallback 复盘文档** (2026-05-27) — 已更新 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)、[USAGE_GUIDE_V3.md](USAGE_GUIDE_V3.md)、[ENGINEERING_BOUNDARIES.md](ENGINEERING_BOUNDARIES.md)，说明“未注册目录 → 顶层 legacy buffer → 页面项目聚合不可见”的原因、调用链、现场处理记录和后续产品决策。
 - [x] **echoctl serve 后台模式** (2026-05-27) — `echoctl serve` 默认后台启动 API + VitePress，输出中英文对齐提示：Docs/API/State/Log、`echoctl stop` 停止命令、`echoctl serve --foreground` 前台调试、`echoctl capture on/off` 收集开关，并显示“正在收集/已关闭 AI 聊天记录”与对应命令。保留 `--foreground` 使用原前台流程；新增格式化输出测试。
+- [x] **echoctl serve 注册项目提示** (2026-05-28) — 启动摘要新增“已注册项目”列表，并明确提示新项目必须先运行 `echoctl init project --path <project-dir>` 注册，否则网页不会显示该项目的 AI 聊天记录。
+- [x] **README 当前使用方式重写** (2026-05-27) — README 改为当前真实用户路径：安装方法前用醒目的 TIP 提示“AI 时代的安装方法：可以将当前页面交给 AI，让它帮你安装和配置 Echo”；`npm link` 安装开发版 CLI、`echoctl init project` 注册项目、`echoctl hook install claude --write` 安装 hook、`echoctl serve` 后台启动网页；删除过时的 npm 主流程和旧测试数量，补充未注册目录 legacy fallback 与 serve 暂无实时 watcher 的边界说明。
 - [ ] **创建标记表单样式重设计** — 功能保留，但当前文章底部”创建标记”区域像临时表单且视觉重复；需要重新设计为更轻量的文章级标记入口，和评论区/底部导航形成清晰层级。
 - [ ] **标签/摘要编辑** — 网页端改 frontmatter 字段，写回 MD
 - [ ] **剪贴板导入脚本** — `paste-to-md.sh`（macOS 优先）

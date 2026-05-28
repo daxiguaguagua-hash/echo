@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { spawn } = require("child_process");
 const {
   resolveEchoHomePath,
   ensureDir,
@@ -70,10 +71,37 @@ function getSessionFile(sid, bufferRoot) {
 
   const base = `session-${getLocalDate()}`;
   let v = 1;
-  while (fs.existsSync(path.join(bufferRoot, `${base}-v${v}.md`))) v++;
-  const file = path.join(bufferRoot, `${base}-v${v}.md`);
+  let file;
+  while (true) {
+    const candidate = path.join(bufferRoot, `${base}-v${v}.md`);
+    try {
+      const fd = fs.openSync(candidate, "wx");
+      fs.closeSync(fd);
+      file = candidate;
+      break;
+    } catch (e) {
+      if (e.code === "EEXIST") {
+        v++;
+        continue;
+      }
+      throw e;
+    }
+  }
   fs.appendFileSync(mapPath, `${sid}=${file}\n`);
   return file;
+}
+
+function scheduleServeRefresh() {
+  const { getRunningServeInfo } = require("../usecases/refresh-serve");
+  if (!getRunningServeInfo()) return false;
+  const bin = path.resolve(__dirname, "../../../bin/echoctl.js");
+  const child = spawn(process.execPath, [bin, "refresh", "--quiet"], {
+    detached: true,
+    stdio: "ignore",
+    env: process.env,
+  });
+  child.unref();
+  return true;
 }
 
 function extractAuqBlock(hookData, lastCount) {
@@ -309,6 +337,7 @@ ${aiText}
   fs.appendFileSync(sessionFile, entry);
   fs.unlinkSync(pendingFile);
   console.log(`turn t${String(turnNum).padStart(3, "0")}-t${String(turnNum + 1).padStart(3, "0")} saved`);
+  scheduleServeRefresh();
 }
 
 async function handleStopFailure(data, bufferRoot) {
@@ -357,6 +386,7 @@ module.exports = {
   projectFromTranscriptPath,
   resolveBufferRoot,
   getSessionFile,
+  scheduleServeRefresh,
   extractAuqBlock,
   handleUserPromptSubmit,
   handleStop,
