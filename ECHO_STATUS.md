@@ -104,7 +104,7 @@
 - [x] **serve 启动时自动运行管线** (2026-05-27) — `echoctl serve` 启动时在 `runBuildDocs()` 之前自动执行 `runPipeline({ allProjects: true, silent: true })`，确保 capture 的 buffer 自动转换为可见文章，不再需要手动跑 `npm run all`。`npm run all` 通过，`npm run docs:generate` 生成 18 篇文章。
 - [x] **旧全局目录关联切断** (2026-05-27) — 网页生成在存在 registry 项目时只聚合 `projects/<project-id>/` 数据，不再把 Echo home 根目录的 legacy `articles/` 混入当前项目视图；capture 在 `cwd` 缺失或 stale 时可通过 Claude transcript 目录精确匹配 registry 项目，避免新会话继续写入 `~/.echo-workspace/session-buffer/`。新增 hook/build-docs 回归测试；旧全局目录保留为后续清理项。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
-- [ ] **Live session 与不可变文章分层** — 正在进行的 AI 会话应从 `session-buffer` 渲染 live page，可持续刷新；只有显式 publish/session end 后才生成不可变 article。设计记录：[issues/016-live-session-vs-immutable-article.md](issues/016-live-session-vs-immutable-article.md)
+- [x] **Live session 与不可变文章分层** (2026-05-28) — 正在进行的 AI 会话从 `session-buffer` 渲染 live page，30 秒自动刷新；显式 publish 后生成不可变 article（不可覆盖）。Live 页面位于 `/live/generated/<project>--<session>.md`，含 LIVE 脉冲标记、turn 计数、发布按钮和已发布文章链接。POST `/api/publish` 端点将 buffer 转为正式文章。设计记录：[issues/016-live-session-vs-immutable-article.md](issues/016-live-session-vs-immutable-article.md)
 
 ### 编辑
 - [ ] **全局控制入口迁移** — `收集: 开/关` 和 `MCP 配置` 是全局控制，不应出现在每篇文章末尾；迁移到顶部导航（“首页 / 文章 / 标签”附近）或独立设置入口，文章页底部只保留与当前文章相关的评论/标记操作。
@@ -119,6 +119,7 @@
 - [x] **myEchoTestV1 项目注册兜底** (2026-05-27) — 异常原因：`~/myEchoTestV1` 未注册，hook 将会话写入 legacy `~/.echo-workspace/session-buffer/session-2026-05-27-v13.md`，网页项目列表只聚合已注册项目。处理：注册为 `myechotestv1`，复制已捕获 buffer 到项目数据目录，补 `session-map.txt` 与 `auq-counter.txt`，`echoctl all` 后生成 1 篇文章；浏览器验证 `/articles/` 已显示 `myechotestv1 (1)`，总数 27。
 - [x] **myEchoTestV2 项目显示修复** (2026-05-28) — `~/myechotestv2` 已注册但测试对话仍写入 legacy buffer。原因是 `~/.claude/settings.json` 同时保留旧 bash hook 和新版 CLI hook，旧 `echo-capture.sh` 固定写入 `~/.echo-workspace/session-buffer/`。处理：复制 legacy buffer 到 `projects/myechotestv2/session-buffer/`，补当前 session-map，跑 `echoctl all` 生成文章，并通过 `/api/rebuild-docs` 重建网页；同时移除旧 bash hook，仅保留 `echo-mcp hook capture/status`。
 - [x] **serve 自动刷新方案** (2026-05-28) — 新增 `echoctl refresh`，运行中的 serve 可通过 `/api/rebuild-docs` 执行 `runPipeline({ allProjects: true })` + `runBuildDocs()`，无需重启。`echoctl init project` 注册后会自动安排 refresh；hook 捕获 Stop 成功后也会后台触发 refresh，让新对话进入页面而不要求用户 `Ctrl+C` 重启。
+- [x] **legacy buffer 迁移命令** (2026-05-28) — 新增 `echoctl migrate legacy-buffer --project <id>|--path <dir> [--apply]`，把未注册项目误入 legacy `session-buffer` 的会话迁移到项目数据目录；默认 dry-run，执行时同步 `.md`、`session-map.txt`、pending、failures 和 AUQ 计数，支持 `--overwrite` / `--move`。
 - [x] **未注册目录 legacy fallback 复盘文档** (2026-05-27) — 已更新 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)、[USAGE_GUIDE_V3.md](USAGE_GUIDE_V3.md)、[ENGINEERING_BOUNDARIES.md](ENGINEERING_BOUNDARIES.md)，说明“未注册目录 → 顶层 legacy buffer → 页面项目聚合不可见”的原因、调用链、现场处理记录和后续产品决策。
 - [x] **echoctl serve 后台模式** (2026-05-27) — `echoctl serve` 默认后台启动 API + VitePress，输出中英文对齐提示：Docs/API/State/Log、`echoctl stop` 停止命令、`echoctl serve --foreground` 前台调试、`echoctl capture on/off` 收集开关，并显示“正在收集/已关闭 AI 聊天记录”与对应命令。保留 `--foreground` 使用原前台流程；新增格式化输出测试。
 - [x] **echoctl serve 注册项目提示** (2026-05-28) — 启动摘要新增“已注册项目”列表，并明确提示新项目必须先运行 `echoctl init project --path <project-dir>` 注册，否则网页不会显示该项目的 AI 聊天记录。

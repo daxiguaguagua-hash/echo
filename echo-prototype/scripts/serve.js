@@ -368,6 +368,40 @@ function createRouter(deps) {
         }
       }
 
+      if (p === "/api/publish" && req.method === "POST") {
+        const body = await readBody(req);
+        if (!body || !body.sessionId) {
+          return jsonResponse(res, 400, { error: "sessionId required" }, docsPort);
+        }
+        try {
+          const dirs = resolveDirsForProject(body.projectId, deps.dirs);
+          const bufferPath = path.join(dirs.bufferDir, `${body.sessionId}.md`);
+          if (!fs.existsSync(bufferPath)) {
+            return jsonResponse(res, 404, { error: `session buffer not found: ${body.sessionId}` }, docsPort);
+          }
+          const { parseBuffer, buildArticle } = require("./lib/usecases/convert-buffer");
+          const raw = fs.readFileSync(bufferPath, "utf-8");
+          const { turns } = parseBuffer(raw);
+          if (turns.length === 0) {
+            return jsonResponse(res, 422, { error: "buffer has no turns" }, docsPort);
+          }
+          const articlePath = path.join(dirs.articlesDir, `${body.sessionId}.md`);
+          if (fs.existsSync(articlePath)) {
+            return jsonResponse(res, 409, { error: "article already published" }, docsPort);
+          }
+          const { id, article, turnCount } = buildArticle(body.sessionId, turns, { project: dirs.projectId });
+          fs.mkdirSync(dirs.articlesDir, { recursive: true });
+          fs.writeFileSync(articlePath, article);
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
+            console.error("[echo] Rebuilding docs after publish failed:", e.message);
+          }
+          const slug = id;
+          return jsonResponse(res, 201, { ok: true, id, slug, turnCount }, docsPort);
+        } catch (err) {
+          return jsonResponse(res, 500, { error: err.message }, docsPort);
+        }
+      }
+
       if (p === "/api/rebuild-docs" && req.method === "POST") {
         try {
           const { runPipeline } = require("./lib/usecases/run-pipeline");

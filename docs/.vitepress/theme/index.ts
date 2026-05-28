@@ -8,6 +8,7 @@ import EchoChatBubbles from './components/EchoChatBubbles.vue'
 import EchoProjectTabs from './components/EchoProjectTabs.vue'
 import EchoCommentChain from './components/EchoCommentChain.vue'
 import EchoCommentNode from './components/EchoCommentNode.vue'
+import EchoLiveSession from './components/EchoLiveSession.vue'
 import './custom.css'
 
 export default {
@@ -22,5 +23,6 @@ export default {
     app.component('EchoProjectTabs', EchoProjectTabs)
     app.component('EchoCommentChain', EchoCommentChain)
     app.component('EchoCommentNode', EchoCommentNode)
+    app.component('EchoLiveSession', EchoLiveSession)
   },
 }

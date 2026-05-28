@@ -569,3 +569,111 @@ mark.echo-search-hit-active {
   margin-left: 0;
   border-left: none;
 }
+
+/* ---- Live session ---- */
+
+.echo-live-badge {
+  align-items: center;
+  background: var(--vp-c-danger-soft);
+  border: 1px solid var(--vp-c-danger-1);
+  border-radius: 8px;
+  color: var(--vp-c-danger-1);
+  display: flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 10px 16px;
+}
+
+.echo-live-badge a {
+  color: var(--vp-c-brand-1);
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.echo-live-dot {
+  animation: echo-pulse 2s ease-in-out infinite;
+  background: var(--vp-c-danger-1);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  height: 8px;
+  width: 8px;
+}
+
+@keyframes echo-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.echo-live-actions {
+  margin: 0 0 20px;
+}
+
+.echo-publish-btn {
+  background: var(--vp-c-brand-1);
+  border: none;
+  border-radius: 6px;
+  color: var(--vp-c-bg);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 18px;
+}
+
+.echo-publish-btn:hover {
+  background: var(--vp-c-brand-2);
+}
+
+.echo-publish-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.echo-publish-error {
+  color: var(--vp-c-danger-1);
+  font-size: 13px;
+  margin-left: 12px;
+}
+
+.echo-publish-ok {
+  color: var(--vp-c-brand-1);
+  font-size: 13px;
+  margin-left: 12px;
+}
+
+.echo-published-link {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-brand-1);
+  border-radius: 6px;
+  color: var(--vp-c-brand-1);
+  display: inline-block;
+  font-size: 14px;
+  padding: 8px 18px;
+  text-decoration: none;
+}
+
+.echo-published-link:hover {
+  text-decoration: none;
+}
+
+.echo-ls-badge {
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-right: 4px;
+  padding: 1px 6px;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.echo-ls-live {
+  background: var(--vp-c-danger-soft);
+  color: var(--vp-c-danger-1);
+}
+
+.echo-ls-published {
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+}

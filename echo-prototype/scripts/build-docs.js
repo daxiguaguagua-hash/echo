@@ -17,6 +17,7 @@ function sitePaths(docsRoot) {
   return {
     docsRoot,
     generatedArticlesDir: path.join(docsRoot, "articles", "generated"),
+    generatedLiveDir: path.join(docsRoot, "live", "generated"),
     sidebarFile: path.join(docsRoot, ".vitepress", "echo-sidebar.mts"),
   };
 }
@@ -55,6 +56,7 @@ function ensureSiteScaffold(docsRoot) {
   ensureDir(docsRoot);
   ensureDir(path.join(docsRoot, "articles"));
   ensureDir(path.join(docsRoot, "tags"));
+  ensureDir(path.join(docsRoot, "live"));
 
   if (path.resolve(docsRoot) !== path.resolve(PACKAGE_DOCS_ROOT)) {
     copyDir(path.join(PACKAGE_DOCS_ROOT, ".vitepress"), path.join(docsRoot, ".vitepress"));
@@ -437,7 +439,7 @@ ${renderHomeArticles(articles)}
   fs.writeFileSync(path.join(docsRoot, "index.md"), home, "utf-8");
 }
 
-function writeSidebar(articles, sidebarFile) {
+function writeSidebar(articles, liveSessions, sidebarFile) {
   const renderItem = (article, indent = "            ") => {
     const title = displayTitle(article);
     return `${indent}{ text: ${JSON.stringify(title)}, link: '/articles/generated/${articleSlug(article)}' }`;
@@ -466,6 +468,20 @@ ${items}
           }`;
   }).join(",\n");
 
+  const liveItems = (liveSessions || []).map((s) => {
+    const label = s.publishedSlug ? `${s.sessionId} (已发布)` : `${s.sessionId} (LIVE)`;
+    return `            { text: ${JSON.stringify(label)}, link: '/live/generated/${liveSessionSlug(s)}' }`;
+  }).join(",\n");
+
+  const liveSection = (liveSessions || []).length > 0 ? `      {
+        text: 'Live Sessions',
+        collapsed: false,
+        items: [
+${liveItems}
+        ],
+      },
+` : "";
+
   const sidebar = `export const articleSidebar = [
   {
     text: '文章列表',
@@ -485,11 +501,166 @@ ${recentItems}
 ${projectGroups}
         ],
       },
-    ],
+${liveSection}    ],
   },
 ]
 `;
   fs.writeFileSync(sidebarFile, sidebar, "utf-8");
+}
+
+function loadLiveSessions() {
+  const sessions = [];
+  const seenRoots = new Set();
+  let registeredProjects = [];
+
+  function addSource(source) {
+    const root = path.resolve(source.root);
+    if (seenRoots.has(root)) return;
+    seenRoots.add(root);
+    sources.push({ ...source, root });
+  }
+
+  const sources = [];
+
+  try {
+    const { listProjects } = require("./lib/usecases/project-registry");
+    registeredProjects = listProjects();
+  } catch (_) {}
+
+  if (registeredProjects.length > 0) {
+    for (const p of registeredProjects) {
+      addSource({
+        projectId: p.projectId,
+        root: p.dataRoot,
+        bufferDir: path.join(p.dataRoot, "session-buffer"),
+        articlesDir: path.join(p.dataRoot, "articles"),
+      });
+    }
+  } else {
+    const dirs = resolveDataDirs();
+    addSource({
+      projectId: dirs.projectId || null,
+      root: dirs.projectRoot,
+      bufferDir: dirs.bufferDir,
+      articlesDir: dirs.articlesDir,
+    });
+  }
+
+  for (const source of sources) {
+    if (!fs.existsSync(source.bufferDir)) continue;
+    const bufferFiles = fs.readdirSync(source.bufferDir)
+      .filter((f) => f.startsWith("session-") && f.endsWith(".md"))
+      .sort();
+
+    for (const bf of bufferFiles) {
+      const bufferPath = path.join(source.bufferDir, bf);
+      const sessionId = path.basename(bf, ".md");
+      let raw;
+      try { raw = fs.readFileSync(bufferPath, "utf-8"); } catch (_) { continue; }
+      const turnCount = (raw.match(/<!-- turn:/g) || []).length;
+      if (turnCount === 0) continue;
+
+      let publishedSlug = null;
+      const articlePath = path.join(source.articlesDir, `${sessionId}.md`);
+      if (fs.existsSync(articlePath)) {
+        try {
+          const article = store.readMarkdownFile(articlePath);
+          publishedSlug = articleSlug({ id: sessionId, data: article.data, _project: source.projectId });
+        } catch (_) {}
+      }
+
+      sessions.push({
+        projectId: source.projectId,
+        sessionId,
+        bufferPath,
+        content: raw,
+        turnCount,
+        publishedSlug,
+      });
+    }
+  }
+
+  return sessions;
+}
+
+function liveSessionSlug(session) {
+  const base = String(session.sessionId)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const project = session.projectId;
+  if (!project) return base;
+  return `${slugText(project)}--${base}`;
+}
+
+function renderLiveSessionPage(session) {
+  const title = `Live: ${session.sessionId}`;
+  const project = session.projectId || "";
+  const bodyHtml = escapeHtmlTagsOutsideCode(session.content)
+    .replace(/<!--\s*turn:[\s\S]*?-->/g, renderTurnMarker)
+    .trim();
+
+  const publishedLink = session.publishedSlug
+    ? `<a href="/articles/generated/${session.publishedSlug}">查看已发布文章</a>`
+    : "";
+
+  return `---
+title: "${escapeFrontmatterString(title)}"
+echo:
+  sessionId: ${session.sessionId}
+  projectId: ${project ? `"${escapeFrontmatterString(project)}"` : "null"}
+  live: true
+  published: ${session.publishedSlug ? "true" : "false"}
+  turnCount: ${session.turnCount}
+head:
+  - - meta
+    - http-equiv: refresh
+      content: "30"
+---
+
+# ${title}
+
+<div class="echo-live-badge">
+  <span class="echo-live-dot"></span>
+  LIVE · ${session.turnCount} turns · 每 30 秒自动刷新
+  ${publishedLink}
+</div>
+
+<EchoLiveSession
+  project-id="${escapeHtml(project)}"
+  session-id="${escapeHtml(session.sessionId)}"
+  published="${session.publishedSlug ? "true" : "false"}"
+  published-slug="${escapeHtml(session.publishedSlug || "")}"
+/>
+
+${bodyHtml}
+`;
+}
+
+function renderLiveSessionsIndex(sessions) {
+  if (sessions.length === 0) {
+    return `# Live Sessions
+
+暂无正在进行的 AI 会话。开始一个新的 AI 对话后，实时会话将自动出现在这里。
+`;
+  }
+
+  const items = sessions.map((s) => {
+    const project = s.projectId || "未归类";
+    const badge = s.publishedSlug ? "已发布" : "LIVE";
+    const badgeClass = s.publishedSlug ? "echo-ls-published" : "echo-ls-live";
+    return `- <span class="echo-ls-badge ${badgeClass}">${badge}</span> [${s.sessionId}](./generated/${liveSessionSlug(s)}) · ${project} · ${s.turnCount} turns`;
+  }).join("\n");
+
+  return `# Live Sessions
+
+正在进行或最近结束的 AI 会话。页面每 30 秒自动刷新。
+
+共 ${sessions.length} 个会话。
+
+${items}
+`;
 }
 
 function loadAllArticlesAndComments() {
@@ -566,6 +737,8 @@ function runBuildDocs(opts = {}) {
 
   ensureSiteScaffold(docsRoot);
   cleanDir(paths.generatedArticlesDir);
+
+  // Generate article pages
   for (const article of articles) {
     fs.writeFileSync(
       path.join(paths.generatedArticlesDir, `${articleSlug(article)}.md`),
@@ -574,13 +747,28 @@ function runBuildDocs(opts = {}) {
     );
   }
 
+  // Generate live session pages
+  const liveDir = path.join(docsRoot, "live", "generated");
+  cleanDir(liveDir);
+  const liveSessions = loadLiveSessions();
+  for (const session of liveSessions) {
+    fs.writeFileSync(
+      path.join(liveDir, `${liveSessionSlug(session)}.md`),
+      renderLiveSessionPage(session),
+      "utf-8"
+    );
+  }
+
   fs.writeFileSync(path.join(docsRoot, "articles", "index.md"), renderArticleIndex(articles), "utf-8");
   fs.writeFileSync(path.join(docsRoot, "tags", "index.md"), renderTagsIndex(articles), "utf-8");
+  fs.writeFileSync(path.join(docsRoot, "live", "index.md"), renderLiveSessionsIndex(liveSessions), "utf-8");
   updateHome(articles, docsRoot);
-  writeSidebar(articles, paths.sidebarFile);
+  writeSidebar(articles, liveSessions, paths.sidebarFile);
 
-  console.log(`Generated VitePress docs for ${articles.length} articles and ${comments.length} comments.`);
-  return { articles: articles.length, comments: comments.length, docsRoot };
+  const summary = [`${articles.length} articles`, `${comments.length} comments`];
+  if (liveSessions.length > 0) summary.push(`${liveSessions.length} live sessions`);
+  console.log(`Generated VitePress docs for ${summary.join(", ")}.`);
+  return { articles: articles.length, comments: comments.length, liveSessions: liveSessions.length, docsRoot };
 }
 
 if (require.main === module) {
@@ -591,6 +779,7 @@ module.exports = {
   runBuildDocs,
   displayTitle,
   loadAllArticlesAndComments,
+  loadLiveSessions,
   ensureSiteScaffold,
   articleDisplayTags,
   tagAnchor,
