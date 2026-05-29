@@ -223,7 +223,7 @@ function toEchoArticle(turns, metadata, opts = {}) {
     turnNum++;
     const speaker = normalizeSpeaker(turn);
     const speakerLabel = speaker === "human" ? (opts.userSpeaker || "human") : (opts.aiSpeaker || "ai");
-    lines.push(`<!-- turn: t${String(turnNum).padStart(2, "0")} speaker: ${speakerLabel} -->`);
+    lines.push(`<!-- turn: t${String(turnNum).padStart(2, "0")} speaker=${speakerLabel} -->`);
     lines.push("");
     lines.push(turn.content);
     lines.push("");

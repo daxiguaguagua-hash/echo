@@ -8,7 +8,7 @@ const route = useRoute()
 
 function isUserSpeaker(speaker: string): boolean {
   const s = speaker.toLowerCase()
-  return s === 'vincent' || s === 'user' || s === '我'
+  return s === 'vincent' || s === 'user' || s === '我' || s === 'human'
 }
 
 function isAssistantSpeaker(speaker: string): boolean {
