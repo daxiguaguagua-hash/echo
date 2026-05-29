@@ -407,13 +407,14 @@ function renderHomeArticles(articles) {
 }
 
 function updateHome(articles, docsRoot) {
+  const recentList = renderHomeArticles(articles);
   const home = `---
 layout: home
 
 hero:
-  name: "Echo 知识库"
+  name: "Echo"
   text: "本地优先的 AI 对话知识论坛"
-  tagline: 将 AI 对话转化为结构化、可检索、可标注的知识资产
+  tagline: 把 AI 编程会话捕获为不可变的 Markdown 文章，支持浏览、搜索、标签、评论、MCP 访问。
   actions:
     - theme: brand
       text: 浏览文章
@@ -424,22 +425,32 @@ hero:
 
 features:
   - icon: "📝"
-    title: 自动捕获
-    details: Hook 实时捕获 Claude Code 对话，零手动操作
+    title: 不可变归档
+    details: 文章正文一旦创建即不可修改。AI 对话作为源记录永久保存，后续整理通过标签、评论、标注完成。
+  - icon: "🔴"
+    title: Live Session 实时预览
+    details: 正在聊天的内容通过 live session 页面实时查看，前端心跳自动检测更新，无需手动刷新。
+  - icon: "🤖"
+    title: MCP AI 接口
+    details: 9 个 MCP 工具让 AI 助手直接读取、搜索 Echo 本地归档，成为 AI 的长期记忆。
+  - icon: "📁"
+    title: 多项目支持
+    details: 每个项目独立管理，会话自动归入对应项目。空目录需显式注册，未注册目录降级写入 legacy buffer。
   - icon: "🔍"
     title: 全文搜索
-    details: 本地搜索索引，关键词 + 标签过滤
-  - icon: "💬"
-    title: 批注链
-    details: 对文章任意片段追加评论，支持回复链和引用追踪
-  - icon: "🔗"
-    title: 进化追踪
-    details: 文章间的 evolution 引用，追踪知识演进路径
+    details: 本地搜索索引，通过 CLI 或网页快速找到历史对话中的关键信息。
+  - icon: "🏷️"
+    title: 标签管理
+    details: 为文章打标签、分类整理，支持添加、移除、重命名、删除标签，构建个人知识体系。
 ---
 
 ## 最近文章
 
-${renderHomeArticles(articles)}
+${recentList || "暂无文章。"}
+
+---
+
+*Echo 处于开发阶段，当前通过 npm link 使用开发版。功能和使用说明详见 [README](https://github.com/daxiguaguagua-hash/echo/blob/main/README.md)。*
 `;
   fs.writeFileSync(path.join(docsRoot, "index.md"), home, "utf-8");
 }
