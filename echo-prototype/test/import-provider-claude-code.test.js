@@ -668,6 +668,30 @@ test.describe("toEchoArticle", () => {
     assert.ok(markdown.includes("Architecture Discussion"));
   });
 
+  test("human turns use speaker=human marker", () => {
+    const turns = [
+      { speaker: "human", content: "User question." },
+      { speaker: "ai", content: "AI response." },
+    ];
+    const metadata = { title: "Speaker Test", date: "2026-05-20", model: "test" };
+    const opts = { project: "test", sessionId: UUID_A };
+
+    const markdown = cc.toEchoArticle(turns, metadata, opts);
+    assert.match(markdown, /<!-- turn: t01 speaker=human -->/);
+  });
+
+  test("ai turns use speaker=ai marker", () => {
+    const turns = [
+      { speaker: "human", content: "User question." },
+      { speaker: "ai", content: "AI response." },
+    ];
+    const metadata = { title: "Speaker Test", date: "2026-05-20", model: "test" };
+    const opts = { project: "test", sessionId: UUID_A };
+
+    const markdown = cc.toEchoArticle(turns, metadata, opts);
+    assert.match(markdown, /<!-- turn: t02 speaker=ai -->/);
+  });
+
   test("does not modify turn text — every toEchoArticle call is idempotent", () => {
     const turns = [
       { speaker: "human", content: "Original message." },
