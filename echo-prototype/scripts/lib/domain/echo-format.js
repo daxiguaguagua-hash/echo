@@ -142,10 +142,13 @@ function createArticle(input) {
 
 // ---- shared turn marker (single source of truth) ----
 
+/** Regex for parsing turn markers. Must stay in sync with renderTurnMarker(). */
+const TURN_MARKER_REGEX = /^<!-- turn: (\S+) speaker=(\S+)(?: reply_to=(\S+))? -->/;
+
 /**
  * renderTurnMarker(id, speaker, replyTo)
  * 生成统一的 `<!-- turn: ... -->` 标记字符串。
- * 所有生成和解析 turn 标记的代码应使用此函数。
+ * 所有生成和解析 turn 标记的代码应使用此函数和 TURN_MARKER_REGEX。
  */
 function renderTurnMarker(id, speaker, replyTo) {
   const parts = [`<!-- turn: ${id} speaker=${speaker}`];
@@ -250,6 +253,7 @@ function extractSessionDate(sessionName) {
 
 module.exports = {
   DEFAULT_SPEAKERS,
+  TURN_MARKER_REGEX,
   renderTurnMarker,
   createTurn,
   createParticipant,

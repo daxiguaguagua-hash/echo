@@ -5,6 +5,7 @@ const { resolveDataDirs } = require("./lib/infra/echo-paths");
 const { resolveEchoHomePath } = require("./lib/infra/workspace");
 const store = require("./lib/infra/markdown-store");
 const { stripCommentSections } = require("./lib/usecases/strip-comments");
+const { TURN_MARKER_REGEX } = require("./lib/domain/echo-format");
 
 const PACKAGE_DOCS_ROOT = path.resolve(__dirname, "../../docs");
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
@@ -146,9 +147,10 @@ function stripFirstHeading(content) {
 }
 
 function renderTurnMarker(raw) {
-  const id = raw.match(/turn:\s*([^\s]+)/)?.[1] || "";
-  const speaker = raw.match(/speaker=([^\s]+)/)?.[1] || "unknown";
-  const replyTo = raw.match(/reply_to=([^\s]+)/)?.[1];
+  const m = raw.match(TURN_MARKER_REGEX);
+  const id = m?.[1] || "";
+  const speaker = m?.[2] || "unknown";
+  const replyTo = m?.[3];
   const replyAttr = replyTo ? ` data-reply-to="${escapeHtml(replyTo)}"` : "";
   return `\n\n<span class="echo-turn-marker" hidden aria-hidden="true" data-turn-id="${escapeHtml(id)}" data-speaker="${escapeHtml(speaker)}"${replyAttr}></span>\n\n`;
 }

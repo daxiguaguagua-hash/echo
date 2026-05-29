@@ -6,7 +6,7 @@ function parseBuffer(raw) {
   let currentTurn = null;
 
   for (const line of raw.split("\n")) {
-    const turnMatch = line.match(/^<!-- turn: (\S+) speaker=(\S+)(?: reply_to=(\S+))? -->/);
+    const turnMatch = line.match(ef.TURN_MARKER_REGEX);
     if (turnMatch) {
       if (currentTurn) turns.push(currentTurn);
       currentTurn = {
