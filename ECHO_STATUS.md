@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-29 (Live 页改为共享心跳 + hash 变化刷新；目标测试、docs 生成与管线通过)
+最后更新：2026-05-29 (Turn 标记格式统一 + 工作流纪律强化)
 
 ## 已完成
 
@@ -51,6 +51,8 @@
 - [x] **项目筛选空项目修复** (2026-05-29) — `EchoProjectTabs` 将已注册但当前 0 篇文章的项目也渲染为可选 tab，避免全局下拉框选择 `echo-notes` / `ruoyi-vue-pro` 时回退到“全部”。Browser 验证：空项目显示 0 张卡片，`mynote` 显示 21 张卡片；`npm test` 332/332 通过，`npm run all` 通过。
 - [x] **注册项目自动补导入历史会话** (2026-05-29) — 新增 `importClaudeProject()` usecase，`echoctl init project` 注册后自动扫描对应 Claude transcript 目录并导入有意义会话，避免用户还要手动跑 `import claude`。已补救 `ruoyi-vue-pro`：5 条 transcript 中 1 条高质量会话导入为 `session-b8cfacc9.md`，4 条单用户回合跳过；`npm test` 333/333 通过，`npm run all` 通过。
 - [x] **Live 页共享心跳与按需刷新** (2026-05-29) — Stop hook 写入 `index/live-state.json`，`GET /api/live-session-state` 返回 session hash/turnCount；前端新增单例 heartbeat，Live 页只在当前 session hash 变化时刷新，避免每 30 秒整页闪烁重置。Live 路径接入侧边栏与右侧目录，徽标文案改为“有更新时自动刷新”。
+- [x] **Turn 标记格式统一** (2026-05-29) — 修复 `claude-code.toEchoArticle()` 使用 `speaker:` 冒号格式导致 import 路径文章用户说话无气泡边框的 bug；新增 `renderTurnMarker()` 共享函数统一 3 个生成点；新增 `TURN_MARKER_REGEX` 统一 2 个解析点；10 个回归测试；`npm test` 343/343 全绿，`npm run all` 通过。详见 [issues/022](issues/022-turn-marker-format-unification.md)。
+- [x] **工作流纪律强化** (2026-05-29) — `CLAUDE.md` 接入 `workflows/` 目录和两道横切门禁（验证门、不可变性门）；补上本次 bug 修复在首次实施时遗漏的 ECHO_STATUS 更新和 issue 记录。
 
 ## 进行中
 

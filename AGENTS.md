@@ -65,6 +65,23 @@ ECHO_STATUS.md           — 项目进度表（活的，随时更新）
 
 ## 做完任何事后
 
+### 横切门禁（必须过，详见 `workflows/gates/`）
+
+1. **验证门** — `npm test && npm run all` + 更新 `ECHO_STATUS.md`（`- [ ]` → `- [x]`，刷新顶部日期）
+2. **不可变性门** — 确认没有修改任何文章正文（`<!-- turn:` 之后的内容）
+
+### 多步骤变更额外要求
+
+参照 [Issue 驱动工作流](workflows/06-issue-driven.md)：
+- 在 `issues/` 下创建 issue 记录（背景、问题、设计决策、实施步骤、验证）
+- `ECHO_STATUS.md` 中留链接指向 issue
+
+参照 [核心流程](workflows/08-industry-workflow.md)：
+- Plan → Build → Local Gates → Status Gate → Human Gate
+- 小改动可跳过跨模型审查，但必须过两道横切门禁
+
+### 具体步骤
+
 1. **更新 ECHO_STATUS.md** — 把对应的 `- [ ]` 改成 `- [x]`，保持进度表不过时
 2. **跑 `npm run all`** — 验证全管线通过（convert → validate → index → resolve）
 3. **来不及修的问题记到 ECHO_STATUS.md** — 放在「后期改进」或「待做」中
