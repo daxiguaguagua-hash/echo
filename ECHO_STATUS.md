@@ -93,7 +93,7 @@
 - [ ] **session-map 并发保护** — 并行 Claude 会话同时 Stop 可能损坏 `session-map.txt`（Issue 009 #9 未修）
 
 **P3 — 文档**
-- [ ] **终端用户 onboarding 文档** — 缺独立的五分钟上手指南（安装 → 初始化 → 首次导入 → 日常使用）
+- [x] **终端用户 onboarding 文档** — `GETTING_STARTED.md` 五分钟上手指南（安装 → 注册项目 → Hook → 导入旧对话 → 启动网页 → 日常 + FAQ）
 
 **P4 — 远期**
 - [ ] **进化链 UI** — 文章 `evolution` 关系可视化（已实现评论区回复链，前端 evolution 链路浏览未做）
