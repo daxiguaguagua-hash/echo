@@ -44,6 +44,16 @@ interface PublishResponse {
   latest: boolean
 }
 
+interface LiveSessionState {
+  ok: boolean
+  exists: boolean
+  projectId: string | null
+  sessionId: string
+  turnCount: number
+  hash: string | null
+  updatedAt: string | null
+}
+
 interface LegacyCandidate {
   sessionId: string
   fileName: string
@@ -185,6 +195,12 @@ export function postPublish(payload: PublishPayload): Promise<PublishResponse> {
   })
 }
 
+export function getLiveSessionState(projectId: string | null, sessionId: string): Promise<LiveSessionState> {
+  const params = new URLSearchParams({ sessionId })
+  if (projectId) params.set('projectId', projectId)
+  return request<LiveSessionState>(`/api/live-session-state?${params.toString()}`)
+}
+
 export function getLegacyCandidates(projectId: string): Promise<LegacyCandidatesResponse> {
   return request<LegacyCandidatesResponse>(`/api/legacy-candidates?projectId=${encodeURIComponent(projectId)}`)
 }
@@ -217,4 +233,4 @@ export function importClaudeSessions(projectId: string, sessionIds: string[]): P
 }
 
 export { EchoApiError, CONFIGURED_API_BASE, DEFAULT_API_BASE }
-export type { EchoStatus, CommentPayload, TagPayload, PublishPayload, PublishResponse, LegacyCandidate, LegacyCandidatesResponse, LegacyMigrateResponse, ClaudeImportCandidate, ClaudeImportCandidatesResponse, ClaudeImportResponse }
+export type { EchoStatus, CommentPayload, TagPayload, PublishPayload, PublishResponse, LiveSessionState, LegacyCandidate, LegacyCandidatesResponse, LegacyMigrateResponse, ClaudeImportCandidate, ClaudeImportCandidatesResponse, ClaudeImportResponse }

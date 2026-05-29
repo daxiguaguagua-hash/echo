@@ -8,6 +8,7 @@ const {
 const { isCaptureEnabled, getSpeakers } = require("../infra/config");
 const { findProjectForPath, listProjects } = require("../usecases/project-registry");
 const { readStdin } = require("../infra/read-stdin");
+const { writeLiveSessionState } = require("../usecases/live-session-state");
 
 function claudeProjectDirName(projectPath) {
   return "-" + path.resolve(projectPath).slice(1).split(path.sep).join("-");
@@ -335,6 +336,7 @@ ${aiText}
 `;
 
   fs.appendFileSync(sessionFile, entry);
+  writeLiveSessionState(bufferRoot, sessionFile);
   fs.unlinkSync(pendingFile);
   console.log(`turn t${String(turnNum).padStart(3, "0")}-t${String(turnNum + 1).padStart(3, "0")} saved`);
   scheduleServeRefresh();

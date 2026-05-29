@@ -357,6 +357,21 @@ function createRouter(deps) {
         }, docsPort);
       }
 
+      if (p === "/api/live-session-state" && req.method === "GET") {
+        const sessionId = url.searchParams.get("sessionId");
+        if (!sessionId) {
+          return jsonResponse(res, 400, { error: "sessionId query parameter required" }, docsPort);
+        }
+        const projectId = url.searchParams.get("projectId") || null;
+        try {
+          const dirs = resolveDirsForProject(projectId, deps.dirs);
+          const { getLiveSessionState } = require("./lib/usecases/live-session-state");
+          return jsonResponse(res, 200, getLiveSessionState(dirs, sessionId), docsPort);
+        } catch (err) {
+          return jsonResponse(res, 500, { error: err.message }, docsPort);
+        }
+      }
+
       if (p === "/api/query-log" && req.method === "GET") {
         const limit = parseInt(url.searchParams.get("limit") || "50", 10);
         const dirs = deps.dirs || resolveDataDirs();

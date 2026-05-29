@@ -15,6 +15,7 @@ const {
   handleStopFailure,
 } = require("../scripts/lib/hooks/capture");
 const { registerProject } = require("../scripts/lib/usecases/project-registry");
+const { liveStatePath } = require("../scripts/lib/usecases/live-session-state");
 
 // --- helpers ---
 
@@ -482,6 +483,37 @@ test("handleStop writes markdown turn with user prompt and AI reply", async () =
     assert.ok(content.includes("my question"), "contains user prompt");
     assert.ok(content.includes("Here is the answer."), "contains AI reply");
     assert.ok(content.includes("<!-- turn: t001"), "contains turn marker");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("handleStop records live session state after writing buffer", async () => {
+  const dir = tempDir();
+  try {
+    const bufDir = path.join(dir, "session-buffer");
+    const pendingDir = path.join(bufDir, "pending");
+    fs.mkdirSync(pendingDir, { recursive: true });
+
+    const sid = "sess-live-state";
+    fs.writeFileSync(path.join(pendingDir, `${sid}.json`), JSON.stringify({
+      prompt: "live question",
+      session_id: sid,
+      transcript_path: "",
+      cwd: "/tmp",
+      created_at: "",
+    }));
+
+    await handleStop({ session_id: sid, last_assistant_message: "live answer", transcript_path: "" }, dir);
+
+    const sessionFile = fs.readdirSync(bufDir).find((f) => f.startsWith("session-") && f.endsWith(".md"));
+    assert.ok(sessionFile, "session markdown file created");
+
+    const state = JSON.parse(fs.readFileSync(liveStatePath(dir), "utf-8"));
+    const sessionId = path.basename(sessionFile, ".md");
+    assert.equal(state.sessions[sessionId].turnCount, 2);
+    assert.equal(typeof state.sessions[sessionId].hash, "string");
+    assert.equal(state.sessions[sessionId].sourcePath, path.join(bufDir, sessionFile));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

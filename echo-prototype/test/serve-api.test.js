@@ -270,6 +270,39 @@ test("GET /api/status returns capture state and version", async () => {
   fs.rmSync(echoHome, { recursive: true, force: true });
 });
 
+test("GET /api/live-session-state returns hash and turn count for project buffer", async () => {
+  const echoHome = tempDir();
+  const projectPath = tempDir();
+  fs.mkdirSync(projectPath, { recursive: true });
+  process.env.ECHO_HOME = echoHome;
+
+  const { projectId } = registerProject(projectPath, { echoHome });
+  const dirs = resolveDataDirs({ cwd: projectPath });
+  fs.mkdirSync(dirs.bufferDir, { recursive: true });
+  fs.writeFileSync(path.join(dirs.bufferDir, "session-live-v1.md"), [
+    "<!-- turn: t001 speaker=vincent -->",
+    "hello",
+    "",
+    "<!-- turn: t002 speaker=ai reply_to=t001 -->",
+    "hi",
+    "",
+  ].join("\n"));
+
+  const router = createRouter({ docsPort: 5173, dirs });
+  const res = await jsonRequest(router, "GET", `/api/live-session-state?projectId=${projectId}&sessionId=session-live-v1`);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.exists, true);
+  assert.equal(res.body.projectId, projectId);
+  assert.equal(res.body.sessionId, "session-live-v1");
+  assert.equal(res.body.turnCount, 2);
+  assert.equal(typeof res.body.hash, "string");
+
+  delete process.env.ECHO_HOME;
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(projectPath, { recursive: true, force: true });
+});
+
 test("POST /api/capture toggles capture state", async () => {
   const echoHome = tempDir();
   fs.mkdirSync(echoHome, { recursive: true });

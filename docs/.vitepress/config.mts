@@ -14,6 +14,7 @@ export default defineConfig({
 
     sidebar: {
       '/articles/': articleSidebar,
+      '/live/': articleSidebar,
     },
 
     socialLinks: [],

@@ -619,7 +619,7 @@ echo:
 
 <div class="echo-live-badge">
   <span class="echo-live-dot"></span>
-  LIVE · ${session.turnCount} turns · 每 30 秒自动刷新
+  LIVE · ${session.turnCount} turns · 有更新时自动刷新
   ${publishedLink}
 </div>
 

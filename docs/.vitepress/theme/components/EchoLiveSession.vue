@@ -13,7 +13,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
-import { postPublish, EchoApiError } from '../lib/echo-api'
+import { postPublish, getLiveSessionState, EchoApiError } from '../lib/echo-api'
+import { subscribeEchoHeartbeat } from '../lib/echo-heartbeat'
 
 const props = defineProps<{
   projectId: string
@@ -26,18 +27,37 @@ const publishing = ref(false)
 const error = ref("")
 const ok = ref("")
 const isPublished = computed(() => props.published === "true")
-let refreshTimer: ReturnType<typeof window.setInterval> | null = null
+let unsubscribeHeartbeat: (() => void) | null = null
+let lastHash: string | null = null
+let checking = false
 
 onMounted(() => {
   const livePath = window.location.pathname
-  refreshTimer = window.setInterval(() => {
+  const checkForChanges = async () => {
+    if (checking) return
     if (document.visibilityState === "hidden") return
-    if (window.location.pathname === livePath) window.location.reload()
-  }, 30000)
+    checking = true
+    try {
+      const state = await getLiveSessionState(props.projectId || null, props.sessionId)
+      if (!state.exists || !state.hash) return
+      if (lastHash && lastHash !== state.hash && window.location.pathname === livePath) {
+        window.location.reload()
+        return
+      }
+      lastHash = state.hash
+    } catch (_) {
+      // Live pages must remain readable when the local API is stopped.
+    } finally {
+      checking = false
+    }
+  }
+
+  void checkForChanges()
+  unsubscribeHeartbeat = subscribeEchoHeartbeat(checkForChanges)
 })
 
 onBeforeUnmount(() => {
-  if (refreshTimer) window.clearInterval(refreshTimer)
+  if (unsubscribeHeartbeat) unsubscribeHeartbeat()
 })
 
 async function publish() {
