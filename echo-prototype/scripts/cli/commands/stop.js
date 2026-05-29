@@ -6,7 +6,7 @@ function run(args) {
         findServeProcessCandidates,
         isValidPositivePid,
         verifyProcessIdentity,
-      } = require("../serve");
+      } = require("../../serve");
 
       function childPidsFrom(info) {
         return [

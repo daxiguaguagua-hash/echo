@@ -171,7 +171,7 @@ function run(args) {
       console.log(`\nImported: ${imported}  Skipped: ${skipped + plan.skipped.length}`);
       console.log(`Articles: ${targetArticlesDir}`);
 
-      const { runValidate } = require("../validate");
+      const { runValidate } = require("../../validate");
       const result = runValidate();
       if (result.success) {
         console.log(`Validate: OK — ${result.articleCount} articles, ${result.commentCount} comments`);
