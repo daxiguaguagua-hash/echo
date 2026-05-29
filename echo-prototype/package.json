@@ -39,7 +39,8 @@
     "docs:dev": "npm run docs:generate && vitepress dev ~/.echo-workspace/.site",
     "docs:build": "npm run docs:generate && vitepress build ~/.echo-workspace/.site",
     "docs:preview": "npm run docs:generate && vitepress preview ~/.echo-workspace/.site",
-    "serve": "node bin/echoctl.js serve"
+    "serve": "node bin/echoctl.js serve",
+    "prepare": "mkdir -p bin && printf '#!/usr/bin/env node\\nrequire(\"../scripts/cli/echoctl.js\");\\n' > bin/echoctl.js && chmod +x bin/echoctl.js"
   },
   "bin": {
     "echoctl": "./bin/echoctl.js",

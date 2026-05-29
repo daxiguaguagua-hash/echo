@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-29 (bin/ 分解: 源码与发布入口分离 + 剩余任务盘点)
+最后更新：2026-05-29 (echoctl.js 拆分: 911 行 switch → 17 命令模块 + prepare 脚本)
 
 ## 已完成
 
@@ -53,7 +53,8 @@
 - [x] **Live 页共享心跳与按需刷新** (2026-05-29) — Stop hook 写入 `index/live-state.json`，`GET /api/live-session-state` 返回 session hash/turnCount；前端新增单例 heartbeat，Live 页只在当前 session hash 变化时刷新，避免每 30 秒整页闪烁重置。Live 路径接入侧边栏与右侧目录，徽标文案改为“有更新时自动刷新”。
 - [x] **Turn 标记格式统一** (2026-05-29) — 修复 `claude-code.toEchoArticle()` 使用 `speaker:` 冒号格式导致 import 路径文章用户说话无气泡边框的 bug；新增 `renderTurnMarker()` 共享函数统一 3 个生成点；新增 `TURN_MARKER_REGEX` 统一 2 个解析点；10 个回归测试；`npm test` 343/343 全绿，`npm run all` 通过。详见 [issues/022](issues/022-turn-marker-format-unification.md)。
 - [x] **工作流纪律强化** (2026-05-29) — `CLAUDE.md` 接入 `workflows/` 目录和两道横切门禁（验证门、不可变性门）；补上本次 bug 修复在首次实施时遗漏的 ECHO_STATUS 更新和 issue 记录。
-- [x] **bin/ 源码与发布入口分离** (2026-05-29) — `bin/echoctl.js` 911 行手写 CLI 逻辑 → 3 行引导入口（`require("../scripts/cli/echoctl.js")`）；业务逻辑迁至 `scripts/cli/echoctl.js`（git 跟踪）；`bin/` 在根 `.gitignore` 排除，`echo-prototype/.gitignore` 不含 `bin/` 确保 npm publish 正常打包；待加 `prepare` 脚本在 `npm install` 时自动生成引导文件。
+- [x] **bin/ 源码与发布入口分离** (2026-05-29) — `bin/echoctl.js` 911 行手写 CLI 逻辑 → 3 行引导入口（`require("../scripts/cli/echoctl.js")`）；业务逻辑迁至 `scripts/cli/echoctl.js`（git 跟踪）；`bin/` 在根 `.gitignore` 排除，`echo-prototype/.gitignore` 不含 `bin/` 确保 npm publish 正常打包；`prepare` 脚本在 `npm install` 时自动生成引导文件。
+- [x] **echoctl.js 命令拆分** (2026-05-29) — 911 行 switch 路由 → 44 行查表入口 + 17 个命令模块（`scripts/cli/commands/`）；新增 `prepare` 脚本自动生成 `bin/echoctl.js`；`echo-prototype/.gitignore` 新增 `.codegraph/`；CLI 全命令验证通过，`npm run all` 通过。
 
 ## 进行中
 
@@ -85,8 +86,8 @@
 ### 下一阶段剩余任务 (2026-05-29 盘点)
 
 **P1 — 阻碍发布**
-- [ ] **npm publish** — `package.json` 就绪（`private: false`、`bin`、`files` 已配置），未执行实际发布
-- [ ] **`scripts/cli/echoctl.js` 拆分** — 911 行单体，Issue 009 计划拆为 `bin/commands/` 子模块（暂缓项）
+- [ ] **npm publish** — `package.json` 就绪（`private: false`、`bin`、`files`、`prepare` 脚本已配置），未执行实际发布
+- [x] **`scripts/cli/echoctl.js` 拆分** — 911 行 → 44 行入口 + 17 命令模块（`scripts/cli/commands/`）
 
 **P2 — 数据完整性**
 - [ ] **session-map 并发保护** — 并行 Claude 会话同时 Stop 可能损坏 `session-map.txt`（Issue 009 #9 未修）
