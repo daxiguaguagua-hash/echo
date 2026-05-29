@@ -201,6 +201,42 @@ export function removeTags(payload: RemoveTagPayload): Promise<any> {
   })
 }
 
+interface RenameTagPayload {
+  oldTag: string
+  newTag: string
+  projectId?: string | null
+}
+
+interface RenameTagResponse {
+  oldTag: string
+  newTag: string
+  renamed: number
+}
+
+export function renameTag(payload: RenameTagPayload): Promise<RenameTagResponse> {
+  return request<RenameTagResponse>('/api/tags/rename', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+interface PurgeTagPayload {
+  tag: string
+  projectId?: string | null
+}
+
+interface PurgeTagResponse {
+  tag: string
+  purged: number
+}
+
+export function purgeTag(payload: PurgeTagPayload): Promise<PurgeTagResponse> {
+  return request<PurgeTagResponse>('/api/tags/purge', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 interface SummaryPayload {
   articleId: string
   summary: string
@@ -259,4 +295,4 @@ export function importClaudeSessions(projectId: string, sessionIds: string[]): P
 }
 
 export { EchoApiError, CONFIGURED_API_BASE, DEFAULT_API_BASE }
-export type { EchoStatus, CommentPayload, TagPayload, RemoveTagPayload, SummaryPayload, PublishPayload, PublishResponse, LiveSessionState, LegacyCandidate, LegacyCandidatesResponse, LegacyMigrateResponse, ClaudeImportCandidate, ClaudeImportCandidatesResponse, ClaudeImportResponse }
+export type { EchoStatus, CommentPayload, TagPayload, RemoveTagPayload, RenameTagPayload, RenameTagResponse, PurgeTagPayload, PurgeTagResponse, SummaryPayload, PublishPayload, PublishResponse, LiveSessionState, LegacyCandidate, LegacyCandidatesResponse, LegacyMigrateResponse, ClaudeImportCandidate, ClaudeImportCandidatesResponse, ClaudeImportResponse }

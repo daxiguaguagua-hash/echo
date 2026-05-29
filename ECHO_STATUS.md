@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-29 (标签/摘要编辑 + 项目筛选隐藏 + LiveSession UI 隐藏 + Claude 导入横幅)
+最后更新：2026-05-29 (标签 CRUD 补齐: MCP/CLI/测试)
 
 ## 已完成
 
@@ -79,6 +79,16 @@
 
 ### 核心功能
 - [x] **标签管理** — MCP tools `add_tags` / `remove_tags`, CLI `echo-mcp tag add|remove|list`, persisted to YAML frontmatter. 7 新测试, 113 全绿.
+- [x] **标签页 CRUD** (2026-05-29) — `/tags/` 页面新增标签增加/修改/删除功能：
+  - **增加**: "+ 新建标签"按钮 → 弹窗选择标签名 + 多选文章，调用 `POST /api/tags` 逐个写入
+  - **修改**: 每个标签悬停显示 ✏️ 按钮 → 行内输入框重命名 → `POST /api/tags/rename` 批量更新所有文章 frontmatter
+  - **删除**: 每个标签悬停显示 🗑️ 按钮 → 确认弹窗 → `POST /api/tags/purge` 从所有文章移除该标签
+  - 后端新增 `renameTag()` / `purgeTag()`（query-articles.js）+ 两个 API 端点 + 文档自动重建
+  - 前端 `EchoTagsPage.vue` 完整重写；`build-docs.js` tags payload 新增 `id` 字段；`echo-api.ts` 新增类型
+  - **MCP 同步**: `tools.js` 新增 `rename_tag` / `purge_tag` schema + handler
+  - **CLI 同步**: `echoctl tag rename <old> <new>` / `echoctl tag purge <tag>`
+  - **测试**: `serve-api.test.js` 6 个新测试 + `mcp-e2e.test.js` 4 个新测试 + `mcp-server.test.js` 4 个新测试 = 14 个增量
+  - `npm test` 357/357 全绿，`npm run all` 8 项目全绿
 
 ### 展示层
 - [x] **VitePress 骨架** — `docs/` 目录、`.vitepress/config.mts`、首页文章列表、示例文章、`docs:dev/build/preview` 脚本，构建通过

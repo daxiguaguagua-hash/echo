@@ -138,13 +138,13 @@ test("notifications/initialized returns null", () => {
   assert.equal(res, null);
 });
 
-test("tools/list returns 9 tools with name, description, and inputSchema", () => {
+test("tools/list returns 11 tools with name, description, and inputSchema", () => {
   const res = handleRequest({ id: 2, method: "tools/list" });
   assertJsonRpcResult(res, 2);
-  assert.equal(res.result.tools.length, 9);
+  assert.equal(res.result.tools.length, 11);
   const names = res.result.tools.map((t) => t.name).sort();
   assert.deepEqual(names, [
-    "add_tags", "get_article", "get_article_context", "get_project", "list_projects", "list_recent", "list_tags", "remove_tags", "search_articles",
+    "add_tags", "get_article", "get_article_context", "get_project", "list_projects", "list_recent", "list_tags", "purge_tag", "remove_tags", "rename_tag", "search_articles",
   ]);
   for (const tool of res.result.tools) {
     assert.equal(typeof tool.name, "string");
@@ -303,6 +303,49 @@ test("tools/call remove_tags silently ignores non-existent tags", () => {
 test("tools/call remove_tags for missing ID returns JSON-RPC error -32002", () => {
   const res = handleRequest({ id: 45, method: "tools/call", params: { name: "remove_tags", arguments: { id: "nonexistent", tags: ["foo"] } } });
   assertJsonRpcError(res, 45, -32002);
+  assert.match(res.error.message, /not found/);
+});
+
+// ---- Tag rename / purge -------------------------------------------------
+
+test("tools/call rename_tag renames a tag across all articles", () => {
+  // Both fixture articles have "demo" tag; rename to "renamed-demo"
+  const res = handleRequest({ id: 50, method: "tools/call", params: { name: "rename_tag", arguments: { oldTag: "demo", newTag: "renamed-demo" } } });
+  const data = assertToolContent(res, 50);
+  assert.equal(data.oldTag, "demo");
+  assert.equal(data.newTag, "renamed-demo");
+  assert.equal(data.renamed, 2);
+
+  // Verify via get_article
+  const getRes = handleRequest({ id: 51, method: "tools/call", params: { name: "get_article", arguments: { id: "test-art-001" } } });
+  const art1 = assertToolContent(getRes, 51);
+  assert.ok(art1.tags.includes("renamed-demo"));
+  assert.ok(!art1.tags.includes("demo"));
+  assert.ok(art1.tags.includes("test")); // other tags preserved
+});
+
+test("tools/call rename_tag for nonexistent tag returns JSON-RPC error -32002", () => {
+  const res = handleRequest({ id: 52, method: "tools/call", params: { name: "rename_tag", arguments: { oldTag: "no-such-tag", newTag: "x" } } });
+  assertJsonRpcError(res, 52, -32002);
+  assert.match(res.error.message, /not found/);
+});
+
+test("tools/call purge_tag removes a tag from all articles", () => {
+  // Both fixture articles have "test" tag
+  const res = handleRequest({ id: 53, method: "tools/call", params: { name: "purge_tag", arguments: { tag: "test" } } });
+  const data = assertToolContent(res, 53);
+  assert.equal(data.tag, "test");
+  assert.equal(data.purged, 2);
+
+  // Verify via get_article
+  const getRes = handleRequest({ id: 54, method: "tools/call", params: { name: "get_article", arguments: { id: "test-art-001" } } });
+  const art1 = assertToolContent(getRes, 54);
+  assert.ok(!art1.tags.includes("test"));
+});
+
+test("tools/call purge_tag for nonexistent tag returns JSON-RPC error -32002", () => {
+  const res = handleRequest({ id: 55, method: "tools/call", params: { name: "purge_tag", arguments: { tag: "no-such-tag" } } });
+  assertJsonRpcError(res, 55, -32002);
   assert.match(res.error.message, /not found/);
 });
 

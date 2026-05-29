@@ -266,6 +266,54 @@ function removeTags(args, deps) {
   return { id: article.data.id, tags: kept, removed: [...toRemove] };
 }
 
+function renameTag(args, deps) {
+  const { dirs, store } = deps;
+  const oldTag = (args.oldTag || "").trim();
+  const newTag = (args.newTag || "").trim();
+  if (!oldTag || !newTag) throw new Error("oldTag and newTag are required");
+  if (oldTag === newTag) throw new Error("oldTag and newTag must be different");
+
+  ensureDir(dirs.articlesDir);
+  const articles = store.loadArticles(dirs.articlesDir);
+
+  let renamed = 0;
+  for (const article of articles) {
+    const tags = article.data.tags || [];
+    if (tags.includes(oldTag)) {
+      article.data.tags = tags.map((t) => (t === oldTag ? newTag : t));
+      store.writeArticleFile(article.absPath, article.data, article.content);
+      renamed++;
+    }
+  }
+
+  if (renamed === 0) throw new NotFoundError(`Tag "${oldTag}" not found in any article`);
+
+  return { oldTag, newTag, renamed };
+}
+
+function purgeTag(args, deps) {
+  const { dirs, store } = deps;
+  const tag = (args.tag || "").trim();
+  if (!tag) throw new Error("tag is required");
+
+  ensureDir(dirs.articlesDir);
+  const articles = store.loadArticles(dirs.articlesDir);
+
+  let purged = 0;
+  for (const article of articles) {
+    const tags = article.data.tags || [];
+    if (tags.includes(tag)) {
+      article.data.tags = tags.filter((t) => t !== tag);
+      store.writeArticleFile(article.absPath, article.data, article.content);
+      purged++;
+    }
+  }
+
+  if (purged === 0) throw new NotFoundError(`Tag "${tag}" not found in any article`);
+
+  return { tag, purged };
+}
+
 function listRecent(args, deps) {
   const { dirs, store } = deps;
   ensureDir(dirs.articlesDir);
@@ -324,6 +372,8 @@ module.exports = {
   listRecent,
   addTags,
   removeTags,
+  renameTag,
+  purgeTag,
   updateSummary,
   listProjects,
   getProject,

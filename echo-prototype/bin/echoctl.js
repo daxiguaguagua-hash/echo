@@ -28,6 +28,8 @@ Usage:
   ${commandFor(["tag", "list"])}    List all tags with usage counts
   ${commandFor(["tag", "add", "<article-id>", "<tag1>", "[tag2...]"])}  Add one or more tags to an article
   ${commandFor(["tag", "remove", "<article-id>", "<tag1>", "[tag2...]"])}  Remove one or more tags from an article
+  ${commandFor(["tag", "rename", "<old-tag>", "<new-tag>"])}  Rename a tag across all articles
+  ${commandFor(["tag", "purge", "<tag>"])}  Remove a tag from all articles
   ${commandFor(["import", "claude", "--all", "--dry-run|--apply"])}  Import Claude Code sessions
   ${commandFor(["import", "claude", "--project", "<dir>", "--as-project", "<id>"])}  Import single project
   ${commandFor(["serve"])}              Start API + VitePress dev server in background
@@ -820,7 +822,7 @@ switch (cmd) {
   case "tag": {
     const { resolveDataDirs } = require("../scripts/lib/infra/echo-paths");
     const store = require("../scripts/lib/infra/markdown-store");
-    const { listTags, addTags, removeTags } = require("../scripts/lib/usecases/query-articles");
+    const { listTags, addTags, removeTags, renameTag, purgeTag } = require("../scripts/lib/usecases/query-articles");
     const dirs = resolveDataDirs();
     const deps = { dirs, store };
     const sub = args[1];
@@ -868,8 +870,37 @@ switch (cmd) {
         console.error(`Error: ${err.message}`);
         process.exit(1);
       }
+    } else if (sub === "rename") {
+      const oldTag = args[2];
+      const newTag = args[3];
+      if (!oldTag || !newTag) {
+        console.error(`Usage: ${commandFor(["tag", "rename", "<old-tag>", "<new-tag>"])}`);
+        process.exit(1);
+      }
+      try {
+        const result = renameTag({ oldTag, newTag }, deps);
+        console.log(`Renamed: ${result.oldTag} → ${result.newTag}`);
+        console.log(`Updated: ${result.renamed} article(s)`);
+      } catch (err) {
+        console.error(`Error: ${err.message}`);
+        process.exit(1);
+      }
+    } else if (sub === "purge") {
+      const tag = args[2];
+      if (!tag) {
+        console.error(`Usage: ${commandFor(["tag", "purge", "<tag>"])}`);
+        process.exit(1);
+      }
+      try {
+        const result = purgeTag({ tag }, deps);
+        console.log(`Purged:  ${result.tag}`);
+        console.log(`Removed: from ${result.purged} article(s)`);
+      } catch (err) {
+        console.error(`Error: ${err.message}`);
+        process.exit(1);
+      }
     } else {
-      console.error(`Usage: ${commandFor(["tag", "list|add|remove"])}`);
+      console.error(`Usage: ${commandFor(["tag", "list|add|remove|rename|purge"])}`);
       process.exit(1);
     }
     break;

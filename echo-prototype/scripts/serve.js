@@ -347,6 +347,42 @@ function createRouter(deps) {
         }
       }
 
+      if (p === "/api/tags/rename" && req.method === "POST") {
+        const body = await readBody(req);
+        if (!body || !body.oldTag || !body.newTag) {
+          return jsonResponse(res, 400, { error: "oldTag and newTag required" }, docsPort);
+        }
+        const dirs = resolveDirsForProject(body.projectId, deps.dirs);
+        try {
+          const { renameTag } = require("./lib/usecases/query-articles");
+          const result = renameTag({ oldTag: body.oldTag, newTag: body.newTag }, { dirs, store });
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
+            console.error("[echo] Rebuilding docs after tag rename failed:", e.message);
+          }
+          return jsonResponse(res, 200, result, docsPort);
+        } catch (err) {
+          return jsonResponse(res, err.name === "NotFoundError" ? 404 : 422, { error: err.message }, docsPort);
+        }
+      }
+
+      if (p === "/api/tags/purge" && req.method === "POST") {
+        const body = await readBody(req);
+        if (!body || !body.tag) {
+          return jsonResponse(res, 400, { error: "tag required" }, docsPort);
+        }
+        const dirs = resolveDirsForProject(body.projectId, deps.dirs);
+        try {
+          const { purgeTag } = require("./lib/usecases/query-articles");
+          const result = purgeTag({ tag: body.tag }, { dirs, store });
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
+            console.error("[echo] Rebuilding docs after tag purge failed:", e.message);
+          }
+          return jsonResponse(res, 200, result, docsPort);
+        } catch (err) {
+          return jsonResponse(res, err.name === "NotFoundError" ? 404 : 422, { error: err.message }, docsPort);
+        }
+      }
+
       if (p === "/api/summary" && req.method === "POST") {
         const body = await readBody(req);
         if (!body || !body.articleId || body.summary === undefined) {

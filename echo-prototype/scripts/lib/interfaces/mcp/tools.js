@@ -8,6 +8,8 @@ const {
   listRecent,
   addTags,
   removeTags,
+  renameTag,
+  purgeTag,
   listProjects,
   getProject,
 } = require("../../usecases/query-articles");
@@ -108,6 +110,29 @@ const TOOLS = [
       required: ["id", "tags"],
     },
   },
+  {
+    name: "rename_tag",
+    description: "Rename a tag across all articles that have it. All occurrences of the old tag in article frontmatter are replaced with the new tag.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        oldTag: { type: "string", description: "Current tag name to rename" },
+        newTag: { type: "string", description: "New tag name" },
+      },
+      required: ["oldTag", "newTag"],
+    },
+  },
+  {
+    name: "purge_tag",
+    description: "Permanently remove a tag from all articles. The tag is deleted from every article's frontmatter.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tag: { type: "string", description: "Tag to remove from all articles" },
+      },
+      required: ["tag"],
+    },
+  },
 ];
 
 const TOOL_HANDLERS = {
@@ -120,6 +145,8 @@ const TOOL_HANDLERS = {
   get_project: getProject,
   add_tags: addTags,
   remove_tags: removeTags,
+  rename_tag: renameTag,
+  purge_tag: purgeTag,
 };
 
 module.exports = { TOOLS, TOOL_HANDLERS };

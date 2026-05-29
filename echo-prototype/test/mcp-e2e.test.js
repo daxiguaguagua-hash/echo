@@ -137,11 +137,11 @@ test("MCP spawn E2E: tools/list returns 9 tools", async () => {
 
   const res = await client.call("tools/list");
   assert.equal(res.jsonrpc, "2.0");
-  assert.equal(res.result.tools.length, 9);
+  assert.equal(res.result.tools.length, 11);
 
   const names = res.result.tools.map((t) => t.name).sort();
   assert.deepEqual(names, [
-    "add_tags", "get_article", "get_article_context", "get_project", "list_projects", "list_recent", "list_tags", "remove_tags", "search_articles",
+    "add_tags", "get_article", "get_article_context", "get_project", "list_projects", "list_recent", "list_tags", "purge_tag", "remove_tags", "rename_tag", "search_articles",
   ]);
 
   proc.kill("SIGTERM");
@@ -291,6 +291,97 @@ test("MCP spawn E2E: add_tags and remove_tags roundtrip", async () => {
   assert.deepEqual(rmData.removed, ["e2e-test"]);
   assert.ok(!rmData.tags.includes("e2e-test"));
   assert.ok(rmData.tags.includes("original"));
+
+  proc.kill("SIGTERM");
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("MCP spawn E2E: rename_tag renames across multiple articles", async () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(path.join(echoHome, "articles"), { recursive: true });
+  fs.mkdirSync(path.join(echoHome, "comments"), { recursive: true });
+
+  writeArticle(path.join(echoHome, "articles"), "e2e-rename-a", "Rename A", ["old-name", "shared"]);
+  writeArticle(path.join(echoHome, "articles"), "e2e-rename-b", "Rename B", ["old-name"]);
+
+  const { client, proc } = await startMcpServer(echoHome);
+
+  const renameRes = await client.call("tools/call", { name: "rename_tag", arguments: { oldTag: "old-name", newTag: "new-name" } });
+  const renameData = JSON.parse(renameRes.result.content[0].text);
+  assert.equal(renameData.oldTag, "old-name");
+  assert.equal(renameData.newTag, "new-name");
+  assert.equal(renameData.renamed, 2);
+
+  // Verify via get_article
+  const getA = await client.call("tools/call", { name: "get_article", arguments: { id: "e2e-rename-a" } });
+  const dataA = JSON.parse(getA.result.content[0].text);
+  assert.ok(dataA.tags.includes("new-name"));
+  assert.ok(!dataA.tags.includes("old-name"));
+  assert.ok(dataA.tags.includes("shared"));
+
+  const getB = await client.call("tools/call", { name: "get_article", arguments: { id: "e2e-rename-b" } });
+  const dataB = JSON.parse(getB.result.content[0].text);
+  assert.ok(dataB.tags.includes("new-name"));
+  assert.ok(!dataB.tags.includes("old-name"));
+
+  proc.kill("SIGTERM");
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("MCP spawn E2E: purge_tag removes tag from all articles", async () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(path.join(echoHome, "articles"), { recursive: true });
+  fs.mkdirSync(path.join(echoHome, "comments"), { recursive: true });
+
+  writeArticle(path.join(echoHome, "articles"), "e2e-purge-a", "Purge A", ["to-remove", "keep-me"]);
+  writeArticle(path.join(echoHome, "articles"), "e2e-purge-b", "Purge B", ["to-remove"]);
+
+  const { client, proc } = await startMcpServer(echoHome);
+
+  const purgeRes = await client.call("tools/call", { name: "purge_tag", arguments: { tag: "to-remove" } });
+  const purgeData = JSON.parse(purgeRes.result.content[0].text);
+  assert.equal(purgeData.tag, "to-remove");
+  assert.equal(purgeData.purged, 2);
+
+  // Verify via get_article
+  const getA = await client.call("tools/call", { name: "get_article", arguments: { id: "e2e-purge-a" } });
+  const dataA = JSON.parse(getA.result.content[0].text);
+  assert.ok(!dataA.tags.includes("to-remove"));
+  assert.ok(dataA.tags.includes("keep-me"));
+
+  const getB = await client.call("tools/call", { name: "get_article", arguments: { id: "e2e-purge-b" } });
+  const dataB = JSON.parse(getB.result.content[0].text);
+  assert.ok(!dataB.tags.includes("to-remove"));
+
+  proc.kill("SIGTERM");
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("MCP spawn E2E: rename_tag returns error for nonexistent tag", async () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(path.join(echoHome, "articles"), { recursive: true });
+  fs.mkdirSync(path.join(echoHome, "comments"), { recursive: true });
+
+  const { client, proc } = await startMcpServer(echoHome);
+
+  const res = await client.call("tools/call", { name: "rename_tag", arguments: { oldTag: "not-exist", newTag: "x" } });
+  assert.ok("error" in res);
+  assert.equal(res.error.code, -32002);
+
+  proc.kill("SIGTERM");
+  fs.rmSync(echoHome, { recursive: true, force: true });
+});
+
+test("MCP spawn E2E: purge_tag returns error for nonexistent tag", async () => {
+  const echoHome = tempDir();
+  fs.mkdirSync(path.join(echoHome, "articles"), { recursive: true });
+  fs.mkdirSync(path.join(echoHome, "comments"), { recursive: true });
+
+  const { client, proc } = await startMcpServer(echoHome);
+
+  const res = await client.call("tools/call", { name: "purge_tag", arguments: { tag: "not-exist" } });
+  assert.ok("error" in res);
+  assert.equal(res.error.code, -32002);
 
   proc.kill("SIGTERM");
   fs.rmSync(echoHome, { recursive: true, force: true });

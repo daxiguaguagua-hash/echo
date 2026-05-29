@@ -251,6 +251,172 @@ test("POST /api/tags adds a tag to article frontmatter and rebuilds docs", async
   fs.rmSync(docsRoot, { recursive: true, force: true });
 });
 
+test("POST /api/tags/rename renames a tag across multiple articles", async () => {
+  const echoHome = tempDir();
+  const projectPath = tempDir();
+  const docsRoot = tempDir();
+  fs.mkdirSync(projectPath, { recursive: true });
+  process.env.ECHO_HOME = echoHome;
+
+  const { projectId } = registerProject(projectPath, { echoHome });
+  const dirs = resolveDataDirs({ cwd: projectPath });
+
+  fs.mkdirSync(dirs.articlesDir, { recursive: true });
+  for (const [id, tags] of [["art-a", ["旧标签", "公共"]], ["art-b", ["旧标签"]]]) {
+    const articlePath = path.join(dirs.articlesDir, `${id}.md`);
+    fs.writeFileSync(articlePath, [
+      "---",
+      `id: ${id}`,
+      `title: ${id}`,
+      "created_at: 2026-05-25T00:00:00.000Z",
+      `tags: [${tags.map((t) => JSON.stringify(t)).join(", ")}]`,
+      `project: ${projectId}`,
+      "---",
+      "",
+      `# ${id}`,
+      "",
+      "Body.",
+      "",
+    ].join("\n"));
+  }
+
+  const router = createRouter({ docsPort: 5173, docsRoot, dirs });
+
+  const res = await jsonRequest(router, "POST", "/api/tags/rename", {
+    oldTag: "旧标签",
+    newTag: "新标签",
+    projectId,
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.oldTag, "旧标签");
+  assert.equal(res.body.newTag, "新标签");
+  assert.equal(res.body.renamed, 2);
+  assert.match(fs.readFileSync(path.join(dirs.articlesDir, "art-a.md"), "utf-8"), /新标签/);
+  assert.doesNotMatch(fs.readFileSync(path.join(dirs.articlesDir, "art-a.md"), "utf-8"), /旧标签/);
+  assert.match(fs.readFileSync(path.join(dirs.articlesDir, "art-b.md"), "utf-8"), /新标签/);
+  assert.doesNotMatch(fs.readFileSync(path.join(dirs.articlesDir, "art-b.md"), "utf-8"), /旧标签/);
+
+  delete process.env.ECHO_HOME;
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(projectPath, { recursive: true, force: true });
+  fs.rmSync(docsRoot, { recursive: true, force: true });
+});
+
+test("POST /api/tags/rename returns 400 without oldTag", async () => {
+  const router = createRouter({ docsPort: 5173 });
+  const res = await jsonRequest(router, "POST", "/api/tags/rename", { newTag: "x" });
+  assert.equal(res.statusCode, 400);
+  assert.ok(res.body.error.includes("oldTag"));
+});
+
+test("POST /api/tags/rename returns 404 for tag not found", async () => {
+  const echoHome = tempDir();
+  const projectPath = tempDir();
+  const docsRoot = tempDir();
+  fs.mkdirSync(projectPath, { recursive: true });
+  process.env.ECHO_HOME = echoHome;
+
+  const { projectId } = registerProject(projectPath, { echoHome });
+  const dirs = resolveDataDirs({ cwd: projectPath });
+  fs.mkdirSync(dirs.articlesDir, { recursive: true });
+
+  const router = createRouter({ docsPort: 5173, docsRoot, dirs });
+  const res = await jsonRequest(router, "POST", "/api/tags/rename", {
+    oldTag: "nonexistent",
+    newTag: "x",
+    projectId,
+  });
+
+  assert.equal(res.statusCode, 404);
+
+  delete process.env.ECHO_HOME;
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(projectPath, { recursive: true, force: true });
+  fs.rmSync(docsRoot, { recursive: true, force: true });
+});
+
+test("POST /api/tags/purge removes a tag from all articles", async () => {
+  const echoHome = tempDir();
+  const projectPath = tempDir();
+  const docsRoot = tempDir();
+  fs.mkdirSync(projectPath, { recursive: true });
+  process.env.ECHO_HOME = echoHome;
+
+  const { projectId } = registerProject(projectPath, { echoHome });
+  const dirs = resolveDataDirs({ cwd: projectPath });
+
+  fs.mkdirSync(dirs.articlesDir, { recursive: true });
+  for (const [id, tags] of [["art-x", ["删除我", "保留"]], ["art-y", ["删除我"]]]) {
+    const articlePath = path.join(dirs.articlesDir, `${id}.md`);
+    fs.writeFileSync(articlePath, [
+      "---",
+      `id: ${id}`,
+      `title: ${id}`,
+      "created_at: 2026-05-25T00:00:00.000Z",
+      `tags: [${tags.map((t) => JSON.stringify(t)).join(", ")}]`,
+      `project: ${projectId}`,
+      "---",
+      "",
+      `# ${id}`,
+      "",
+      "Body.",
+      "",
+    ].join("\n"));
+  }
+
+  const router = createRouter({ docsPort: 5173, docsRoot, dirs });
+
+  const res = await jsonRequest(router, "POST", "/api/tags/purge", {
+    tag: "删除我",
+    projectId,
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.tag, "删除我");
+  assert.equal(res.body.purged, 2);
+  assert.doesNotMatch(fs.readFileSync(path.join(dirs.articlesDir, "art-x.md"), "utf-8"), /删除我/);
+  assert.match(fs.readFileSync(path.join(dirs.articlesDir, "art-x.md"), "utf-8"), /保留/);
+  assert.doesNotMatch(fs.readFileSync(path.join(dirs.articlesDir, "art-y.md"), "utf-8"), /删除我/);
+
+  delete process.env.ECHO_HOME;
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(projectPath, { recursive: true, force: true });
+  fs.rmSync(docsRoot, { recursive: true, force: true });
+});
+
+test("POST /api/tags/purge returns 400 without tag", async () => {
+  const router = createRouter({ docsPort: 5173 });
+  const res = await jsonRequest(router, "POST", "/api/tags/purge", {});
+  assert.equal(res.statusCode, 400);
+  assert.ok(res.body.error.includes("tag"));
+});
+
+test("POST /api/tags/purge returns 404 for tag not found", async () => {
+  const echoHome = tempDir();
+  const projectPath = tempDir();
+  const docsRoot = tempDir();
+  fs.mkdirSync(projectPath, { recursive: true });
+  process.env.ECHO_HOME = echoHome;
+
+  const { projectId } = registerProject(projectPath, { echoHome });
+  const dirs = resolveDataDirs({ cwd: projectPath });
+  fs.mkdirSync(dirs.articlesDir, { recursive: true });
+
+  const router = createRouter({ docsPort: 5173, docsRoot, dirs });
+  const res = await jsonRequest(router, "POST", "/api/tags/purge", {
+    tag: "nonexistent",
+    projectId,
+  });
+
+  assert.equal(res.statusCode, 404);
+
+  delete process.env.ECHO_HOME;
+  fs.rmSync(echoHome, { recursive: true, force: true });
+  fs.rmSync(projectPath, { recursive: true, force: true });
+  fs.rmSync(docsRoot, { recursive: true, force: true });
+});
+
 test("GET /api/status returns capture state and version", async () => {
   const echoHome = tempDir();
   fs.mkdirSync(echoHome, { recursive: true });

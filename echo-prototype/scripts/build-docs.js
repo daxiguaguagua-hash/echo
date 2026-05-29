@@ -381,6 +381,7 @@ function renderTagsIndex(articles) {
       anchor,
       tag,
       articles: taggedArticles.map((article) => ({
+        id: article.data.id || article.id,
         title: displayTitle(article),
         summary: article.data.summary || "",
         href: `/articles/generated/${articleSlug(article)}`,
