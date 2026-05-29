@@ -8,9 +8,11 @@ import EchoChatBubbles from './components/EchoChatBubbles.vue'
 import EchoProjectTabs from './components/EchoProjectTabs.vue'
 import EchoCommentChain from './components/EchoCommentChain.vue'
 import EchoCommentNode from './components/EchoCommentNode.vue'
-import EchoLiveSession from './components/EchoLiveSession.vue'
+// [LIVE_SESSION_DISABLED] 后期恢复时取消注释
+// import EchoLiveSession from './components/EchoLiveSession.vue'
 import EchoLegacyRecovery from './components/EchoLegacyRecovery.vue'
 import EchoGlobalControls from './components/EchoGlobalControls.vue'
+import EchoClaudeImportBanner from './components/EchoClaudeImportBanner.vue'
 import './custom.css'
 
 export default {
@@ -25,8 +27,10 @@ export default {
     app.component('EchoProjectTabs', EchoProjectTabs)
     app.component('EchoCommentChain', EchoCommentChain)
     app.component('EchoCommentNode', EchoCommentNode)
-    app.component('EchoLiveSession', EchoLiveSession)
+    // [LIVE_SESSION_DISABLED] 后期恢复时取消注释
+    // app.component('EchoLiveSession', EchoLiveSession)
     app.component('EchoLegacyRecovery', EchoLegacyRecovery)
     app.component('EchoGlobalControls', EchoGlobalControls)
+    app.component('EchoClaudeImportBanner', EchoClaudeImportBanner)
   },
 }

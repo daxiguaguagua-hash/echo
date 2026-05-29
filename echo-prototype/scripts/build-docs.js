@@ -356,6 +356,8 @@ function renderArticleIndex(articles) {
 共 ${articles.length} 篇 Echo 文章。
 
 <EchoProjectTabs payload="${payload}" />
+
+<EchoClaudeImportBanner />
 `;
 }
 
@@ -470,10 +472,12 @@ ${items}
           }`;
   }).join(",\n");
 
-  const liveItems = (liveSessions || []).map((s) => {
-    const label = s.publishedSlug ? `${s.sessionId} (已发布)` : `${s.sessionId} (LIVE)`;
-    return `            { text: ${JSON.stringify(label)}, link: '/live/generated/${liveSessionSlug(s)}' }`;
-  }).join(",\n");
+  // [LIVE_SESSION_DISABLED] 后期恢复时取消注释
+  // const liveItems = (liveSessions || []).map((s) => {
+  //   const label = s.publishedSlug ? `${s.sessionId} (已发布)` : `${s.sessionId} (LIVE)`;
+  //   return `            { text: ${JSON.stringify(label)}, link: '/live/generated/${liveSessionSlug(s)}' }`;
+  // }).join(",\n");
+  const liveItems = "";
 
   const liveSection = (liveSessions || []).length > 0 ? `      {
         text: 'Live Sessions',
@@ -745,28 +749,29 @@ function runBuildDocs(opts = {}) {
     );
   }
 
-  // Generate live session pages
-  const liveDir = path.join(docsRoot, "live", "generated");
-  cleanDir(liveDir);
-  const liveSessions = loadLiveSessions();
-  for (const session of liveSessions) {
-    fs.writeFileSync(
-      path.join(liveDir, `${liveSessionSlug(session)}.md`),
-      renderLiveSessionPage(session),
-      "utf-8"
-    );
-  }
+  // [LIVE_SESSION_DISABLED] 后期恢复时取消下面注释，并删除空数组赋值
+  // const liveDir = path.join(docsRoot, "live", "generated");
+  // cleanDir(liveDir);
+  // const liveSessions = loadLiveSessions();
+  // for (const session of liveSessions) {
+  //   fs.writeFileSync(
+  //     path.join(liveDir, `${liveSessionSlug(session)}.md`),
+  //     renderLiveSessionPage(session),
+  //     "utf-8"
+  //   );
+  // }
+  const liveSessions = [];
 
   fs.writeFileSync(path.join(docsRoot, "articles", "index.md"), renderArticleIndex(articles), "utf-8");
   fs.writeFileSync(path.join(docsRoot, "tags", "index.md"), renderTagsIndex(articles), "utf-8");
-  fs.writeFileSync(path.join(docsRoot, "live", "index.md"), renderLiveSessionsIndex(liveSessions), "utf-8");
+  // fs.writeFileSync(path.join(docsRoot, "live", "index.md"), renderLiveSessionsIndex(liveSessions), "utf-8");
   updateHome(articles, docsRoot);
   writeSidebar(articles, liveSessions, paths.sidebarFile);
 
   const summary = [`${articles.length} articles`, `${comments.length} comments`];
-  if (liveSessions.length > 0) summary.push(`${liveSessions.length} live sessions`);
+  // if (liveSessions.length > 0) summary.push(`${liveSessions.length} live sessions`);
   console.log(`Generated VitePress docs for ${summary.join(", ")}.`);
-  return { articles: articles.length, comments: comments.length, liveSessions: liveSessions.length, docsRoot };
+  return { articles: articles.length, comments: comments.length, liveSessions: 0, docsRoot };
 }
 
 if (require.main === module) {

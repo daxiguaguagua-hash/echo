@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-29 (Turn 标记格式统一 + 工作流纪律强化)
+最后更新：2026-05-29 (未导入 Claude 历史会话横幅 + Turn 标记 + 工作流纪律)
 
 ## 已完成
 
@@ -118,7 +118,7 @@
 - [x] **serve 启动时自动运行管线** (2026-05-27) — `echoctl serve` 启动时在 `runBuildDocs()` 之前自动执行 `runPipeline({ allProjects: true, silent: true })`，确保 capture 的 buffer 自动转换为可见文章，不再需要手动跑 `npm run all`。`npm run all` 通过，`npm run docs:generate` 生成 18 篇文章。
 - [x] **旧全局目录关联切断** (2026-05-27) — 网页生成在存在 registry 项目时只聚合 `projects/<project-id>/` 数据，不再把 Echo home 根目录的 legacy `articles/` 混入当前项目视图；capture 在 `cwd` 缺失或 stale 时可通过 Claude transcript 目录精确匹配 registry 项目，避免新会话继续写入 `~/.echo-workspace/session-buffer/`。新增 hook/build-docs 回归测试；旧全局目录保留为后续清理项。
 - [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
-- [x] **Live session 与不可变文章分层** (2026-05-28) — 正在进行的 AI 会话从 `session-buffer` 渲染 live page，30 秒自动刷新；显式 publish 后生成不可变 article（不可覆盖）。Live 页面位于 `/live/generated/<project>--<session>.md`，含 LIVE 脉冲标记、turn 计数、发布按钮和已发布文章链接。POST `/api/publish` 端点将 buffer 转为正式文章。设计记录：[issues/016-live-session-vs-immutable-article.md](issues/016-live-session-vs-immutable-article.md)
+- [x] **Live session 与不可变文章分层** (2026-05-28) — 正在进行的 AI 会话从 `session-buffer` 渲染 live page。⚠️ **2026-05-29 决定：LiveSession UI 层暂不展示。** 侧边栏 Live 入口、`/live/` 页面生成、组件注册均已用 `[LIVE_SESSION_DISABLED]` 注释标记，后期单开 issue 恢复。后端 `loadLiveSessions()`、`EchoLiveSession.vue`、`live-session-state.js`、API 端点代码完整保留。
 
 ### 编辑
 - [x] **全局控制入口迁移** (2026-05-28) — 新增 `EchoGlobalControls`，将 `收集 开/关` 和 `MCP` 配置入口迁移到 VitePress 顶部导航；文章页底部只保留与当前文章相关的评论/标记操作。Browser 已验证文章列表、文章详情与 MCP 弹窗。
@@ -141,7 +141,7 @@
 - [x] **创建标记表单样式重设计** (2026-05-28) — 保留原有 `postTag` 行为，将底部“创建标记”卡片改为轻量 `标记` 工具条，减少与评论区的视觉重复；Browser 移动宽度检查无横向溢出。
 - [ ] **标签/摘要编辑** — 网页端改 frontmatter 字段，写回 MD
 - [ ] **剪贴板导入脚本** — `paste-to-md.sh`（macOS 优先）
-- [x] **未导入 Claude 历史会话提示** — Issue 021 后端完成：`discoverClaudeImportCandidates` usecase、status `transcripts` 字段、API `GET /api/import/claude-candidates` + `POST /api/import/claude`、echo-api.ts。7 新测试，331 全绿，管线通过。页面空状态 Vue 组件待后续。
+- [x] **未导入 Claude 历史会话提示** — Issue 021 全栈完成。后端：`discoverClaudeImportCandidates` usecase + API；前端：`EchoClaudeImportBanner.vue` 横幅组件（文章列表页顶部，展开查看候选 + CLI 命令提示 + 一键导入）。7 新测试，331 全绿，管线通过。
 
 ### 工程
 - [ ] **Git 仓库初始化** — `git init` + `.gitignore`（排除 `.echo-buffer/`、`node_modules/`）
@@ -175,6 +175,7 @@
   - **替代想法**：不做内置 wiki，改为可选的 `sync-to-wiki` 桥接脚本。检测 `~/Documents/SilentBrain/` 等已有 wiki vault，Echo 的 convert/import 输出自动同步到 wiki 的 `raw/articles/` 目录。用户自己决定是否将 Echo 文章提升为 wiki 的 concept/entity 页。这样 Echo 管线不受影响，wiki 作为独立的知识精炼层存在。架构影响评估已存档于 session-2026-05-23。
 - [ ] **build-docs 读 snapshots.json** (Issue 019 P2 延后) — 文章列表默认只显示 latest snapshot，需接入 `snapshots.json` 版本索引；当前 build-docs 加载全部 article 不做版本过滤。
 - [ ] **help 文案进 i18n 层** (Issue 018 P2 延后) — `echoctl --help`/`mcp --help` 文案仍硬编码在 bin/echoctl.js，未进入 `lib/i18n/messages/`；`echo-mcp --help` 缺少 legacy 命令提醒。
+- [ ] **LiveSession UI 恢复** — 当前已用 `[LIVE_SESSION_DISABLED]` 注释隐藏。恢复步骤：`grep -rn "LIVE_SESSION_DISABLED" echo-prototype/scripts/build-docs.js docs/.vitepress/theme/index.ts` → ① build-docs.js:475 取消 `liveItems` 注释、删 `const liveItems = ""` → ② build-docs.js:752 取消 live 页面生成注释、删 `const liveSessions = []`、取消 `live/index.md` 生成和 summary 计数注释、return 的 `liveSessions: 0` 改回 `liveSessions.length` → ③ index.ts:11 取消 import 注释 → ④ index.ts:30 取消 `app.component` 注释。建议单开 issue 后再操作。
 - [ ] **Code Review 改进项** — 11 项代码质量问题，详见 [issues/009-code-review-findings.md](issues/009-code-review-findings.md)（2026-05-26，CodeGraph 全项目扫描）
 - [x] **echoctl 查找已注册项目 + MCP 同步** — CLI 新增 `echoctl project list` / `echoctl project find <id>`，MCP 新增 `list_projects` / `get_project` 工具，详见 [issues/011-echoctl-list-projects-mcp-sync.md](issues/011-echoctl-list-projects-mcp-sync.md)（2026-05-27）
 - [x] **多项目网页端不可见** — `echoctl all` 改为对所有已注册项目运行完整管线；新增 `aggregate-all-projects.js` usecase；`loadAllArticlesAndComments()` 已支撑多项目网页聚合。详见 [issues/012-multi-project-web-visibility.md](issues/012-multi-project-web-visibility.md)（2026-05-27）
