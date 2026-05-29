@@ -121,7 +121,7 @@
 - [x] **Live session 与不可变文章分层** (2026-05-28) — 正在进行的 AI 会话从 `session-buffer` 渲染 live page。⚠️ **2026-05-29 决定：LiveSession UI 层暂不展示。** 侧边栏 Live 入口、`/live/` 页面生成、组件注册均已用 `[LIVE_SESSION_DISABLED]` 注释标记，后期单开 issue 恢复。后端 `loadLiveSessions()`、`EchoLiveSession.vue`、`live-session-state.js`、API 端点代码完整保留。
 
 ### 编辑
-- [x] **全局控制入口迁移** (2026-05-28) — 新增 `EchoGlobalControls`，将 `收集 开/关` 和 `MCP` 配置入口迁移到 VitePress 顶部导航；文章页底部只保留与当前文章相关的评论/标记操作。Browser 已验证文章列表、文章详情与 MCP 弹窗。
+- [x] **全局控制入口迁移** (2026-05-28) — 新增 `EchoGlobalControls`，将 `收集 开/关` 和 `MCP` 配置入口迁移到 VitePress 顶部导航；文章页底部只保留与当前文章相关的评论/标记操作。⚠️ **2026-05-29：顶部项目筛选下拉框已用 `[PROJECT_FILTER_DISABLED]` 注释隐藏**（功能失灵），后期单开 issue 修复后恢复。
 - [x] **文章正文聊天气泡化** — 用户发言靠右、AI 回复靠左，基于隐藏 `echo-turn-marker` 在 VitePress 渲染后分组，不修改原文且不影响 search landing / annotation anchor。设计记录：[issues/010-article-chat-bubbles.md](issues/010-article-chat-bubbles.md)
 - [x] **聊天气泡运行时修复** (2026-05-26) — 修复 VitePress 将隐藏 turn marker 包进空 `<p>` 后，`EchoChatBubbles` 从 `span.nextSibling` 找不到正文节点的问题；现在以 marker 所在空段落作为边界，并刷新 runtime site。Browser 验证 `session-2026-05-25` 生成 10 个气泡 turn。
 - [x] **聊天气泡宽度自适应** (2026-05-26) — 气泡改为 `width: fit-content` + `max-width` 兜底，短用户消息按内容收缩，长回复仍限制在正文宽度内。
@@ -175,6 +175,7 @@
   - **替代想法**：不做内置 wiki，改为可选的 `sync-to-wiki` 桥接脚本。检测 `~/Documents/SilentBrain/` 等已有 wiki vault，Echo 的 convert/import 输出自动同步到 wiki 的 `raw/articles/` 目录。用户自己决定是否将 Echo 文章提升为 wiki 的 concept/entity 页。这样 Echo 管线不受影响，wiki 作为独立的知识精炼层存在。架构影响评估已存档于 session-2026-05-23。
 - [ ] **build-docs 读 snapshots.json** (Issue 019 P2 延后) — 文章列表默认只显示 latest snapshot，需接入 `snapshots.json` 版本索引；当前 build-docs 加载全部 article 不做版本过滤。
 - [ ] **help 文案进 i18n 层** (Issue 018 P2 延后) — `echoctl --help`/`mcp --help` 文案仍硬编码在 bin/echoctl.js，未进入 `lib/i18n/messages/`；`echo-mcp --help` 缺少 legacy 命令提醒。
+- [ ] **顶部项目筛选恢复** — 当前已用 `[PROJECT_FILTER_DISABLED]` 在 `EchoGlobalControls.vue` 中注释隐藏（功能失灵）。恢复：`grep -rn "PROJECT_FILTER_DISABLED" docs/.vitepress/theme/components/EchoGlobalControls.vue` → 取消 template 和 script 中共 3 处注释。
 - [ ] **LiveSession UI 恢复** — 当前已用 `[LIVE_SESSION_DISABLED]` 注释隐藏。恢复步骤：`grep -rn "LIVE_SESSION_DISABLED" echo-prototype/scripts/build-docs.js docs/.vitepress/theme/index.ts` → ① build-docs.js:475 取消 `liveItems` 注释、删 `const liveItems = ""` → ② build-docs.js:752 取消 live 页面生成注释、删 `const liveSessions = []`、取消 `live/index.md` 生成和 summary 计数注释、return 的 `liveSessions: 0` 改回 `liveSessions.length` → ③ index.ts:11 取消 import 注释 → ④ index.ts:30 取消 `app.component` 注释。建议单开 issue 后再操作。
 - [ ] **Code Review 改进项** — 11 项代码质量问题，详见 [issues/009-code-review-findings.md](issues/009-code-review-findings.md)（2026-05-26，CodeGraph 全项目扫描）
 - [x] **echoctl 查找已注册项目 + MCP 同步** — CLI 新增 `echoctl project list` / `echoctl project find <id>`，MCP 新增 `list_projects` / `get_project` 工具，详见 [issues/011-echoctl-list-projects-mcp-sync.md](issues/011-echoctl-list-projects-mcp-sync.md)（2026-05-27）

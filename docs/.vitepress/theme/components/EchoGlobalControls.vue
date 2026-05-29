@@ -1,5 +1,6 @@
 <template>
   <div class="echo-global-controls">
+    <!-- [PROJECT_FILTER_DISABLED] 功能失灵，后期修复后取消注释
     <select
       class="echo-global-select"
       :value="projectFilter.selectedProject.value"
@@ -10,6 +11,7 @@
         {{ p.name }}
       </option>
     </select>
+    -->
     <button
       class="echo-global-btn"
       :class="status?.captureEnabled ? 'echo-btn-on' : 'echo-btn-off'"
@@ -48,15 +50,16 @@
 import { onMounted, ref } from 'vue'
 import { useEchoStatus } from '../lib/useEchoStatus'
 import { getMcpConfig, setCapture } from '../lib/echo-api'
-import { useProjectFilter } from '../lib/useProjectFilter'
+// [PROJECT_FILTER_DISABLED] 后期恢复时取消注释
+// import { useProjectFilter } from '../lib/useProjectFilter'
 
 const articleId = ref<string | undefined>(undefined)
 const { state, status } = useEchoStatus(articleId)
-const projectFilter = useProjectFilter()
+// const projectFilter = useProjectFilter()
 
 onMounted(() => {
-  projectFilter.load()
-  projectFilter.restore()
+  // projectFilter.load()
+  // projectFilter.restore()
 })
 
 const mcpVisible = ref(false)
