@@ -8,3 +8,5 @@ docs/.vitepress/cache/
 docs/articles/generated/
 .gstack/
 .deepseek/
+./echo-prototype/bin/
+./echo-prototype/comments/
