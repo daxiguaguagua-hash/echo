@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-29 (未导入 Claude 历史会话横幅 + Turn 标记 + 工作流纪律)
+最后更新：2026-05-29 (标签/摘要编辑 + 项目筛选隐藏 + LiveSession UI 隐藏 + Claude 导入横幅)
 
 ## 已完成
 
@@ -139,7 +139,7 @@
 - [x] **echoctl serve 注册项目提示** (2026-05-28) — 启动摘要新增“已注册项目”列表，并明确提示新项目必须先运行 `echoctl init project --path <project-dir>` 注册，否则网页不会显示该项目的 AI 聊天记录。
 - [x] **README 当前使用方式重写** (2026-05-27) — README 改为当前真实用户路径：安装方法前用醒目的 TIP 提示“AI 时代的安装方法：可以将当前页面交给 AI，让它帮你安装和配置 Echo”；`npm link` 安装开发版 CLI、`echoctl init project` 注册项目、`echoctl hook install claude --write` 安装 hook、`echoctl serve` 后台启动网页；删除过时的 npm 主流程和旧测试数量，补充未注册目录 legacy fallback 与 serve 暂无实时 watcher 的边界说明。
 - [x] **创建标记表单样式重设计** (2026-05-28) — 保留原有 `postTag` 行为，将底部“创建标记”卡片改为轻量 `标记` 工具条，减少与评论区的视觉重复；Browser 移动宽度检查无横向溢出。
-- [ ] **标签/摘要编辑** — 网页端改 frontmatter 字段，写回 MD
+- [x] **标签/摘要编辑** (2026-05-29) — 全栈完成。后端：`updateSummary()` usecase + `POST /api/tags/remove` + `POST /api/summary` API；前端：`EchoArticleActions.vue` 已有标签 chip 列表（× 删除）+ 摘要 textarea（保存按钮）；`echo-api.ts` 新增 `removeTags()` / `updateSummary()`。343 测试全绿，管线通过。
 - [ ] **剪贴板导入脚本** — `paste-to-md.sh`（macOS 优先）
 - [x] **未导入 Claude 历史会话提示** — Issue 021 全栈完成。后端：`discoverClaudeImportCandidates` usecase + API；前端：`EchoClaudeImportBanner.vue` 横幅组件（文章列表页顶部，展开查看候选 + CLI 命令提示 + 一键导入）。7 新测试，331 全绿，管线通过。
 

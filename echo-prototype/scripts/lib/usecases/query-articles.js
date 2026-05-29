@@ -236,6 +236,18 @@ function addTags(args, deps) {
   return { id: article.data.id, tags: merged, added: newTags };
 }
 
+function updateSummary(args, deps) {
+  const { dirs, store } = deps;
+  ensureDir(dirs.articlesDir);
+  const article = store.loadArticleById(dirs.articlesDir, args.id);
+  if (!article) throw new NotFoundError(`Article "${args.id}" not found`);
+
+  article.data.summary = (args.summary || "").trim() || undefined;
+  store.writeArticleFile(article.absPath, article.data, article.content);
+
+  return { id: article.data.id, summary: article.data.summary || "" };
+}
+
 function removeTags(args, deps) {
   const { dirs, store } = deps;
   ensureDir(dirs.articlesDir);
@@ -312,6 +324,7 @@ module.exports = {
   listRecent,
   addTags,
   removeTags,
+  updateSummary,
   listProjects,
   getProject,
 };

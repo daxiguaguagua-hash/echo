@@ -328,6 +328,43 @@ function createRouter(deps) {
         }
       }
 
+      if (p === "/api/tags/remove" && req.method === "POST") {
+        const body = await readBody(req);
+        const tags = Array.isArray(body?.tags) ? body.tags : [];
+        if (!body || !body.articleId || tags.length === 0) {
+          return jsonResponse(res, 400, { error: "articleId and tags required" }, docsPort);
+        }
+        const dirs = resolveDirsForProject(body.projectId, deps.dirs);
+        try {
+          const { removeTags } = require("./lib/usecases/query-articles");
+          const result = removeTags({ id: body.articleId, tags }, { dirs, store });
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
+            console.error("[echo] Rebuilding docs after tag removal failed:", e.message);
+          }
+          return jsonResponse(res, 200, result, docsPort);
+        } catch (err) {
+          return jsonResponse(res, err.name === "NotFoundError" ? 404 : 422, { error: err.message }, docsPort);
+        }
+      }
+
+      if (p === "/api/summary" && req.method === "POST") {
+        const body = await readBody(req);
+        if (!body || !body.articleId || body.summary === undefined) {
+          return jsonResponse(res, 400, { error: "articleId and summary required" }, docsPort);
+        }
+        const dirs = resolveDirsForProject(body.projectId, deps.dirs);
+        try {
+          const { updateSummary } = require("./lib/usecases/query-articles");
+          const result = updateSummary({ id: body.articleId, summary: body.summary }, { dirs, store });
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
+            console.error("[echo] Rebuilding docs after summary update failed:", e.message);
+          }
+          return jsonResponse(res, 200, result, docsPort);
+        } catch (err) {
+          return jsonResponse(res, err.name === "NotFoundError" ? 404 : 422, { error: err.message }, docsPort);
+        }
+      }
+
       if (p === "/api/projects" && req.method === "GET") {
         const echoHome = resolveEchoHomePath();
         const projects = listProjects(echoHome);

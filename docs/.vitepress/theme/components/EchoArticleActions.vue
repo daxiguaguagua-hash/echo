@@ -5,6 +5,17 @@
 
   <div class="echo-tag-strip">
     <span class="echo-tag-strip-label">标记</span>
+    <div class="echo-existing-tags" v-if="existingTags.length">
+      <span v-for="tag in existingTags" :key="tag" class="echo-tag-chip">
+        {{ tag }}
+        <button
+          class="echo-tag-remove"
+          :disabled="state !== 'ready' || removingTags.has(tag)"
+          title="删除标记"
+          @click="removeTag(tag)"
+        >×</button>
+      </span>
+    </div>
     <div class="echo-tag-form">
       <input
         v-model="tagText"
@@ -21,6 +32,27 @@
       </button>
     </div>
     <span v-if="tagError" class="echo-inline-error">{{ tagError }}</span>
+  </div>
+
+  <div class="echo-summary-strip">
+    <span class="echo-summary-strip-label">摘要</span>
+    <textarea
+      v-model="summaryText"
+      placeholder="文章摘要..."
+      rows="2"
+      :disabled="state !== 'ready' || savingSummary"
+    ></textarea>
+    <div class="echo-summary-actions">
+      <button
+        class="echo-btn"
+        :disabled="state !== 'ready' || savingSummary || summaryText === originalSummary"
+        @click="saveSummary"
+      >
+        {{ savingSummary ? '保存中...' : '保存摘要' }}
+      </button>
+      <span v-if="summaryError" class="echo-inline-error">{{ summaryError }}</span>
+      <span v-if="summarySaved" class="echo-inline-ok">{{ summarySaved }}</span>
+    </div>
   </div>
 
   <div v-if="canPublish" class="echo-publish-strip">
@@ -58,7 +90,7 @@
 import { ref, computed, watch } from 'vue'
 import { useData } from 'vitepress'
 import { useEchoStatus } from '../lib/useEchoStatus'
-import { EchoApiError, postComment, postPublish, postTag } from '../lib/echo-api'
+import { EchoApiError, postComment, postPublish, postTag, removeTags, updateSummary } from '../lib/echo-api'
 
 const { frontmatter } = useData()
 const articleId = computed(() => (frontmatter.value as any)?.echo?.articleId as string | undefined)
@@ -69,9 +101,19 @@ const { state, status } = useEchoStatus(articleId)
 const commentText = ref('')
 const submitting = ref(false)
 const submitError = ref('')
+const existingTags = computed(() => {
+  const tags = (frontmatter.value as any)?.tags
+  return Array.isArray(tags) ? tags : []
+})
+const removingTags = ref<Set<string>>(new Set())
 const tagText = ref('')
 const tagging = ref(false)
 const tagError = ref('')
+const summaryText = ref('')
+const originalSummary = ref('')
+const savingSummary = ref(false)
+const summaryError = ref('')
+const summarySaved = ref('')
 const publishing = ref(false)
 const publishMessage = ref('')
 const publishError = ref('')
@@ -84,6 +126,11 @@ watch(articleId, () => {
   publishError.value = ''
   tagText.value = ''
   commentText.value = ''
+  summaryError.value = ''
+  summarySaved.value = ''
+  const s = (frontmatter.value as any)?.summary || ''
+  summaryText.value = s
+  originalSummary.value = s
 })
 
 async function submitComment() {
@@ -124,6 +171,44 @@ async function submitTag() {
     tagError.value = err.message || '创建失败'
   } finally {
     tagging.value = false
+  }
+}
+
+async function removeTag(tag: string) {
+  if (!articleId.value) return
+  removingTags.value = new Set([...removingTags.value, tag])
+  tagError.value = ''
+  try {
+    await removeTags({
+      articleId: articleId.value,
+      tags: [tag],
+      projectId: projectId.value ?? null,
+    })
+    location.reload()
+  } catch (err: any) {
+    tagError.value = err.message || '删除失败'
+    removingTags.value = new Set([...removingTags.value].filter(t => t !== tag))
+  }
+}
+
+async function saveSummary() {
+  if (!articleId.value) return
+  savingSummary.value = true
+  summaryError.value = ''
+  summarySaved.value = ''
+  try {
+    await updateSummary({
+      articleId: articleId.value,
+      summary: summaryText.value.trim(),
+      projectId: projectId.value ?? null,
+    })
+    originalSummary.value = summaryText.value.trim()
+    summarySaved.value = '摘要已保存'
+    setTimeout(() => { summarySaved.value = '' }, 3000)
+  } catch (err: any) {
+    summaryError.value = err.message || '保存失败'
+  } finally {
+    savingSummary.value = false
   }
 }
 

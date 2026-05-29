@@ -69,6 +69,7 @@ ECHO_STATUS.md           — 项目进度表（活的，随时更新）
 
 1. **验证门** — `npm test && npm run all` + 更新 `ECHO_STATUS.md`（`- [ ]` → `- [x]`，刷新顶部日期）
 2. **不可变性门** — 确认没有修改任何文章正文（`<!-- turn:` 之后的内容）
+3. **Review 门** — 多文件改动（3+ files 或 net 30+ lines）提交前必须 `review diff`，阻塞项修复后再提交。单文件小改可跳过。
 
 ### 多步骤变更额外要求
 

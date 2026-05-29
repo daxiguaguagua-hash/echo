@@ -188,6 +188,32 @@ export function postTag(payload: TagPayload): Promise<any> {
   })
 }
 
+interface RemoveTagPayload {
+  articleId: string
+  tags: string[]
+  projectId?: string | null
+}
+
+export function removeTags(payload: RemoveTagPayload): Promise<any> {
+  return request('/api/tags/remove', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+interface SummaryPayload {
+  articleId: string
+  summary: string
+  projectId?: string | null
+}
+
+export function updateSummary(payload: SummaryPayload): Promise<any> {
+  return request('/api/summary', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function postPublish(payload: PublishPayload): Promise<PublishResponse> {
   return request<PublishResponse>('/api/publish', {
     method: 'POST',
@@ -233,4 +259,4 @@ export function importClaudeSessions(projectId: string, sessionIds: string[]): P
 }
 
 export { EchoApiError, CONFIGURED_API_BASE, DEFAULT_API_BASE }
-export type { EchoStatus, CommentPayload, TagPayload, PublishPayload, PublishResponse, LiveSessionState, LegacyCandidate, LegacyCandidatesResponse, LegacyMigrateResponse, ClaudeImportCandidate, ClaudeImportCandidatesResponse, ClaudeImportResponse }
+export type { EchoStatus, CommentPayload, TagPayload, RemoveTagPayload, SummaryPayload, PublishPayload, PublishResponse, LiveSessionState, LegacyCandidate, LegacyCandidatesResponse, LegacyMigrateResponse, ClaudeImportCandidate, ClaudeImportCandidatesResponse, ClaudeImportResponse }

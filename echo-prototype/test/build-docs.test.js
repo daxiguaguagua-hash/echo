@@ -101,7 +101,7 @@ test("runBuildDocs can generate a runtime VitePress site outside the package doc
   assert.deepEqual(payload[0].articles.map((article) => article.title), ["Runtime Article"]);
 });
 
-test("runBuildDocs renders live pages without global meta refresh", (t) => {
+test("runBuildDocs skips live page generation when LIVE_SESSION_DISABLED", (t) => {
   const oldEchoHome = process.env.ECHO_HOME;
   const oldCwd = process.cwd();
   const echoHome = tempDir();
@@ -133,10 +133,10 @@ test("runBuildDocs renders live pages without global meta refresh", (t) => {
 
   runBuildDocs({ docsRoot });
 
-  const livePage = fs.readFileSync(path.join(docsRoot, "live", "generated", "mynote--session-live.md"), "utf-8");
-  assert.match(livePage, /<EchoLiveSession/);
-  assert.doesNotMatch(livePage, /http-equiv:\s*refresh/);
-  assert.doesNotMatch(livePage, /content:\s*"30"/);
+  const liveGenerated = path.join(docsRoot, "live", "generated");
+  const files = fs.existsSync(liveGenerated) ? fs.readdirSync(liveGenerated).filter(f => f !== ".gitkeep") : [];
+  assert.equal(files.length, 0, "live/generated should be empty when live session is disabled");
+  assert.equal(runBuildDocs({ docsRoot }).liveSessions, 0);
 });
 
 test("runBuildDocs groups sidebar articles by project while keeping recent shortcut", (t) => {
