@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-29 (标签 CRUD 补齐: MCP/CLI/测试)
+最后更新：2026-05-29 (bin/ 分解: 源码与发布入口分离 + 剩余任务盘点)
 
 ## 已完成
 
@@ -53,6 +53,7 @@
 - [x] **Live 页共享心跳与按需刷新** (2026-05-29) — Stop hook 写入 `index/live-state.json`，`GET /api/live-session-state` 返回 session hash/turnCount；前端新增单例 heartbeat，Live 页只在当前 session hash 变化时刷新，避免每 30 秒整页闪烁重置。Live 路径接入侧边栏与右侧目录，徽标文案改为“有更新时自动刷新”。
 - [x] **Turn 标记格式统一** (2026-05-29) — 修复 `claude-code.toEchoArticle()` 使用 `speaker:` 冒号格式导致 import 路径文章用户说话无气泡边框的 bug；新增 `renderTurnMarker()` 共享函数统一 3 个生成点；新增 `TURN_MARKER_REGEX` 统一 2 个解析点；10 个回归测试；`npm test` 343/343 全绿，`npm run all` 通过。详见 [issues/022](issues/022-turn-marker-format-unification.md)。
 - [x] **工作流纪律强化** (2026-05-29) — `CLAUDE.md` 接入 `workflows/` 目录和两道横切门禁（验证门、不可变性门）；补上本次 bug 修复在首次实施时遗漏的 ECHO_STATUS 更新和 issue 记录。
+- [x] **bin/ 源码与发布入口分离** (2026-05-29) — `bin/echoctl.js` 911 行手写 CLI 逻辑 → 3 行引导入口（`require("../scripts/cli/echoctl.js")`）；业务逻辑迁至 `scripts/cli/echoctl.js`（git 跟踪）；`bin/` 在根 `.gitignore` 排除，`echo-prototype/.gitignore` 不含 `bin/` 确保 npm publish 正常打包；待加 `prepare` 脚本在 `npm install` 时自动生成引导文件。
 
 ## 进行中
 
@@ -79,16 +80,26 @@
 
 ### 核心功能
 - [x] **标签管理** — MCP tools `add_tags` / `remove_tags`, CLI `echo-mcp tag add|remove|list`, persisted to YAML frontmatter. 7 新测试, 113 全绿.
-- [x] **标签页 CRUD** (2026-05-29) — `/tags/` 页面新增标签增加/修改/删除功能：
-  - **增加**: "+ 新建标签"按钮 → 弹窗选择标签名 + 多选文章，调用 `POST /api/tags` 逐个写入
-  - **修改**: 每个标签悬停显示 ✏️ 按钮 → 行内输入框重命名 → `POST /api/tags/rename` 批量更新所有文章 frontmatter
-  - **删除**: 每个标签悬停显示 🗑️ 按钮 → 确认弹窗 → `POST /api/tags/purge` 从所有文章移除该标签
-  - 后端新增 `renameTag()` / `purgeTag()`（query-articles.js）+ 两个 API 端点 + 文档自动重建
-  - 前端 `EchoTagsPage.vue` 完整重写；`build-docs.js` tags payload 新增 `id` 字段；`echo-api.ts` 新增类型
-  - **MCP 同步**: `tools.js` 新增 `rename_tag` / `purge_tag` schema + handler
-  - **CLI 同步**: `echoctl tag rename <old> <new>` / `echoctl tag purge <tag>`
-  - **测试**: `serve-api.test.js` 6 个新测试 + `mcp-e2e.test.js` 4 个新测试 + `mcp-server.test.js` 4 个新测试 = 14 个增量
-  - `npm test` 357/357 全绿，`npm run all` 8 项目全绿
+- [x] **标签页 CRUD** (2026-05-29) — 全部完成，357 测试全绿。
+
+### 下一阶段剩余任务 (2026-05-29 盘点)
+
+**P1 — 阻碍发布**
+- [ ] **npm publish** — `package.json` 就绪（`private: false`、`bin`、`files` 已配置），未执行实际发布
+- [ ] **`scripts/cli/echoctl.js` 拆分** — 911 行单体，Issue 009 计划拆为 `bin/commands/` 子模块（暂缓项）
+
+**P2 — 数据完整性**
+- [ ] **session-map 并发保护** — 并行 Claude 会话同时 Stop 可能损坏 `session-map.txt`（Issue 009 #9 未修）
+
+**P3 — 文档**
+- [ ] **终端用户 onboarding 文档** — 缺独立的五分钟上手指南（安装 → 初始化 → 首次导入 → 日常使用）
+
+**P4 — 远期**
+- [ ] **进化链 UI** — 文章 `evolution` 关系可视化（已实现评论区回复链，前端 evolution 链路浏览未做）
+- [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 全局最近查询日志，v2 按文章关联
+
+### 设计上故意不做
+- **serve watcher (自动 convert)** — live session 心跳已覆盖实时查看；正式文章须显式 publish，符合 Issue 016/019 的不可变设计
 
 ### 展示层
 - [x] **VitePress 骨架** — `docs/` 目录、`.vitepress/config.mts`、首页文章列表、示例文章、`docs:dev/build/preview` 脚本，构建通过
@@ -127,7 +138,6 @@
 - [x] **echoctl stop 孤立 docs 进程清理** (2026-05-27) — `serve` 状态文件新增 VitePress 子进程 PID；`echoctl stop` 在主进程已退出时会继续清理记录的子进程，并在状态文件缺失但 5173/8787 上仍有 Echo serve/VitePress 进程时识别并停止孤立进程，避免出现”docs 还在、API 已停”的半残页面。已清理本机遗留 PID 96905；`npm test -- test/serve-api.test.js test/stop-command.test.js test/build-docs.test.js` 和 `npm run all` 通过。
 - [x] **serve 启动时自动运行管线** (2026-05-27) — `echoctl serve` 启动时在 `runBuildDocs()` 之前自动执行 `runPipeline({ allProjects: true, silent: true })`，确保 capture 的 buffer 自动转换为可见文章，不再需要手动跑 `npm run all`。`npm run all` 通过，`npm run docs:generate` 生成 18 篇文章。
 - [x] **旧全局目录关联切断** (2026-05-27) — 网页生成在存在 registry 项目时只聚合 `projects/<project-id>/` 数据，不再把 Echo home 根目录的 legacy `articles/` 混入当前项目视图；capture 在 `cwd` 缺失或 stale 时可通过 Claude transcript 目录精确匹配 registry 项目，避免新会话继续写入 `~/.echo-workspace/session-buffer/`。新增 hook/build-docs 回归测试；旧全局目录保留为后续清理项。
-- [ ] **AI 查询链 UI** — MCP 查询写入 query log，v1 先做全局最近查询日志，v2 按文章关联
 - [x] **Live session 与不可变文章分层** (2026-05-28) — 正在进行的 AI 会话从 `session-buffer` 渲染 live page。⚠️ **2026-05-29 决定：LiveSession UI 层暂不展示。** 侧边栏 Live 入口、`/live/` 页面生成、组件注册均已用 `[LIVE_SESSION_DISABLED]` 注释标记，后期单开 issue 恢复。后端 `loadLiveSessions()`、`EchoLiveSession.vue`、`live-session-state.js`、API 端点代码完整保留。
 
 ### 编辑
@@ -154,10 +164,9 @@
 - [x] **未导入 Claude 历史会话提示** — Issue 021 全栈完成。后端：`discoverClaudeImportCandidates` usecase + API；前端：`EchoClaudeImportBanner.vue` 横幅组件（文章列表页顶部，展开查看候选 + CLI 命令提示 + 一键导入）。7 新测试，331 全绿，管线通过。
 
 ### 工程
-- [ ] **Git 仓库初始化** — `git init` + `.gitignore`（排除 `.echo-buffer/`、`node_modules/`）
+- [x] **Git 仓库初始化** — `git init` + `.gitignore`
 - [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
-- [x] **项目本地管线 CLI** (2026-05-24) — 新增 `echo-mcp all` 从任意注册项目目录运行完整管线 (convert → validate → index → resolve)；所有管线脚本 (convert/validate/index/resolve/search/annotate/import-sessions) 统一走 `resolveDataDirs()` 按 cwd 匹配 project registry；新增 `run-pipeline.js` usecase；doctor 识别 Echo 内部数据目录并提示修复命令。113 测试全绿，`npm run all` 通过。设计文档：[issues/004-project-local-pipeline-cli.md](issues/004-project-local-pipeline-cli.md)
-- [ ] **SessionEnd hook** — 清理残留 pending、从 transcript 补漏
+- [x] **项目本地管线 CLI** — 新增 `echo-mcp all` 从任意注册项目目录运行完整管线 (convert → validate → index → resolve)；所有管线脚本 (convert/validate/index/resolve/search/annotate/import-sessions) 统一走 `resolveDataDirs()` 按 cwd 匹配 project registry；新增 `run-pipeline.js` usecase；doctor 识别 Echo 内部数据目录并提示修复命令。113 测试全绿，`npm run all` 通过。设计文档：[issues/004-project-local-pipeline-cli.md](issues/004-project-local-pipeline-cli.md)
 - [x] **AUQ 捕获质量修复** — 问题 1：AUQ 之间的叙述文本丢失（已修复：ordered_blocks 保留原始交错顺序）；问题 2：答案格式为原始系统返回值（已修复：正则解析并 join 所有答案）。详见 [issues/013-auq-capture-quality.md](issues/013-auq-capture-quality.md)
 - [x] **capture.js 同步 + 测试覆盖** — Phase 1: 可测试性重构 (module.exports)；Phase 2: 同步 Bash 版 AUQ 修复 (ordered_blocks + tool_use_id + 答案展示)；Phase 3: 15 个 node:test 用例覆盖 extractAuqBlock/handleStop/handleUserPromptSubmit/handleStopFailure。详见 [issues/014-capture-js-sync-and-test.md](issues/014-capture-js-sync-and-test.md)
 - [x] **Project registry** — `registry.json` schema、登记/读取 usecase、重复登记幂等和路径缺失测试

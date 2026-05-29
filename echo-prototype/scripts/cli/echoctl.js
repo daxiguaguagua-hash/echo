@@ -2,7 +2,7 @@
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
-const { commandFor, cliNames } = require("../scripts/lib/cli/names");
+const { commandFor, cliNames } = require("../lib/cli/names");
 
 const CLI = cliNames.canonicalName;
 const USAGE = `${CLI} — Echo knowledge forum CLI
@@ -73,7 +73,7 @@ Verify / 验证：
 `;
 
 function scheduleRefreshIfServeRunning() {
-  const { getRunningServeInfo } = require("../scripts/lib/usecases/refresh-serve");
+  const { getRunningServeInfo } = require("../lib/usecases/refresh-serve");
   if (!getRunningServeInfo()) return false;
   const { spawn } = require("child_process");
   const child = spawn(process.execPath, [__filename, "refresh", "--quiet"], {
@@ -100,7 +100,7 @@ const args = process.argv.slice(2);
 const cmd = args[0];
 
 if (cmd === "--version" || cmd === "-v" || cmd === "-V") {
-  const { version } = require("../package.json");
+  const { version } = require("../../package.json");
   console.log(version);
   process.exit(0);
 }
@@ -115,16 +115,16 @@ switch (cmd) {
     const json = args.includes("--json");
     const langIdx = args.indexOf("--lang");
     const lang = langIdx !== -1 ? args[langIdx + 1] : (process.env.ECHO_LANG || null);
-    const { collectStatus } = require("../scripts/lib/usecases/status-collector");
-    const { formatStatus } = require("../scripts/lib/i18n/format");
+    const { collectStatus } = require("../lib/usecases/status-collector");
+    const { formatStatus } = require("../lib/i18n/format");
     const model = collectStatus();
     console.log(formatStatus(model, { json, lang }));
     break;
   }
   case "hook": {
     const sub = args[1];
-    if (sub === "capture") require("../scripts/lib/hooks/capture");
-    else if (sub === "status") require("../scripts/lib/hooks/status");
+    if (sub === "capture") require("../lib/hooks/capture");
+    else if (sub === "status") require("../lib/hooks/status");
     else if (sub === "install") {
       const provider = args[2];
       if (!provider || provider.startsWith("-")) {
@@ -136,7 +136,7 @@ switch (cmd) {
         process.exit(1);
       }
       const write = args.includes("--write");
-      const { installClaudeHook } = require("../scripts/lib/usecases/install-claude-hook");
+      const { installClaudeHook } = require("../lib/usecases/install-claude-hook");
 
       const result = installClaudeHook({ write });
 
@@ -173,7 +173,7 @@ switch (cmd) {
       }
     }
     else if (sub === "doctor") {
-      const { runDoctor } = require("../scripts/lib/usecases/run-doctor");
+      const { runDoctor } = require("../lib/usecases/run-doctor");
       const results = runDoctor({ hookOnly: true });
       console.log("Hook health check:\n");
       printDoctorResults(results);
@@ -189,7 +189,7 @@ switch (cmd) {
         console.error("Error: --path requires a directory path");
         process.exit(1);
       }
-      const { registerProject } = require("../scripts/lib/usecases/project-registry");
+      const { registerProject } = require("../lib/usecases/project-registry");
       const result = registerProject(projectPath);
       console.log(`Project: ${result.projectId}`);
       console.log(`Root: ${result.projectRoot}`);
@@ -206,7 +206,7 @@ switch (cmd) {
         console.log(`Registered: no (already exists)`);
       }
       try {
-        const { importClaudeProject } = require("../scripts/lib/usecases/import-claude-project");
+        const { importClaudeProject } = require("../lib/usecases/import-claude-project");
         const imported = importClaudeProject(result.projectId);
         if (imported.total > 0) {
           console.log(`Claude transcripts: ${imported.total} found, ${imported.imported} imported, ${imported.skipped} skipped`);
@@ -220,7 +220,7 @@ switch (cmd) {
         console.log(`Serve refresh: scheduled`);
       }
     } else {
-      const { initWorkspace } = require("../scripts/lib/usecases/init-workspace");
+      const { initWorkspace } = require("../lib/usecases/init-workspace");
       const result = initWorkspace();
       console.log(`Workspace: ${result.workspace}`);
       if (result.created.length > 0) {
@@ -236,7 +236,7 @@ switch (cmd) {
   case "project": {
     const sub = args[1];
     if (sub === "list") {
-      const { listProjects } = require("../scripts/lib/usecases/project-registry");
+      const { listProjects } = require("../lib/usecases/project-registry");
       const projects = listProjects();
       if (projects.length === 0) {
         console.log("No registered projects.");
@@ -251,7 +251,7 @@ switch (cmd) {
         console.error("Error: project ID required. Usage: echoctl project find <projectId>");
         process.exit(1);
       }
-      const { findProjectById } = require("../scripts/lib/usecases/project-registry");
+      const { findProjectById } = require("../lib/usecases/project-registry");
       const project = findProjectById(targetId);
       if (!project) {
         console.error(`Project "${targetId}" not found.`);
@@ -268,7 +268,7 @@ switch (cmd) {
   case "refresh": {
     const quiet = args.includes("--quiet");
     (async () => {
-      const { requestRunningServeRefresh } = require("../scripts/lib/usecases/refresh-serve");
+      const { requestRunningServeRefresh } = require("../lib/usecases/refresh-serve");
       const remote = await requestRunningServeRefresh();
       if (remote.attempted) {
         if (!quiet) {
@@ -278,9 +278,9 @@ switch (cmd) {
         return;
       }
 
-      const { runPipeline } = require("../scripts/lib/usecases/run-pipeline");
-      const { runBuildDocs } = require("../scripts/build-docs");
-      const { resolveRuntimeSiteDir } = require("../scripts/serve");
+      const { runPipeline } = require("../lib/usecases/run-pipeline");
+      const { runBuildDocs } = require("../build-docs");
+      const { resolveRuntimeSiteDir } = require("../serve");
       runPipeline({ allProjects: true, silent: quiet });
       runBuildDocs({ docsRoot: resolveRuntimeSiteDir() });
       if (!quiet) console.log("Local refresh: ok");
@@ -291,7 +291,7 @@ switch (cmd) {
     break;
   }
   case "doctor": {
-    const { runDoctor } = require("../scripts/lib/usecases/run-doctor");
+    const { runDoctor } = require("../lib/usecases/run-doctor");
     const results = runDoctor();
     console.log("Echo health check:\n");
     printDoctorResults(results);
@@ -328,7 +328,7 @@ switch (cmd) {
     }
 
     try {
-      const { migrateLegacyBuffer } = require("../scripts/lib/usecases/migrate-legacy-buffer");
+      const { migrateLegacyBuffer } = require("../lib/usecases/migrate-legacy-buffer");
       const result = migrateLegacyBuffer({ projectId, projectPath, from, apply, overwrite, move });
       console.log(apply ? "Legacy buffer migration applied." : "Legacy buffer migration preview. Re-run with --apply to write changes.");
       console.log(`Project: ${result.projectId}`);
@@ -359,19 +359,19 @@ switch (cmd) {
     break;
   }
   case "all": {
-    const { runPipeline } = require("../scripts/lib/usecases/run-pipeline");
+    const { runPipeline } = require("../lib/usecases/run-pipeline");
     const result = runPipeline({ allProjects: true });
     const hasError = Object.values(result).some((r) => r && (r.success === false || r.broken > 0));
     if (hasError) process.exit(1);
     break;
   }
   case "convert": {
-    const { runConvert } = require("../scripts/convert");
+    const { runConvert } = require("../convert");
     runConvert();
     break;
   }
   case "validate": {
-    const { runValidate } = require("../scripts/validate");
+    const { runValidate } = require("../validate");
     const result = runValidate();
     if (result.success) {
       console.log(`OK — ${result.articleCount} articles, ${result.commentCount} comments`);
@@ -383,13 +383,13 @@ switch (cmd) {
     break;
   }
   case "resolve": {
-    const { runResolve } = require("../scripts/resolve");
+    const { runResolve } = require("../resolve");
     const result = runResolve();
     if (result.broken > 0) process.exit(1);
     break;
   }
   case "search": {
-    const { runSearch } = require("../scripts/search");
+    const { runSearch } = require("../search");
     const args = process.argv.slice(2);
     const opts = { keyword: "", tag: "" };
     for (let i = 1; i < args.length; i++) {
@@ -414,7 +414,7 @@ switch (cmd) {
     if (args[1] === "--help" || args[1] === "-h") {
       console.log(MCP_HELP);
     } else {
-      require("../scripts/lib/interfaces/mcp/server").start();
+      require("../lib/interfaces/mcp/server").start();
     }
     break;
   case "import": {
@@ -454,11 +454,11 @@ switch (cmd) {
       process.exit(1);
     }
 
-    const { scanClaudeProjects, buildImportPlan } = require("../scripts/lib/import/scanner");
-    const mf = require("../scripts/lib/import/manifest");
-    const provider = require("../scripts/lib/import/providers/claude-code");
-    const { resolveEchoHomePath } = require("../scripts/lib/infra/workspace");
-    const store = require("../scripts/lib/infra/markdown-store");
+    const { scanClaudeProjects, buildImportPlan } = require("../lib/import/scanner");
+    const mf = require("../lib/import/manifest");
+    const provider = require("../lib/import/providers/claude-code");
+    const { resolveEchoHomePath } = require("../lib/infra/workspace");
+    const store = require("../lib/infra/markdown-store");
 
     const echoHome = resolveEchoHomePath();
     const manifestPath = path.join(echoHome, "import-manifest.json");
@@ -532,7 +532,7 @@ switch (cmd) {
     }
 
     if (apply) {
-      const { resolveDataDirs } = require("../scripts/lib/infra/echo-paths");
+      const { resolveDataDirs } = require("../lib/infra/echo-paths");
       const dirs = resolveDataDirs();
       const targetArticlesDir = asProject
         ? path.join(echoHome, "projects", asProject, "articles")
@@ -588,7 +588,7 @@ switch (cmd) {
       console.log(`\nImported: ${imported}  Skipped: ${skipped + plan.skipped.length}`);
       console.log(`Articles: ${targetArticlesDir}`);
 
-      const { runValidate } = require("../scripts/validate");
+      const { runValidate } = require("../validate");
       const result = runValidate();
       if (result.success) {
         console.log(`Validate: OK — ${result.articleCount} articles, ${result.commentCount} comments`);
@@ -600,7 +600,7 @@ switch (cmd) {
   }
   case "serve":
     if (args.includes("--foreground")) {
-      require("../scripts/serve").start().catch((err) => {
+      require("../serve").start().catch((err) => {
         console.error(`${CLI} serve failed:`, err.message);
         process.exit(1);
       });
@@ -613,8 +613,8 @@ switch (cmd) {
           serveLogFile,
           formatServeSummary,
           isPidRunning,
-        } = require("../scripts/serve");
-        const { isCaptureEnabled } = require("../scripts/lib/infra/config");
+        } = require("../serve");
+        const { isCaptureEnabled } = require("../lib/infra/config");
 
         const existing = readServeInfo();
         if (existing && isPidRunning(existing.pid)) {
@@ -675,7 +675,7 @@ switch (cmd) {
         findServeProcessCandidates,
         isValidPositivePid,
         verifyProcessIdentity,
-      } = require("../scripts/serve");
+      } = require("../serve");
 
       function childPidsFrom(info) {
         return [
@@ -804,7 +804,7 @@ switch (cmd) {
   }
   case "capture": {
     const action = args[1];
-    const { isCaptureEnabled, setCaptureEnabled } = require("../scripts/lib/infra/config");
+    const { isCaptureEnabled, setCaptureEnabled } = require("../lib/infra/config");
     if (action === "on") {
       const r = setCaptureEnabled(true);
       console.log(`Capture enabled (${r.configPath})`);
@@ -820,9 +820,9 @@ switch (cmd) {
     break;
   }
   case "tag": {
-    const { resolveDataDirs } = require("../scripts/lib/infra/echo-paths");
-    const store = require("../scripts/lib/infra/markdown-store");
-    const { listTags, addTags, removeTags, renameTag, purgeTag } = require("../scripts/lib/usecases/query-articles");
+    const { resolveDataDirs } = require("../lib/infra/echo-paths");
+    const store = require("../lib/infra/markdown-store");
+    const { listTags, addTags, removeTags, renameTag, purgeTag } = require("../lib/usecases/query-articles");
     const dirs = resolveDataDirs();
     const deps = { dirs, store };
     const sub = args[1];
