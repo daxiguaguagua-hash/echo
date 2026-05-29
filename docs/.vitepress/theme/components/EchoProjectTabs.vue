@@ -30,7 +30,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useProjectFilter } from '../lib/useProjectFilter'
 
 type ProjectArticle = {
   href: string
@@ -49,6 +50,8 @@ type ProjectGroup = {
 
 const props = defineProps<{ payload: string }>()
 
+const projectFilter = useProjectFilter()
+
 const projectGroups = computed<ProjectGroup[]>(() => {
   try {
     return JSON.parse(decodeURIComponent(props.payload)) as ProjectGroup[]
@@ -64,12 +67,30 @@ const allTab = computed<ProjectGroup>(() => ({
   label: '全部',
 }))
 
-const tabs = computed(() => [allTab.value, ...projectGroups.value])
+const emptyProjectTabs = computed<ProjectGroup[]>(() => {
+  const withArticles = new Set(projectGroups.value.map((group) => group.key))
+  return projectFilter.allProjects.value
+    .filter((project) => !withArticles.has(project.id))
+    .map((project) => ({
+      anchor: `project-${project.id}`,
+      articles: [],
+      key: project.id,
+      label: project.name,
+    }))
+})
+
+const tabs = computed(() => [allTab.value, ...projectGroups.value, ...emptyProjectTabs.value])
 const selectedKey = ref('__all__')
 
 const selectedArticles = computed(() => {
   return tabs.value.find((tab) => tab.key === selectedKey.value)?.articles || []
 })
+
+function resolveTabKey(projectId: string): string {
+  if (projectId === '__all__') return '__all__'
+  const tab = tabs.value.find((t) => t.key === projectId)
+  return tab ? tab.key : '__all__'
+}
 
 function syncFromHash() {
   const hash = decodeURIComponent(window.location.hash.slice(1) || '')
@@ -79,10 +100,29 @@ function syncFromHash() {
 
 function select(key: string) {
   selectedKey.value = key
+  // Also update the global filter so nav dropdown syncs
+  projectFilter.select(key === '__all__' ? '__all__' : key)
 }
 
+function syncFromProjectFilter(projectId: string) {
+  selectedKey.value = resolveTabKey(projectId)
+}
+
+// Sync with global project filter (nav dropdown), including async project loads.
+watch(
+  () => [projectFilter.selectedProject.value, tabs.value.map((tab) => tab.key).join('|')],
+  ([projectId]) => syncFromProjectFilter(projectId),
+)
+
 onMounted(() => {
-  syncFromHash()
+  projectFilter.load()
+  projectFilter.restore()
+  // If global filter is set, use it; otherwise fall back to hash
+  if (projectFilter.selectedProject.value !== '__all__') {
+    syncFromProjectFilter(projectFilter.selectedProject.value)
+  } else {
+    syncFromHash()
+  }
   window.addEventListener('hashchange', syncFromHash)
 })
 

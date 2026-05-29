@@ -200,12 +200,6 @@
   color: var(--vp-c-text-2);
 }
 
-.echo-toolbar {
-  border-top: 1px solid var(--vp-c-divider);
-  margin: 32px 0 0;
-  padding: 16px 0 8px;
-}
-
 .echo-doc-bottom {
   padding: 0 32px;
 }
@@ -221,10 +215,65 @@
   }
 }
 
-.echo-toolbar-btns {
+.echo-global-controls {
+  align-items: center;
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 12px;
+}
+
+.echo-global-btn {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.echo-global-btn:hover {
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
+}
+
+.echo-global-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.echo-global-select {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  color: var(--vp-c-text-1);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  max-width: 120px;
+  padding: 5px 20px 5px 7px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0l4 6 4-6z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+
+.echo-global-select:hover {
+  border-color: var(--vp-c-brand-1);
+}
+
+@media (max-width: 640px) {
+  .echo-global-controls {
+    gap: 4px;
+    margin-left: 6px;
+  }
+
+  .echo-global-btn {
+    font-size: 11px;
+    padding: 5px 6px;
+  }
 }
 
 .echo-btn {
@@ -295,20 +344,37 @@
   padding: 16px;
 }
 
-.echo-tag-box {
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  margin-top: 16px;
-  padding: 16px;
+.echo-comment-box h3 { font-size: 15px; margin: 0 0 10px; }
+
+.echo-tag-strip {
+  align-items: center;
+  border-bottom: 1px solid var(--vp-c-divider);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 24px 0 0;
+  padding: 0 0 14px;
 }
 
-.echo-comment-box h3,
-.echo-tag-box h3 { font-size: 15px; margin: 0 0 10px; }
+.echo-tag-strip-label {
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.echo-publish-strip {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
 
 .echo-tag-form {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  flex: 1 1 260px;
 }
 
 .echo-comment-box textarea {
@@ -340,6 +406,12 @@
   display: inline-block;
   font-size: 13px;
   margin-top: 8px;
+}
+
+.echo-inline-ok {
+  color: var(--vp-c-brand-1);
+  display: inline-block;
+  font-size: 13px;
 }
 
 .echo-serve-notice {

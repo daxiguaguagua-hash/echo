@@ -60,6 +60,32 @@ interface LegacyCandidatesResponse {
   candidates: LegacyCandidate[]
 }
 
+interface ClaudeImportCandidate {
+  sessionId: string
+  filePath: string
+  status: string
+  articleId: string
+  turnCount: number
+  mtime: string
+  fileHash: string
+}
+
+interface ClaudeImportCandidatesResponse {
+  projectId: string
+  provider: string
+  projectDir: string
+  summary: { total: number; new: number; updated: number; skipped: number }
+  candidates: ClaudeImportCandidate[]
+}
+
+interface ClaudeImportResponse {
+  ok: boolean
+  imported: number
+  skipped: number
+  articlesDir: string | null
+  refreshScheduled: boolean
+}
+
 interface LegacyMigrateResponse {
   ok: boolean
   migrated: number
@@ -170,5 +196,25 @@ export function migrateLegacyCandidates(projectId: string, candidateIds?: string
   })
 }
 
+interface ProjectsResponse {
+  projects: { id: string; name: string; root: string; dataRoot: string }[]
+  currentId: string | null
+}
+
+export function getProjects(): Promise<ProjectsResponse> {
+  return request<ProjectsResponse>('/api/projects')
+}
+
+export function getClaudeImportCandidates(projectId: string): Promise<ClaudeImportCandidatesResponse> {
+  return request<ClaudeImportCandidatesResponse>(`/api/import/claude-candidates?projectId=${encodeURIComponent(projectId)}`)
+}
+
+export function importClaudeSessions(projectId: string, sessionIds: string[]): Promise<ClaudeImportResponse> {
+  return request<ClaudeImportResponse>('/api/import/claude', {
+    method: 'POST',
+    body: JSON.stringify({ projectId, sessionIds }),
+  })
+}
+
 export { EchoApiError, CONFIGURED_API_BASE, DEFAULT_API_BASE }
-export type { EchoStatus, CommentPayload, TagPayload, PublishPayload, PublishResponse, LegacyCandidate, LegacyCandidatesResponse, LegacyMigrateResponse }
+export type { EchoStatus, CommentPayload, TagPayload, PublishPayload, PublishResponse, LegacyCandidate, LegacyCandidatesResponse, LegacyMigrateResponse, ClaudeImportCandidate, ClaudeImportCandidatesResponse, ClaudeImportResponse }

@@ -6,6 +6,7 @@ const { isCaptureEnabled } = require("../infra/config");
 const { findProjectForPath } = require("./project-registry");
 const { cliNames } = require("../cli/names");
 const { scanLegacyCandidates } = require("./legacy-candidates");
+const { discoverClaudeImportCandidates } = require("./discover-claude-imports");
 
 function serveInfoFile() {
   return path.join(resolveEchoHomePath(), ".serve.json");
@@ -85,6 +86,18 @@ function collectStatus(opts = {}) {
     }
   } catch (_) {}
 
+  let transcripts = null;
+  let transcriptNew = 0;
+  let transcriptUpdated = 0;
+  if (project) {
+    try {
+      const r = discoverClaudeImportCandidates(project.projectId, { echoHome });
+      transcripts = { provider: r.provider, projectDir: r.projectDir, ...r.summary };
+      transcriptNew = r.summary.new;
+      transcriptUpdated = r.summary.updated;
+    } catch (_) {}
+  }
+
   return {
     serve: {
       running: serveRunning,
@@ -107,6 +120,7 @@ function collectStatus(opts = {}) {
       comments: countMdFiles(path.join(project.dataRoot, "comments")),
     } : { liveBuffers: 0, articles: 0, comments: 0 },
     legacy: { buffers: legacyBuffers, currentProjectCandidates: legacyCandidates },
+    transcripts,
     mcp: {
       command: cliNames.canonicalName, args: ["mcp"], toolCount: TOOLS.length,
     },
@@ -116,6 +130,9 @@ function collectStatus(opts = {}) {
         : []),
       ...(legacyCandidates > 0
         ? [{ kind: "review_legacy", label: "Review legacy candidates" }]
+        : []),
+      ...(transcriptNew > 0 || transcriptUpdated > 0
+        ? [{ kind: "review_transcripts", label: "Review unimported Claude transcripts" }]
         : []),
     ],
     _meta: { echoHome, collectedAt: new Date().toISOString() },

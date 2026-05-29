@@ -18,7 +18,7 @@ function jsonRequest(router, method, pathname, body, headers = {}) {
     const url = new URL(pathname, "http://127.0.0.1");
     const req = new http.IncomingMessage(null);
     req.method = method;
-    req.url = url.pathname;
+    req.url = url.pathname + url.search;
     req.headers = headers;
     const chunks = [];
     const res = {
@@ -308,6 +308,43 @@ test("findFreePort returns a free port", async () => {
   assert.ok(port >= 19800);
   assert.ok(port <= 65535);
   assert.equal(typeof port, "number");
+});
+
+test("GET /api/import/claude-candidates returns 400 without projectId", async () => {
+  const router = createRouter({ docsPort: 5173 });
+  const res = await jsonRequest(router, "GET", "/api/import/claude-candidates");
+  assert.equal(res.statusCode, 400);
+  assert.ok(res.body.error.includes("projectId"));
+});
+
+test("GET /api/import/claude-candidates returns 404 for unregistered project", async () => {
+  const router = createRouter({ docsPort: 5173 });
+  const res = await jsonRequest(router, "GET", "/api/import/claude-candidates?projectId=nonexistent-test-proj");
+  assert.equal(res.statusCode, 404);
+  assert.ok(res.body.error.includes("not found"));
+});
+
+test("POST /api/import/claude returns 400 without projectId", async () => {
+  const router = createRouter({ docsPort: 5173 });
+  const res = await jsonRequest(router, "POST", "/api/import/claude", { sessionIds: ["abc"] });
+  assert.equal(res.statusCode, 400);
+  assert.ok(res.body.error.includes("projectId"));
+});
+
+test("POST /api/import/claude returns 400 without sessionIds", async () => {
+  const router = createRouter({ docsPort: 5173 });
+  const res = await jsonRequest(router, "POST", "/api/import/claude", { projectId: "test" });
+  assert.equal(res.statusCode, 400);
+  assert.ok(res.body.error.includes("sessionIds"));
+});
+
+test("POST /api/import/claude returns 404 for unregistered project", async () => {
+  const router = createRouter({ docsPort: 5173 });
+  const res = await jsonRequest(router, "POST", "/api/import/claude", {
+    projectId: "nonexistent-test-proj", sessionIds: ["abc"],
+  });
+  assert.equal(res.statusCode, 404);
+  assert.ok(res.body.error.includes("not found"));
 });
 
 test("findFreePort skips occupied ports", async () => {

@@ -1,5 +1,15 @@
 <template>
   <div class="echo-global-controls">
+    <select
+      class="echo-global-select"
+      :value="projectFilter.selectedProject.value"
+      @change="projectFilter.select(($event.target as HTMLSelectElement).value)"
+    >
+      <option value="__all__">全部项目</option>
+      <option v-for="p in projectFilter.allProjects.value" :key="p.id" :value="p.id">
+        {{ p.name }}
+      </option>
+    </select>
     <button
       class="echo-global-btn"
       :class="status?.captureEnabled ? 'echo-btn-on' : 'echo-btn-off'"
@@ -35,12 +45,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useEchoStatus } from '../lib/useEchoStatus'
 import { getMcpConfig, setCapture } from '../lib/echo-api'
+import { useProjectFilter } from '../lib/useProjectFilter'
 
 const articleId = ref<string | undefined>(undefined)
 const { state, status } = useEchoStatus(articleId)
+const projectFilter = useProjectFilter()
+
+onMounted(() => {
+  projectFilter.load()
+  projectFilter.restore()
+})
 
 const mcpVisible = ref(false)
 const mcpConfigText = ref('')

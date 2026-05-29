@@ -12,7 +12,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
+import { postPublish, EchoApiError } from '../lib/echo-api'
 
 const props = defineProps<{
   projectId: string
@@ -25,29 +26,35 @@ const publishing = ref(false)
 const error = ref("")
 const ok = ref("")
 const isPublished = computed(() => props.published === "true")
+let refreshTimer: ReturnType<typeof window.setInterval> | null = null
+
+onMounted(() => {
+  const livePath = window.location.pathname
+  refreshTimer = window.setInterval(() => {
+    if (document.visibilityState === "hidden") return
+    if (window.location.pathname === livePath) window.location.reload()
+  }, 30000)
+})
+
+onBeforeUnmount(() => {
+  if (refreshTimer) window.clearInterval(refreshTimer)
+})
 
 async function publish() {
   publishing.value = true
   error.value = ""
   ok.value = ""
   try {
-    const resp = await fetch('/api/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        projectId: props.projectId || null,
-        sessionId: props.sessionId,
-      }),
+    const data = await postPublish({
+      projectId: props.projectId || null,
+      sessionId: props.sessionId,
     })
-    const data = await resp.json()
-    if (!resp.ok) {
-      error.value = data.error || '发布失败'
-    } else {
-      ok.value = '发布成功！页面即将跳转...'
-      setTimeout(() => { window.location.href = `/articles/generated/${data.slug}` }, 1500)
-    }
+    ok.value = '发布成功！页面即将跳转...'
+    setTimeout(() => { window.location.href = `/articles/generated/${data.slug}` }, 1500)
   } catch (e: any) {
-    error.value = e.message || '网络错误'
+    error.value = e instanceof EchoApiError && e.status === 409
+      ? '已经是最新快照'
+      : e.message || '网络错误'
   } finally {
     publishing.value = false
   }

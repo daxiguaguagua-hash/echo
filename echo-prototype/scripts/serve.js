@@ -480,6 +480,98 @@ function createRouter(deps) {
         }
       }
 
+      if (p === "/api/import/claude-candidates" && req.method === "GET") {
+        const projectId = url.searchParams.get("projectId");
+        if (!projectId) {
+          return jsonResponse(res, 400, { error: "projectId query parameter required" }, docsPort);
+        }
+        try {
+          const { discoverClaudeImportCandidates } = require("./lib/usecases/discover-claude-imports");
+          const result = discoverClaudeImportCandidates(projectId);
+          return jsonResponse(res, 200, result, docsPort);
+        } catch (err) {
+          return jsonResponse(res, err.message.includes("not found") ? 404 : 500, { error: err.message }, docsPort);
+        }
+      }
+
+      if (p === "/api/import/claude" && req.method === "POST") {
+        const body = await readBody(req);
+        if (!body || !body.projectId || !Array.isArray(body.sessionIds) || body.sessionIds.length === 0) {
+          return jsonResponse(res, 400, { error: "projectId and sessionIds (non-empty array) required" }, docsPort);
+        }
+        try {
+          const { discoverClaudeImportCandidates } = require("./lib/usecases/discover-claude-imports");
+          const provider = require("./lib/import/providers/claude-code");
+          const mf = require("./lib/import/manifest");
+          const candidates = discoverClaudeImportCandidates(body.projectId);
+          const idSet = new Set(body.sessionIds);
+          const toImport = candidates.candidates.filter((c) => idSet.has(c.sessionId) && c.status !== "skipped");
+
+          if (toImport.length === 0) {
+            return jsonResponse(res, 200, { ok: true, imported: 0, skipped: 0, articlesDir: null, refreshScheduled: false }, docsPort);
+          }
+
+          const echoHome = resolveEchoHomePath();
+          const manifestPath = path.join(echoHome, "import-manifest.json");
+          const manifest = mf.loadManifest(manifestPath);
+          const { findProjectById } = require("./lib/usecases/project-registry");
+          const project = findProjectById(body.projectId, { echoHome });
+          const articlesDir = project ? project.dataRoot + "/articles" : path.join(echoHome, "articles");
+
+          let imported = 0;
+          let skipped = 0;
+
+          for (const entry of toImport) {
+            const articleId = `session-${entry.sessionId.slice(0, 8)}`;
+            const articlePath = path.join(articlesDir, `${articleId}.md`);
+
+            if (fs.existsSync(articlePath)) {
+              // Record updated hash so this session won't show as "updated" again
+              if (entry.status === "updated") {
+                mf.recordImport(manifest, entry.sessionId, articleId, entry.fileHash, { provider: "claude-code" });
+              }
+              skipped++;
+              continue;
+            }
+
+            try {
+              const turns = provider.readSessionTurns(entry.filePath);
+              const classification = provider.classifySession(turns);
+              if (!classification.isMeaningful) {
+                skipped++;
+                continue;
+              }
+
+              const metadata = provider.extractMetadata(turns);
+              const markdown = provider.toEchoArticle(turns, metadata, {
+                sessionId: entry.sessionId,
+                project: body.projectId,
+              });
+
+              fs.mkdirSync(path.dirname(articlePath), { recursive: true });
+              fs.writeFileSync(articlePath, markdown);
+              mf.recordImport(manifest, entry.sessionId, articleId, entry.fileHash, { provider: "claude-code" });
+              imported++;
+            } catch (err) {
+              console.error("[echo] import claude error:", err.message);
+            }
+          }
+
+          mf.saveManifest(manifest, manifestPath);
+
+          try { runBuildDocs({ docsRoot: deps.docsRoot || resolveRuntimeSiteDir() }); } catch (e) {
+            console.error("[echo] Rebuilding docs after import failed:", e.message);
+          }
+
+          return jsonResponse(res, 200, {
+            ok: true, imported, skipped,
+            articlesDir, refreshScheduled: true,
+          }, docsPort);
+        } catch (err) {
+          return jsonResponse(res, err.message.includes("not found") ? 404 : 500, { error: err.message }, docsPort);
+        }
+      }
+
       if (p === "/api/rebuild-docs" && req.method === "POST") {
         try {
           const { runPipeline } = require("./lib/usecases/run-pipeline");

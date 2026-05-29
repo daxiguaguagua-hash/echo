@@ -101,6 +101,44 @@ test("runBuildDocs can generate a runtime VitePress site outside the package doc
   assert.deepEqual(payload[0].articles.map((article) => article.title), ["Runtime Article"]);
 });
 
+test("runBuildDocs renders live pages without global meta refresh", (t) => {
+  const oldEchoHome = process.env.ECHO_HOME;
+  const oldCwd = process.cwd();
+  const echoHome = tempDir();
+  const docsRoot = tempDir();
+  const projectRoot = tempDir();
+
+  t.after(() => {
+    if (oldEchoHome === undefined) delete process.env.ECHO_HOME;
+    else process.env.ECHO_HOME = oldEchoHome;
+    process.chdir(oldCwd);
+    fs.rmSync(echoHome, { recursive: true, force: true });
+    fs.rmSync(docsRoot, { recursive: true, force: true });
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  process.env.ECHO_HOME = echoHome;
+  const registered = registerProject(projectRoot, { echoHome, projectId: "mynote" });
+  const bufferDir = path.join(registered.dataRoot, "session-buffer");
+  fs.mkdirSync(bufferDir, { recursive: true });
+  fs.writeFileSync(path.join(bufferDir, "session-live.md"), [
+    "# Live Session",
+    "",
+    "<!-- turn:1 speaker=user -->",
+    "",
+    "hello",
+    "",
+  ].join("\n"));
+  process.chdir(projectRoot);
+
+  runBuildDocs({ docsRoot });
+
+  const livePage = fs.readFileSync(path.join(docsRoot, "live", "generated", "mynote--session-live.md"), "utf-8");
+  assert.match(livePage, /<EchoLiveSession/);
+  assert.doesNotMatch(livePage, /http-equiv:\s*refresh/);
+  assert.doesNotMatch(livePage, /content:\s*"30"/);
+});
+
 test("runBuildDocs groups sidebar articles by project while keeping recent shortcut", (t) => {
   const oldEchoHome = process.env.ECHO_HOME;
   const oldCwd = process.cwd();

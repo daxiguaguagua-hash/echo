@@ -613,10 +613,6 @@ echo:
   live: true
   published: ${session.publishedSlug ? "true" : "false"}
   turnCount: ${session.turnCount}
-head:
-  - - meta
-    - http-equiv: refresh
-      content: "30"
 ---
 
 # ${title}

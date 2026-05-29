@@ -1,33 +1,14 @@
 <template>
   <div v-if="state === 'unavailable'" class="echo-serve-notice">
-    Echo API 未运行 — 运行 <code>echoctl serve</code> 以启用交互功能
-  </div>
-  <div v-else class="echo-toolbar">
-    <div class="echo-toolbar-btns">
-      <button
-        class="echo-btn"
-        :class="status?.captureEnabled ? 'echo-btn-on' : 'echo-btn-off'"
-        :disabled="state !== 'ready'"
-        @click="toggleCapture"
-      >
-        收集: {{ status?.captureEnabled ? '开' : '关' }}
-      </button>
-      <button
-        class="echo-btn"
-        :disabled="state !== 'ready'"
-        @click="showMcp"
-      >
-        MCP 配置
-      </button>
-    </div>
+    Echo API 未运行 — 运行 <code>echoctl serve</code> 以启用评论和标记
   </div>
 
-  <div class="echo-tag-box">
-    <h3>创建标记</h3>
+  <div class="echo-tag-strip">
+    <span class="echo-tag-strip-label">标记</span>
     <div class="echo-tag-form">
       <input
         v-model="tagText"
-        placeholder="输入新标记"
+        placeholder="添加文章标记"
         :disabled="state !== 'ready'"
         @keydown.enter.prevent="submitTag"
       />
@@ -36,25 +17,23 @@
         :disabled="state !== 'ready' || !tagText.trim() || tagging"
         @click="submitTag"
       >
-        {{ tagging ? '创建中...' : '创建标记' }}
+        {{ tagging ? '添加中...' : '添加' }}
       </button>
     </div>
     <span v-if="tagError" class="echo-inline-error">{{ tagError }}</span>
   </div>
 
-  <Teleport to="body">
-    <div v-if="mcpVisible" class="echo-modal" @click.self="mcpVisible = false">
-      <div class="echo-modal-content">
-        <h3>MCP 配置</h3>
-        <p>将此 JSON 添加到你的 Claude/Codex MCP 配置文件中：</p>
-        <pre>{{ mcpConfigText }}</pre>
-        <div class="echo-modal-btns">
-          <button class="echo-btn" @click="copyMcp">复制</button>
-          <button class="echo-btn" @click="mcpVisible = false">关闭</button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  <div v-if="canPublish" class="echo-publish-strip">
+    <button
+      class="echo-btn"
+      :disabled="state !== 'ready' || publishing"
+      @click="publishLatest"
+    >
+      {{ publishing ? '发布中...' : '发布最新快照' }}
+    </button>
+    <span v-if="publishMessage" class="echo-inline-ok">{{ publishMessage }}</span>
+    <span v-if="publishError" class="echo-inline-error">{{ publishError }}</span>
+  </div>
 
   <div class="echo-comment-box">
     <h3>发表评论</h3>
@@ -76,10 +55,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useData } from 'vitepress'
 import { useEchoStatus } from '../lib/useEchoStatus'
-import { setCapture, getMcpConfig, postComment, postTag } from '../lib/echo-api'
+import { EchoApiError, postComment, postPublish, postTag } from '../lib/echo-api'
 
 const { frontmatter } = useData()
 const articleId = computed(() => (frontmatter.value as any)?.echo?.articleId as string | undefined)
@@ -87,39 +66,25 @@ const projectId = computed(() => (frontmatter.value as any)?.echo?.projectId as 
 
 const { state, status } = useEchoStatus(articleId)
 
-const mcpVisible = ref(false)
-const mcpConfigText = ref('')
 const commentText = ref('')
 const submitting = ref(false)
 const submitError = ref('')
 const tagText = ref('')
 const tagging = ref(false)
 const tagError = ref('')
+const publishing = ref(false)
+const publishMessage = ref('')
+const publishError = ref('')
+const canPublish = computed(() => !!articleId.value?.startsWith('session-'))
 
-async function toggleCapture() {
-  if (!status.value) return
-  try {
-    const r = await setCapture(!status.value.captureEnabled)
-    status.value = { ...status.value, captureEnabled: r.enabled }
-  } catch (_) {}
-}
-
-async function showMcp() {
-  try {
-    const cfg = await getMcpConfig()
-    const json = JSON.stringify({
-      mcpServers: { echo: { command: cfg.canonical.command, args: cfg.canonical.args } }
-    }, null, 2)
-    mcpConfigText.value = json
-    mcpVisible.value = true
-  } catch (_) {}
-}
-
-async function copyMcp() {
-  try {
-    await navigator.clipboard.writeText(mcpConfigText.value)
-  } catch (_) {}
-}
+watch(articleId, () => {
+  tagError.value = ''
+  submitError.value = ''
+  publishMessage.value = ''
+  publishError.value = ''
+  tagText.value = ''
+  commentText.value = ''
+})
 
 async function submitComment() {
   if (!articleId.value || !commentText.value.trim()) return
@@ -159,6 +124,27 @@ async function submitTag() {
     tagError.value = err.message || '创建失败'
   } finally {
     tagging.value = false
+  }
+}
+
+async function publishLatest() {
+  if (!articleId.value) return
+  publishing.value = true
+  publishMessage.value = ''
+  publishError.value = ''
+  try {
+    const result = await postPublish({
+      sessionId: articleId.value,
+      projectId: projectId.value ?? null,
+    })
+    publishMessage.value = '发布成功，即将跳转...'
+    setTimeout(() => { window.location.href = `/articles/generated/${result.slug}` }, 1000)
+  } catch (err: any) {
+    publishError.value = err instanceof EchoApiError && err.status === 409
+      ? '已经是最新快照'
+      : err.message || '发布失败'
+  } finally {
+    publishing.value = false
   }
 }
 </script>

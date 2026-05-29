@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-28 (三轮 Codex 审计修复完成，管线全绿)
+最后更新：2026-05-29 (项目筛选空项目修复，测试与管线全绿)
 
 ## 已完成
 
@@ -46,6 +46,9 @@
 - [x] **发布入口可见性修复** (Issue 019 follow-up, 2026-05-28) — 文章页底部新增 `发布最新快照`，session 文章可直接从文章页发布当前 live buffer；`EchoLiveSession` 改用统一 `echo-api` 调用，避免从 VitePress 5173 错打 `/api/publish`。Browser 验证按钮可见，已发布文章点击后提示“已经是最新快照”。
 - [x] **三轮 Codex 审计修复** (2026-05-28) — Issue 017 4 项（migrate candidateIds 过滤、completed session 回退匹配、transcript_path 编码、多项目 projectId）；Issue 018 5 项（nested hook 检测+SessionStart、i18n key 映射、MCP 计数双语、ECHO_LANG env、stale URL 隐藏）；Issue 019 4 项（serve 跳过 convert、版本号剥离 buffer 查找、manifest 原子写、loadManifest fail-closed）。管线全绿。
 - [x] **发布提示跨文章状态泄漏修复** (Issue 019 follow-up, 2026-05-28) — `EchoArticleActions` 在 VitePress 客户端切换文章时清空 tag/comment/publish 临时状态，避免 `已经是最新快照` 这类提示从上一篇文章带到下一篇。Browser 复现后验证：v2 点击提示，切到 v3 后提示消失。
+- [x] **未导入 Claude 历史会话发现设计** (Issue 021, 2026-05-29) — 明确区分 legacy buffer 与 Claude `.jsonl` transcript：前者是 Echo 旧路径误捕获，走 migrate；后者是 Echo 开启前/未捕获的历史会话，走 import。设计 `echoctl status`、页面空状态、API dry-run/confirm 与验收标准，详见 [issues/021](issues/021-unimported-claude-transcript-discovery.md)。
+- [x] **Live 页 30 秒跳转修复** (2026-05-29) — 移除生成页 frontmatter 里的全局 `<meta http-equiv="refresh">`，改由 `EchoLiveSession` 组件在当前 Live 路径仍可见时刷新；离开 Live 页后组件卸载并清理 timer，避免浏览其他页面时被拉回。新增回归测试，`npm test` 332/332 通过，`npm run all` 通过。
+- [x] **项目筛选空项目修复** (2026-05-29) — `EchoProjectTabs` 将已注册但当前 0 篇文章的项目也渲染为可选 tab，避免全局下拉框选择 `echo-notes` / `ruoyi-vue-pro` 时回退到“全部”。Browser 验证：空项目显示 0 张卡片，`mynote` 显示 21 张卡片；`npm test` 332/332 通过，`npm run all` 通过。
 
 ## 进行中
 
@@ -92,7 +95,7 @@
 - [x] **npm 发布准备** (Issue 008) — `echoctl@0.1.0`：包名已确定、`"private": false`、`bin`/`files`/`keywords`/`engines` 已配置、npm pack 产物 38 文件 43KB 无污染。用户 onboarding 文档后续按需补充。
 - [x] **底部评论输入框** — 支持文章级评论和后续回复链扩展。作者身份从 `echo.json` 读取。详见 [issues/015-bottom-comment-input.md](issues/015-bottom-comment-input.md)
 - [x] **进化链 UI** — 文章底部评论区展示，回复链可视化 (2026-05-27)
-- [ ] **项目筛选视图** — 统一归档下按 project 元数据显示 `全部` / 单项目文章。元数据在 convert 时根据 registry 补齐。
+- [x] **项目筛选视图** — `EchoGlobalControls` 全局导航栏项目选择器 + `EchoProjectTabs` 文章页 tabs 双向同步（localStorage）。`/api/projects` API + `useProjectFilter` 共享状态。Dropdown 选中后文章页自动过滤该项目的文章。
 - [x] **MCP 配置按钮** (2026-05-24) — `EchoArticleActions.vue` 已实现 MCP 配置弹窗和复制功能。
 - [x] **MCP 安装与 AI 访问端到端验证** (2026-05-25) — 新增 `mcp-e2e.test.js`：spawn `echoctl mcp` 从临时 `ECHO_HOME`，测试真实 JSON-RPC 通信覆盖 initialize、tools/list、全部 7 个 tool（含 add_tags/remove_tags 回环和 alias 搜索）。设计文档：[issues/007-mcp-install-e2e.md](issues/007-mcp-install-e2e.md)
 - [x] **搜索落点增强** (2026-05-26) — VitePress local search 点击结果后记录搜索词，文章页落地时在正文中高亮命中词，并选择离当前 hash 标题最近的命中滚入视口；仅改主题 UI 层，不改文章正文和数据管线。
@@ -134,6 +137,7 @@
 - [x] **创建标记表单样式重设计** (2026-05-28) — 保留原有 `postTag` 行为，将底部“创建标记”卡片改为轻量 `标记` 工具条，减少与评论区的视觉重复；Browser 移动宽度检查无横向溢出。
 - [ ] **标签/摘要编辑** — 网页端改 frontmatter 字段，写回 MD
 - [ ] **剪贴板导入脚本** — `paste-to-md.sh`（macOS 优先）
+- [x] **未导入 Claude 历史会话提示** — Issue 021 后端完成：`discoverClaudeImportCandidates` usecase、status `transcripts` 字段、API `GET /api/import/claude-candidates` + `POST /api/import/claude`、echo-api.ts。7 新测试，331 全绿，管线通过。页面空状态 Vue 组件待后续。
 
 ### 工程
 - [ ] **Git 仓库初始化** — `git init` + `.gitignore`（排除 `.echo-buffer/`、`node_modules/`）
