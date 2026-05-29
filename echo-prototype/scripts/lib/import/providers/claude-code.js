@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { renderTurnMarker } = require("../../domain/echo-format");
 
 // ---- noise detection ----
 
@@ -223,7 +224,8 @@ function toEchoArticle(turns, metadata, opts = {}) {
     turnNum++;
     const speaker = normalizeSpeaker(turn);
     const speakerLabel = speaker === "human" ? (opts.userSpeaker || "human") : (opts.aiSpeaker || "ai");
-    lines.push(`<!-- turn: t${String(turnNum).padStart(2, "0")} speaker=${speakerLabel} -->`);
+    const turnId = `t${String(turnNum).padStart(2, "0")}`;
+    lines.push(renderTurnMarker(turnId, speakerLabel));
     lines.push("");
     lines.push(turn.content);
     lines.push("");

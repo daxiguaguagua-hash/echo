@@ -140,6 +140,20 @@ function createArticle(input) {
   return article;
 }
 
+// ---- shared turn marker (single source of truth) ----
+
+/**
+ * renderTurnMarker(id, speaker, replyTo)
+ * 生成统一的 `<!-- turn: ... -->` 标记字符串。
+ * 所有生成和解析 turn 标记的代码应使用此函数。
+ */
+function renderTurnMarker(id, speaker, replyTo) {
+  const parts = [`<!-- turn: ${id} speaker=${speaker}`];
+  if (replyTo) parts.push(`reply_to=${replyTo}`);
+  parts.push("-->");
+  return parts.join(" ");
+}
+
 // ---- Markdown serializer (single exit point) ----
 
 function toMarkdown(article) {
@@ -169,9 +183,7 @@ function toMarkdown(article) {
 
   const turnBlocks = [];
   for (const t of article.turns) {
-    const meta = [`<!-- turn: ${t.id} speaker=${t.speaker}`];
-    if (t.reply_to) meta.push(`reply_to=${t.reply_to}`);
-    meta.push("-->");
+    const marker = renderTurnMarker(t.id, t.speaker, t.reply_to);
 
     let contentLine;
     if (t.role === "human") {
@@ -181,7 +193,7 @@ function toMarkdown(article) {
       contentLine = `## ai 的回复${modelNote}\n\n${t.content}`;
     }
 
-    turnBlocks.push(`${meta.join(" ")}\n${contentLine}`);
+    turnBlocks.push(`${marker}\n${contentLine}`);
   }
 
   const body = turnBlocks.join("\n\n");
@@ -238,6 +250,7 @@ function extractSessionDate(sessionName) {
 
 module.exports = {
   DEFAULT_SPEAKERS,
+  renderTurnMarker,
   createTurn,
   createParticipant,
   createArticle,

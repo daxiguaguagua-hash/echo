@@ -9,6 +9,7 @@ const { isCaptureEnabled, getSpeakers } = require("../infra/config");
 const { findProjectForPath, listProjects } = require("../usecases/project-registry");
 const { readStdin } = require("../infra/read-stdin");
 const { writeLiveSessionState } = require("../usecases/live-session-state");
+const { renderTurnMarker } = require("../domain/echo-format");
 
 function claudeProjectDirName(projectPath) {
   return "-" + path.resolve(projectPath).slice(1).split(path.sep).join("-");
@@ -324,16 +325,19 @@ async function handleStop(data, bufferRoot) {
 
   const speakers = getSpeakers();
 
+  const userTurnId = `t${String(turnNum).padStart(3, "0")}`;
+  const aiTurnId = `t${String(turnNum + 1).padStart(3, "0")}`;
+
   const entry = `
-<!-- turn: t${String(turnNum).padStart(3, "0")} speaker=${speakers.user} -->
-${speakers.user}：${pending.prompt}
+ ${renderTurnMarker(userTurnId, speakers.user)}
+ ${speakers.user}：${pending.prompt}
 
-<!-- turn: t${String(turnNum + 1).padStart(3, "0")} speaker=${speakers.ai} reply_to=t${String(turnNum).padStart(3, "0")} -->
-## ${speakers.ai} 的回复
-${auqBlock}
-${aiText}
+ ${renderTurnMarker(aiTurnId, speakers.ai, userTurnId)}
+ ## ${speakers.ai} 的回复
+ ${auqBlock}
+ ${aiText}
 
-`;
+ `;
 
   fs.appendFileSync(sessionFile, entry);
   writeLiveSessionState(bufferRoot, sessionFile);
