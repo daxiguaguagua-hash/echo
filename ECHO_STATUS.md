@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-29 (项目筛选空项目修复，测试与管线全绿)
+最后更新：2026-05-29 (init project 自动补导入 Claude 历史会话，测试与管线全绿)
 
 ## 已完成
 
@@ -49,6 +49,7 @@
 - [x] **未导入 Claude 历史会话发现设计** (Issue 021, 2026-05-29) — 明确区分 legacy buffer 与 Claude `.jsonl` transcript：前者是 Echo 旧路径误捕获，走 migrate；后者是 Echo 开启前/未捕获的历史会话，走 import。设计 `echoctl status`、页面空状态、API dry-run/confirm 与验收标准，详见 [issues/021](issues/021-unimported-claude-transcript-discovery.md)。
 - [x] **Live 页 30 秒跳转修复** (2026-05-29) — 移除生成页 frontmatter 里的全局 `<meta http-equiv="refresh">`，改由 `EchoLiveSession` 组件在当前 Live 路径仍可见时刷新；离开 Live 页后组件卸载并清理 timer，避免浏览其他页面时被拉回。新增回归测试，`npm test` 332/332 通过，`npm run all` 通过。
 - [x] **项目筛选空项目修复** (2026-05-29) — `EchoProjectTabs` 将已注册但当前 0 篇文章的项目也渲染为可选 tab，避免全局下拉框选择 `echo-notes` / `ruoyi-vue-pro` 时回退到“全部”。Browser 验证：空项目显示 0 张卡片，`mynote` 显示 21 张卡片；`npm test` 332/332 通过，`npm run all` 通过。
+- [x] **注册项目自动补导入历史会话** (2026-05-29) — 新增 `importClaudeProject()` usecase，`echoctl init project` 注册后自动扫描对应 Claude transcript 目录并导入有意义会话，避免用户还要手动跑 `import claude`。已补救 `ruoyi-vue-pro`：5 条 transcript 中 1 条高质量会话导入为 `session-b8cfacc9.md`，4 条单用户回合跳过；`npm test` 333/333 通过，`npm run all` 通过。
 
 ## 进行中
 

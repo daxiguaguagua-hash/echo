@@ -16,7 +16,7 @@ function discoverClaudeImportCandidates(projectId, opts = {}) {
   const project = findProjectById(projectId, { echoHome });
   if (!project) throw new Error(`Project "${projectId}" not found.`);
 
-  const claudeProjectsDir = path.join(os.homedir(), ".claude", "projects");
+  const claudeProjectsDir = opts.claudeProjectsDir || path.join(os.homedir(), ".claude", "projects");
   const dirName = claudeProjectDirName(project.projectRoot);
   const projectDir = path.join(claudeProjectsDir, dirName);
 

@@ -203,6 +203,17 @@ switch (cmd) {
       } else {
         console.log(`Registered: no (already exists)`);
       }
+      try {
+        const { importClaudeProject } = require("../scripts/lib/usecases/import-claude-project");
+        const imported = importClaudeProject(result.projectId);
+        if (imported.total > 0) {
+          console.log(`Claude transcripts: ${imported.total} found, ${imported.imported} imported, ${imported.skipped} skipped`);
+        } else {
+          console.log(`Claude transcripts: none found`);
+        }
+      } catch (err) {
+        console.log(`Claude transcripts: import skipped (${err.message})`);
+      }
       if (scheduleRefreshIfServeRunning()) {
         console.log(`Serve refresh: scheduled`);
       }
