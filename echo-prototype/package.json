@@ -1,6 +1,6 @@
 {
   "name": "echoctl",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": false,
   "license": "MIT",
   "description": "Local-first AI conversation knowledge forum — capture, search, and annotate Claude Code sessions as Markdown articles with MCP server support",
