@@ -12,7 +12,8 @@
     "local-first",
     "mcp",
     "claude-code",
-    "cli"
+    "cli",
+    "vitepress"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -29,11 +30,11 @@
     "bin/",
     "scripts/",
     "docs/.vitepress/",
-    "docs/index.md",
-    "README.md",
-    "LICENSE"
+    "docs/index.md"
   ],
   "scripts": {
+    "build": "npm run prepare && node -e \"require('./bin/echoctl.js')\" -- --version",
+    "prepack": "npm run build",
     "prepublishOnly": "npm test",
     "test": "node --test",
     "verify": "npm run test && npm run validate && npm run resolve",
@@ -52,6 +53,10 @@
     "docs:preview": "npm run docs:generate && vitepress preview ~/.echo-workspace/.site",
     "serve": "node bin/echoctl.js serve",
     "prepare": "mkdir -p bin && printf '#!/usr/bin/env node\\nrequire(\"../scripts/cli/echoctl.js\");\\n' > bin/echoctl.js && chmod +x bin/echoctl.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "bin": {
     "echoctl": "./bin/echoctl.js",
