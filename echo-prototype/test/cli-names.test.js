@@ -40,20 +40,34 @@ test("cliNames canonicalName is echoctl", () => {
 });
 
 test("echoctl project list outputs registered projects", () => {
+  const fs = require("fs");
   const { execSync } = require("child_process");
-  const out = execSync("node bin/echoctl.js project list", {
-    cwd: path.resolve(__dirname, ".."), encoding: "utf-8",
-  });
-  assert.ok(out.includes("mynote"));
-  assert.ok(out.includes("echo-notes"));
+  const echoHome = fs.mkdtempSync(path.join(require("os").tmpdir(), "echo-test-"));
+  const cwd = path.resolve(__dirname, "..");
+  const env = { ...process.env, ECHO_HOME: echoHome };
+
+  // Register a temp project
+  execSync("node bin/echoctl.js init project --path " + echoHome, { cwd, env, encoding: "utf-8" });
+
+  const out = execSync("node bin/echoctl.js project list", { cwd, env, encoding: "utf-8" });
+  assert.ok(out.includes("echo-test-")); // project id derived from temp dir name
+  fs.rmSync(echoHome, { recursive: true, force: true });
 });
 
-test("echoctl project find mynote outputs project details", () => {
+test("echoctl project find outputs project details", () => {
+  const fs = require("fs");
   const { execSync } = require("child_process");
-  const out = execSync("node bin/echoctl.js project find mynote", {
-    cwd: path.resolve(__dirname, ".."), encoding: "utf-8",
-  });
+  const echoHome = fs.mkdtempSync(path.join(require("os").tmpdir(), "echo-test-"));
+  const projectId = path.basename(echoHome).toLowerCase();
+  const cwd = path.resolve(__dirname, "..");
+  const env = { ...process.env, ECHO_HOME: echoHome };
+
+  // Register a temp project
+  execSync("node bin/echoctl.js init project --path " + echoHome, { cwd, env, encoding: "utf-8" });
+
+  const out = execSync(`node bin/echoctl.js project find ${projectId}`, { cwd, env, encoding: "utf-8" });
   assert.ok(out.includes("Project:"));
-  assert.ok(out.includes("mynote"));
+  assert.ok(out.includes(projectId));
   assert.ok(out.includes("Root:"));
+  fs.rmSync(echoHome, { recursive: true, force: true });
 });
