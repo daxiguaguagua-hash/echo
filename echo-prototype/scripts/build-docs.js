@@ -7,7 +7,7 @@ const store = require("./lib/infra/markdown-store");
 const { stripCommentSections } = require("./lib/usecases/strip-comments");
 const { TURN_MARKER_REGEX } = require("./lib/domain/echo-format");
 
-const PACKAGE_DOCS_ROOT = path.resolve(__dirname, "../../docs");
+const PACKAGE_DOCS_ROOT = path.resolve(__dirname, "../docs");
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 
 function defaultDocsRoot() {
