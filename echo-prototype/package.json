@@ -34,7 +34,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "prepublishOnly": "npm test && npm run all",
+    "prepublishOnly": "npm test",
     "test": "node --test",
     "verify": "npm run test && npm run validate && npm run resolve",
     "validate": "node scripts/validate.js",
