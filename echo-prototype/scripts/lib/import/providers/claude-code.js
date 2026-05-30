@@ -208,7 +208,7 @@ function toEchoArticle(turns, metadata, opts = {}) {
   lines.push("source:");
   lines.push(`  session_id: "${sessionId || ""}"`);
   lines.push(`  source_file_hash: "${sourceHash}"`);
-  lines.push(`  imported_at: "${new Date().toISOString()}"`);
+  lines.push(`  imported_at: "${opts.importedAt || new Date().toISOString()}"`);
 
   if (opts.project) lines.push(`project: ${opts.project}`);
 

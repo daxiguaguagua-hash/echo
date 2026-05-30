@@ -698,7 +698,7 @@ test.describe("toEchoArticle", () => {
       { speaker: "ai", content: "Response." },
     ];
     const metadata = { title: "Idempotent Test", date: "2026-05-20", model: "test" };
-    const opts = { project: "test", sessionId: UUID_A };
+    const opts = { project: "test", sessionId: UUID_A, importedAt: "2026-05-20T00:00:00.000Z" };
 
     const first = cc.toEchoArticle(turns, metadata, opts);
     const second = cc.toEchoArticle(turns, metadata, opts);
