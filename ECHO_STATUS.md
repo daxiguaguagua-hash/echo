@@ -1,6 +1,6 @@
 # Echo 进度表
 
-最后更新：2026-05-29 (echoctl.js 拆分: 911 行 switch → 17 命令模块 + prepare 脚本)
+最后更新：2026-05-29 (npm 发布 0.1.0/0.1.1/0.1.2 + 修复 license/VitePress 配置打包 + MCP 启动 bug)
 
 ## 已完成
 
@@ -86,7 +86,7 @@
 ### 下一阶段剩余任务 (2026-05-29 盘点)
 
 **P1 — 阻碍发布**
-- [ ] **npm publish** — `package.json` 就绪（`private: false`、`bin`、`files`、`prepare` 脚本已配置），未执行实际发布
+- [x] **npm publish** — `echoctl@0.1.0` 已发布，后续修复 `license: MIT`（0.1.1）和 `.vitepress` 移入包内（0.1.2）
 - [x] **`scripts/cli/echoctl.js` 拆分** — 911 行 → 44 行入口 + 17 命令模块（`scripts/cli/commands/`）
 
 **P2 — 数据完整性**
