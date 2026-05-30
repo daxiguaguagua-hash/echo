@@ -2,3 +2,4 @@ node_modules/
 .context/
 .echo-buffer/
 .codegraph/
+*.bak

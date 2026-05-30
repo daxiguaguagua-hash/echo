@@ -6,7 +6,11 @@ function run(args) {
     return;
   }
   const { start } = require("../../lib/interfaces/mcp/server");
-  start().catch(() => process.exit(1));
+  try {
+    start();
+  } catch (err) {
+    process.exit(1);
+  }
 }
 
 module.exports = run;

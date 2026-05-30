@@ -1,9 +1,19 @@
 {
   "name": "echoctl",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
+  "license": "MIT",
   "description": "Local-first AI conversation knowledge forum — capture, search, and annotate Claude Code sessions as Markdown articles with MCP server support",
-  "keywords": ["echo", "knowledge-forum", "ai-conversations", "markdown", "local-first", "mcp", "claude-code", "cli"],
+  "keywords": [
+    "echo",
+    "knowledge-forum",
+    "ai-conversations",
+    "markdown",
+    "local-first",
+    "mcp",
+    "claude-code",
+    "cli"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },
@@ -24,6 +34,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "prepublishOnly": "npm test && npm run all",
     "test": "node --test",
     "verify": "npm run test && npm run validate && npm run resolve",
     "validate": "node scripts/validate.js",
@@ -47,9 +58,8 @@
     "echo-mcp": "./bin/echoctl.js"
   },
   "dependencies": {
-    "gray-matter": "^4.0.3"
-  },
-  "devDependencies": {
+    "gray-matter": "^4.0.3",
     "vitepress": "^1.6.4"
-  }
+  },
+  "devDependencies": {}
 }
