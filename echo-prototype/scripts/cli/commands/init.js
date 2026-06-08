@@ -20,18 +20,26 @@ function run(args) {
     } else {
       console.log(`Registered: no (already exists)`);
     }
+    let articlesImported = 0;
     try {
       const { importClaudeProject } = require("../../lib/usecases/import-claude-project");
       const imported = importClaudeProject(result.projectId);
       if (imported.total > 0) {
         console.log(`Claude transcripts: ${imported.total} found, ${imported.imported} imported, ${imported.skipped} skipped`);
+        articlesImported = imported.imported;
       } else {
         console.log(`Claude transcripts: none found`);
       }
     } catch (err) {
       console.log(`Claude transcripts: import skipped (${err.message})`);
     }
-    if (scheduleRefreshIfServeRunning()) console.log(`Serve refresh: scheduled`);
+    if (scheduleRefreshIfServeRunning()) {
+      console.log(`Serve refresh: scheduled`);
+      if (articlesImported > 0) {
+        const shortcut = process.platform === "darwin" ? "Cmd+Shift+R" : "Ctrl+Shift+R";
+        console.log(`\n  After the page refreshes, press ${shortcut} in your browser to see the new articles.\n`);
+      }
+    }
   } else {
     const { initWorkspace } = require("../../lib/usecases/init-workspace");
     const result = initWorkspace();

@@ -8,7 +8,10 @@ const { loadManifest } = require("../import/manifest");
 const { scanProjectDir } = require("../import/providers/claude-code");
 
 function claudeProjectDirName(projectPath) {
-  return "-" + path.resolve(projectPath).slice(1).split(path.sep).join("-");
+  return "-" + path.resolve(projectPath).slice(1)
+    .split(path.sep)
+    .map((seg) => seg.replace(/[^a-zA-Z0-9._-]/g, "-"))
+    .join("-");
 }
 
 function discoverClaudeImportCandidates(projectId, opts = {}) {

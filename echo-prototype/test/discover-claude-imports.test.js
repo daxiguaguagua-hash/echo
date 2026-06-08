@@ -27,7 +27,7 @@ test("claudeProjectDirName encodes a unix path", () => {
 
 test("claudeProjectDirName encodes path with spaces", () => {
   const result = claudeProjectDirName("/Users/test/my project");
-  assert.equal(result, "-Users-test-my project");
+  assert.equal(result, "-Users-test-my-project");
 });
 
 test("returns empty candidates when Claude project dir does not exist", () => {

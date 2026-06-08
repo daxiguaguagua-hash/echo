@@ -20,6 +20,7 @@ const commands = {
   stop:       require("./commands/stop"),
   capture:    require("./commands/capture"),
   tag:        require("./commands/tag"),
+  dev:        require("./commands/dev"),
 };
 
 const args = process.argv.slice(2);

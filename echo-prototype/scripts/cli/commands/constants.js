@@ -25,6 +25,9 @@ Usage:
   ${commandFor(["tag", "remove", "<article-id>", "<tag1>", "[tag2...]"])}  Remove one or more tags from an article
   ${commandFor(["tag", "rename", "<old-tag>", "<new-tag>"])}  Rename a tag across all articles
   ${commandFor(["tag", "purge", "<tag>"])}  Remove a tag from all articles
+  ${commandFor(["dev"])}                   Show current mode (dev/prod)
+  ${commandFor(["dev", "<source-path>"])}  Switch to dev mode — npm link to local source
+  ${commandFor(["dev", "prod"])}           Switch to prod mode — use published npm package
   ${commandFor(["import", "claude", "--all", "--dry-run|--apply"])}  Import Claude Code sessions
   ${commandFor(["import", "claude", "--project", "<dir>", "--as-project", "<id>"])}  Import single project
   ${commandFor(["serve"])}              Start API + VitePress dev server in background
